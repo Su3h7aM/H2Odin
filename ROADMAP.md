@@ -26,14 +26,14 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 2 — Widen extraction (all declaration kinds)
 
-- [ ] Structs and unions (fields, opaque/forward-declared, packed).
-- [ ] Enums (members, backing type).
-- [ ] Typedefs.
-- [ ] Global variables.
-- [ ] Function pointers and variadics.
-- [ ] Pointers and arrays in the type pool (recursive types).
-- [ ] Object-like macros (`#define` constants); record and skip function-like ones.
-- [ ] Doc-comment passthrough (raw text attached to declarations).
+- [x] Structs and unions (fields, opaque/forward-declared, packed).
+- [x] Enums (members, backing type).
+- [x] Typedefs.
+- [x] Global variables.
+- [x] Function pointers and variadics.
+- [x] Pointers and arrays in the type pool (recursive types).
+- [x] Object-like macros (`#define` constants); record and skip function-like ones.
+- [x] Doc-comment passthrough (raw text attached to declarations).
 
 ## Milestone 3 — Pointer lowering
 
