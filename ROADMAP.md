@@ -6,9 +6,9 @@ Ordered by risk and dependency: prove the pipeline end-to-end on the simplest po
 
 The two biggest unknowns. Settle them before writing any pipeline code.
 
-- [ ] Link libclang from Odin and call one function (e.g. print the Clang version). Uses Karl's bindings. If this does not link, nothing else matters yet.
-- [ ] Stand up the project skeleton: build compiles, entry point runs, `docs/` and `AGENTS.md` in place.
-- [ ] Wire the generation arena: create it, install it as `context.allocator` for the run scope, free it at the end.
+- [x] Link libclang from Odin and call one function (e.g. print the Clang version). Uses Karl's bindings. If this does not link, nothing else matters yet.
+- [x] Stand up the project skeleton: build compiles, entry point runs, `docs/` and `AGENTS.md` in place.
+- [x] Wire the generation arena: create it, install it as `context.allocator` for the run scope, free it at the end.
 
 ## Milestone 1 — The vertical slice
 

@@ -1,0 +1,12 @@
+{
+    "$schema": "https://raw.githubusercontent.com/DanielGavin/ols/master/misc/ols.schema.json",
+    "collections": [{ "name": "vendored", "path": "./vendored" }],
+    "enable_format": true,
+    "enable_hover": true,
+    "enable_document_symbols": true,
+    "enable_overload_resolution": true,
+    "enable_references": true,
+    "enable_auto_import": true,
+    "enable_checker_workspace_diagnostics": true,
+    "checker_args": "-vet -strict-style -vet-tabs -disallow-do -warnings-as-errors"
+}
