@@ -37,10 +37,10 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 3 — Pointer lowering
 
-- [ ] Represent each pointer decision explicitly (lowering + confidence + reason).
-- [ ] Kind-dependent defaults: `void*`→`rawptr`, `const char*`→`cstring`, `T[N]`→`[N]T`, bare `T*`→`^T`.
-- [ ] Emit diagnostics for heuristic (guessed) decisions.
-- [ ] Analysis hint: detect length-like neighbours (`count`/`len`/`size`/…) — a fact, not yet a decision.
+- [x] Represent each pointer decision explicitly (lowering + confidence + reason).
+- [x] Kind-dependent defaults: `void*`→`rawptr`, `const char*`→`cstring`, `T[N]`→`[N]T`, bare `T*`→`^T`.
+- [x] Emit diagnostics for heuristic (guessed) decisions.
+- [x] Analysis hint: detect length-like neighbours (`count`/`len`/`size`/…) — a fact, not yet a decision.
 
 ## Milestone 4 — Idiomatic mode (no wrappers yet)
 
