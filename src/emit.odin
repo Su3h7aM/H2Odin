@@ -30,7 +30,9 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 			emit_func(&foreign_body, ir, ir.funcs[ref.index], &uses_core_c)
 		case .Record:
 			emit_record(&types_body, ir, ir.records[ref.index], &uses_core_c)
-		case .Enum, .Typedef, .Var, .Macro:
+		case .Enum:
+			emit_enum(&types_body, ir, ir.enums[ref.index], &uses_core_c)
+		case .Typedef, .Var, .Macro:
 		// Not yet emitted; extraction for these lands kind by kind.
 		}
 	}
@@ -104,6 +106,62 @@ write_indent :: proc(b: ^strings.Builder, indent: int) {
 	for _ in 0 ..< indent {
 		strings.write_string(b, "\t")
 	}
+}
+
+emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, uses_core_c: ^bool) {
+	if decl.members == nil {
+		// Never defined in this header (or its backing type was
+		// unsupported); nothing faithful to emit.
+		return
+	}
+	if decl.name == "" {
+		// A C anonymous enum is just a bag of integer constants; that is
+		// exactly what it becomes. (One a typedef names is emitted at the
+		// typedef instead.)
+		for member in decl.members {
+			fmt.sbprintf(b, "%s :: ", member.name)
+			write_enum_value(b, ir, decl.backing, member.value)
+			strings.write_string(b, "\n")
+		}
+		strings.write_string(b, "\n")
+		return
+	}
+	fmt.sbprintf(b, "%s :: ", decl.name)
+	write_enum_body(b, ir, decl, 0, uses_core_c)
+	strings.write_string(b, "\n\n")
+}
+
+write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: int, uses_core_c: ^bool) {
+	strings.write_string(b, "enum ")
+	write_type(b, ir, decl.backing, indent, uses_core_c)
+	strings.write_string(b, " {\n")
+	for member in decl.members {
+		write_indent(b, indent + 1)
+		fmt.sbprintf(b, "%s = ", member.name)
+		write_enum_value(b, ir, decl.backing, member.value)
+		strings.write_string(b, ",\n")
+	}
+	write_indent(b, indent)
+	strings.write_string(b, "}")
+}
+
+// Member values are stored as raw i64 bits; the backing type's signedness
+// decides how they read back.
+write_enum_value :: proc(b: ^strings.Builder, ir: ^IR, backing: Type_Handle, value: i64) {
+	builtin, is_builtin := ir_type(ir, backing).variant.(Type_Builtin)
+	if is_builtin && builtin_is_unsigned(builtin.kind) {
+		fmt.sbprintf(b, "%d", u64(value))
+	} else {
+		fmt.sbprintf(b, "%d", value)
+	}
+}
+
+builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
+	#partial switch kind {
+	case .Bool, .U_Char, .U_Short, .U_Int, .U_Long, .U_Long_Long:
+		return true
+	}
+	return false
 }
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {
@@ -199,7 +257,20 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 			write_record_body(b, ir, record, indent, uses_core_c)
 		}
 
-	case Type_Enum_Ref, Type_Typedef_Ref:
+	case Type_Enum_Ref:
+		decl := ir.enums[variant.decl]
+		if decl.name != "" {
+			strings.write_string(b, decl.name)
+		} else if decl.members != nil {
+			// Anonymous enum: its body is its only spelling.
+			write_enum_body(b, ir, decl, indent, uses_core_c)
+		} else {
+			// Referenced but never defined — only its backing integer is
+			// known, and that is all C guarantees about it anyway.
+			write_type(b, ir, decl.backing, indent, uses_core_c)
+		}
+
+	case Type_Typedef_Ref:
 		// Extraction cannot produce these yet; their spellings land with
 		// their extraction, kind by kind.
 		panic("decl-ref type spellings land with their extraction")

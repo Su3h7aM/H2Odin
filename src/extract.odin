@@ -60,6 +60,71 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 		extract_func(state, cursor)
 	case .StructDecl, .UnionDecl:
 		record_decl_for_cursor(state, cursor)
+	case .EnumDecl:
+		enum_decl_for_cursor(state, cursor)
+	}
+	return .Continue
+}
+
+// Get or create the IR declaration for an enum cursor; fill its members when
+// this cursor is the definition. Mirrors record_decl_for_cursor.
+enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
+	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	if ref, found := state.decl_map[usr]; usr != "" && found {
+		handle := Decl_Handle(ref.index)
+		if clang.isCursorDefinition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
+			fill_enum(state, handle, cursor)
+		}
+		return handle
+	}
+
+	decl: Enum_Decl
+	if clang.Cursor_isAnonymous(cursor) == 0 {
+		decl.name = clone_clang_string(clang.getCursorSpelling(cursor))
+	}
+	// The backing integer type is known for any enum cursor — clang answers
+	// with the target's ABI choice — so capture it even for a declaration
+	// that never gets a definition in this header.
+	decl.backing, _ = capture_type(state, clang.getEnumDeclIntegerType(cursor))
+	handle := ir_add_enum(state.ir, decl)
+	if usr != "" {
+		state.decl_map[usr] = Decl_Ref {
+			kind  = .Enum,
+			index = u32(handle),
+		}
+	}
+	if clang.isCursorDefinition(cursor) != 0 {
+		fill_enum(state, handle, cursor)
+	}
+	return handle
+}
+
+Enum_Fill :: struct {
+	ctx:     runtime.Context,
+	state:   ^Extract_State,
+	members: [dynamic]Enum_Member,
+}
+
+fill_enum :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cursor) {
+	fill := Enum_Fill {
+		ctx   = context,
+		state = state,
+	}
+	clang.visitChildren(cursor, visit_enum_child, &fill)
+	state.ir.enums[int(handle)].members = fill.members[:]
+}
+
+visit_enum_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {
+	fill := cast(^Enum_Fill)client_data
+	context = fill.ctx
+
+	#partial switch clang.getCursorKind(cursor) {
+	case .EnumConstantDecl:
+		member := Enum_Member {
+			name  = clone_clang_string(clang.getCursorSpelling(cursor)),
+			value = i64(clang.getEnumConstantDeclValue(cursor)),
+		}
+		append(&fill.members, member)
 	}
 	return .Continue
 }
@@ -298,6 +363,10 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 	case .Record:
 		decl := record_decl_for_cursor(state, clang.getTypeDeclaration(type))
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Record_Ref{decl = decl}}), true
+
+	case .Enum:
+		decl := enum_decl_for_cursor(state, clang.getTypeDeclaration(type))
+		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Enum_Ref{decl = decl}}), true
 	}
 
 	// Builtins; anything else is not yet representable.
