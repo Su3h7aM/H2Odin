@@ -138,11 +138,11 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		fmt.eprintfln("h2odin: skipping %q: unsupported type", name)
 		return
 	}
-	// An extern array of unknown size has no honest Odin spelling — a
-	// zero-length array would defeat every bounds check on the symbol.
+	// C permits extern arrays with unknown bounds. Odin has no incomplete
+	// array type, so preserve the array object shape as [0]T: callers can
+	// take its address, but no bound is invented.
 	if array, is_array := ir_type(state.ir, type).variant.(Type_Array); is_array && array.is_incomplete {
-		fmt.eprintfln("h2odin: skipping %q: extern array of unknown size", name)
-		return
+		fmt.eprintfln("h2odin: extern array %q has unknown size; emitted as [0]T", name)
 	}
 
 	ir_add_var(state.ir, Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
