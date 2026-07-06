@@ -2,15 +2,25 @@ package h2odin
 
 import "core:fmt"
 
+// Which spelling family Transformation aims for.
+Type_Mode :: enum {
+	ABI, // faithful core:c spellings; always correct
+	Idiomatic, // fixed-width Odin spellings where proven safe on the target
+}
+
 // Transformation is where decisions are made. It reads the analyzed IR
 // together with the configuration policy and records the choices — renames,
 // drops, type picks, conversions. It is the only stage that consults policy.
 //
-transform :: proc(ir: ^IR) {
+transform :: proc(ir: ^IR, mode: Type_Mode) {
 	for _, i in ir.types {
 		lower_type(ir, Type_Handle(i))
 	}
 	report_pointer_lowering_guesses(ir)
+
+	// Leaf substitution lands with the idiomatic pass; the mode is plumbed
+	// through already so the pipeline shape is settled.
+	_ = mode
 }
 
 lower_type :: proc(ir: ^IR, handle: Type_Handle) {
