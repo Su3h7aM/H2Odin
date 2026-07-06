@@ -33,6 +33,7 @@ Policy :: struct {
 	// Which callbacks the config actually defines, checked once at load so
 	// the common no-callback run never touches the VM per declaration.
 	has_rename:       bool,
+	has_keep:         bool,
 }
 
 // What kind of thing a symbol is. Renaming rules commonly differ by kind,
@@ -60,7 +61,7 @@ symbol_kind_names := [Symbol_Kind]cstring {
 // Everything a rename callback gets to see about one symbol. A single table
 // on the Lua side, so richer context can be added without breaking existing
 // configurations.
-Rename_Context :: struct {
+Symbol_Context :: struct {
 	name:         string, // the original C name
 	default_name: string, // the generator's default choice
 	kind:         Symbol_Kind,
@@ -99,6 +100,7 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	lua.setfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
 
 	policy.has_rename = policy_has_function(&policy, "rename")
+	policy.has_keep = policy_has_function(&policy, "keep")
 
 	policy.package_name = policy_string_field(&policy, "package")
 	policy.foreign_lib = policy_string_field(&policy, "foreign_lib")
@@ -123,7 +125,7 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 // returned name is copied into the generation arena. A callback that errors
 // or returns a non-string halts the run: guessing what a broken config meant
 // would generate something the user did not ask for.
-policy_rename :: proc(policy: ^Policy, ctx: Rename_Context) -> (name: string, decided: bool) {
+policy_rename :: proc(policy: ^Policy, ctx: Symbol_Context) -> (name: string, decided: bool) {
 	if !policy.has_rename {
 		return "", false
 	}
@@ -148,8 +150,38 @@ policy_rename :: proc(policy: ^Policy, ctx: Rename_Context) -> (name: string, de
 	return strings.clone(string(lua.tostring(L, -1))), true
 }
 
+// Ask the config whether to keep a declaration. Only nil means "use the
+// default" (keep everything); true and false are both explicit decisions.
+// Anything else halts the run.
+policy_keep :: proc(policy: ^Policy, ctx: Symbol_Context) -> bool {
+	if !policy.has_keep {
+		return true
+	}
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	lua.getfield(L, -1, "keep")
+	push_symbol_table(L, ctx)
+	if lua.pcall(L, 1, 1, 0) != 0 {
+		fmt.eprintfln("h2odin: config keep callback failed: %s", lua.tostring(L, -1))
+		os.exit(1)
+	}
+
+	keep: bool
+	#partial switch lua.type(L, -1) {
+	case .NIL:
+		keep = true
+	case .BOOLEAN:
+		keep = bool(lua.toboolean(L, -1))
+	case:
+		fmt.eprintfln("h2odin: config keep for %q must return a boolean or nil", ctx.name)
+		os.exit(1)
+	}
+	lua.pop(L, 2) // the result and the config table
+	return keep
+}
+
 // Build the single context table a callback receives.
-push_symbol_table :: proc(L: ^lua.State, ctx: Rename_Context) {
+push_symbol_table :: proc(L: ^lua.State, ctx: Symbol_Context) {
 	lua.createtable(L, 0, 4)
 	push_string_field(L, "name", ctx.name)
 	push_string_field(L, "default", ctx.default_name)

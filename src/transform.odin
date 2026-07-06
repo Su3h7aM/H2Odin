@@ -22,7 +22,52 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 		substitute_leaf_types(ir)
 	}
 
+	filter_declarations(ir, policy)
 	apply_renames(ir, policy)
+}
+
+// Offer every top-level declaration to the config's keep callback and
+// rebuild the ordering list with the survivors. Dropping is an ordering-list
+// operation only — the declaration stays in its pool, so handles held by
+// other types remain valid. Members and fields are never offered: dropping
+// one would change a layout or an enum the header defines.
+filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
+	if !policy.has_keep {
+		return
+	}
+	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
+	for ref in ir.order {
+		name: string
+		kind: Symbol_Kind
+		switch ref.kind {
+		case .Invalid:
+			continue
+		case .Func:
+			name = ir.funcs[ref.index].name
+			kind = .Func
+		case .Record:
+			name = ir.records[ref.index].name
+			kind = .Type
+		case .Enum:
+			name = ir.enums[ref.index].name
+			kind = .Type
+		case .Typedef:
+			name = ir.typedefs[ref.index].name
+			kind = .Type
+		case .Var:
+			name = ir.vars[ref.index].name
+			kind = .Var
+		case .Macro:
+			name = ir.macros[ref.index].name
+			kind = .Const
+		}
+		// Anonymous declarations are spelled inline where they are used;
+		// they stand or fall with their user, not on their own.
+		if name == "" || policy_keep(policy, Symbol_Context{name = name, default_name = name, kind = kind}) {
+			append(&kept, ref)
+		}
+	}
+	ir.order = kept
 }
 
 // Offer every named symbol to the config's rename callback. Functions and
@@ -89,7 +134,7 @@ rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: stri
 	if name == "" {
 		return "", false
 	}
-	new_name, decided := policy_rename(policy, Rename_Context{name = name, default_name = name, kind = kind, parent = parent})
+	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = name, kind = kind, parent = parent})
 	if !decided || new_name == name {
 		return "", false
 	}
