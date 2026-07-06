@@ -180,7 +180,12 @@ write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: i
 // Member values are stored as raw i64 bits; the backing type's signedness
 // decides how they read back.
 write_enum_value :: proc(b: ^strings.Builder, ir: ^IR, backing: Type_Handle, value: i64) {
-	builtin, is_builtin := ir_type(ir, backing).variant.(Type_Builtin)
+	info := ir_type(ir, backing)
+	if leaf, is_leaf := info.variant.(Type_Idiomatic_Leaf); is_leaf {
+		// Signedness lives on the original the substitution replaced.
+		info = ir_type(ir, leaf.original)
+	}
+	builtin, is_builtin := info.variant.(Type_Builtin)
 	if is_builtin && builtin_is_unsigned(builtin.kind) {
 		fmt.sbprintf(b, "%d", u64(value))
 	} else {
@@ -325,6 +330,11 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		}
 		uses_core_c^ = true
 		strings.write_string(b, mapping.abi)
+
+	case Type_Idiomatic_Leaf:
+		// A substitution proven in Transformation; a plain Odin type that
+		// needs no core:c.
+		strings.write_string(b, variant.spelling)
 
 	case Type_Pointer:
 		panic("raw pointer reached emission before Transformation lowered it")

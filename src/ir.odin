@@ -52,6 +52,7 @@ Type_Info :: struct {
 Type_Variant :: union {
 	Type_Builtin,
 	Type_Std,
+	Type_Idiomatic_Leaf,
 	Type_Pointer,
 	Type_Lowered_Pointer,
 	Type_Array,
@@ -82,6 +83,21 @@ Type_Std :: struct {
 	// Same contract as Type_Builtin.size: measured by libclang on the
 	// extraction target, -1 when unknown.
 	size: int,
+}
+
+Idiomatic_Reason :: enum {
+	Target_Independent, // core:c defines the name as the same Odin type on every target
+	Size_Proven, // the size measured during extraction equals the Odin type's size
+}
+
+// Transformation's decision, in idiomatic mode, to spell a leaf C type with
+// a fixed-width Odin name. Created only when the substitution is proven safe;
+// unproven leaves keep their ABI spelling. The original type moves to its own
+// slot so the decision stays auditable (and signedness queries keep working).
+Type_Idiomatic_Leaf :: struct {
+	original: Type_Handle, // the Type_Builtin / Type_Std this decision replaced
+	spelling: string, // from the types.odin tables
+	reason:   Idiomatic_Reason,
 }
 
 Type_Pointer :: struct {

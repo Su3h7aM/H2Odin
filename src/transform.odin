@@ -18,9 +18,66 @@ transform :: proc(ir: ^IR, mode: Type_Mode) {
 	}
 	report_pointer_lowering_guesses(ir)
 
-	// Leaf substitution lands with the idiomatic pass; the mode is plumbed
-	// through already so the pipeline shape is settled.
-	_ = mode
+	if mode == .Idiomatic {
+		substitute_leaf_types(ir)
+	}
+}
+
+// Replace each leaf C type with its fixed-width Odin spelling when that is
+// provably safe: either core:c defines the name as the same Odin type on
+// every target, or the size libclang measured during extraction equals the
+// Odin type's size. Anything unproven keeps its ABI spelling — correctness
+// over convenience, never a guess.
+substitute_leaf_types :: proc(ir: ^IR) {
+	count := len(ir.types) // slots appended below carry no leaves to revisit
+	for i in 0 ..< count {
+		info := ir.types[i]
+		spelling: string
+		independent: bool
+		measured: int
+		#partial switch variant in info.variant {
+		case Type_Builtin:
+			row := builtin_spellings[variant.kind]
+			spelling = row.idiomatic
+			independent = row.target_independent
+			measured = variant.size
+		case Type_Std:
+			row, known := std_mapping_for(variant.name)
+			if !known {
+				continue
+			}
+			spelling = row.idiomatic
+			independent = row.target_independent
+			measured = variant.size
+		case:
+			continue
+		}
+		if spelling == "" {
+			// No idiomatic form decided for this type.
+			continue
+		}
+
+		reason: Idiomatic_Reason
+		switch {
+		case independent:
+			reason = .Target_Independent
+		case measured >= 0 && measured == odin_type_size(spelling):
+			reason = .Size_Proven
+		case:
+			// Unknown or mismatched size on this target: unproven, keep the
+			// ABI spelling.
+			continue
+		}
+
+		// Rewriting the shared slot in place substitutes every use at once —
+		// interned builtins and enum backing types included. The original
+		// moves to a fresh slot first.
+		original := ir_add_type(ir, info)
+		ir.types[i] = Type_Info {
+			is_const = info.is_const,
+			variant = Type_Idiomatic_Leaf{original = original, spelling = spelling, reason = reason},
+		}
+	}
 }
 
 lower_type :: proc(ir: ^IR, handle: Type_Handle) {

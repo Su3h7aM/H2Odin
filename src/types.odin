@@ -115,6 +115,25 @@ std_mappings := []Std_Mapping {
 SPELLING_RAWPTR :: "rawptr"
 SPELLING_CSTRING :: "cstring"
 
+// The size in bytes of a fixed-width Odin type named in an idiomatic column;
+// -1 for spellings whose size is not fixed across targets (int, uint,
+// uintptr). Substitution proofs compare a size measured by libclang against
+// this — a -1 here can never prove anything, which is exactly right for
+// pointer-width types.
+odin_type_size :: proc(spelling: string) -> int {
+	switch spelling {
+	case "bool", "i8", "u8":
+		return 1
+	case "i16", "u16":
+		return 2
+	case "i32", "u32", "f32":
+		return 4
+	case "i64", "u64", "f64":
+		return 8
+	}
+	return -1
+}
+
 std_mapping_for :: proc(name: string) -> (Std_Mapping, bool) {
 	for mapping in std_mappings {
 		if mapping.c_name == name {
