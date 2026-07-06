@@ -205,6 +205,7 @@ Macro_Decl :: struct {
 	name:             string,
 	tokens:           []Macro_Token, // raw replacement-list tokens after the name
 	is_function_like: bool,
+	doc:              string,
 }
 
 IR :: struct {

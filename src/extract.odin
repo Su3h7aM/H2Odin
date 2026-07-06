@@ -103,6 +103,7 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 			name = clone_clang_string(clang.getCursorSpelling(cursor)),
 			tokens = replacement,
 			is_function_like = clang.Cursor_isMacroFunctionLike(cursor) != 0,
+			doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
 		},
 	)
 }
@@ -144,7 +145,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		return
 	}
 
-	ir_add_var(state.ir, Var_Decl{name = name, type = type})
+	ir_add_var(state.ir, Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
 }
 
 // Get or create the IR declaration for a typedef cursor. The underlying type
@@ -159,6 +160,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 
 	decl := Typedef_Decl {
 		name = clone_clang_string(clang.getCursorSpelling(cursor)),
+		doc  = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
 	}
 	handle := ir_add_typedef(state.ir, decl)
 	if usr != "" {
@@ -198,6 +200,9 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 	usr := clone_clang_string(clang.getCursorUSR(cursor))
 	if ref, found := state.decl_map[usr]; usr != "" && found {
 		handle := Decl_Handle(ref.index)
+		if state.ir.enums[int(handle)].doc == "" {
+			state.ir.enums[int(handle)].doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
+		}
 		if clang.isCursorDefinition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
 			fill_enum(state, handle, cursor)
 		}
@@ -208,6 +213,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 	if clang.Cursor_isAnonymous(cursor) == 0 {
 		decl.name = clone_clang_string(clang.getCursorSpelling(cursor))
 	}
+	decl.doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
 	// The backing integer type is known for any enum cursor — clang answers
 	// with the target's ABI choice — so capture it even for a declaration
 	// that never gets a definition in this header.
@@ -249,6 +255,7 @@ visit_enum_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data
 		member := Enum_Member {
 			name  = clone_clang_string(clang.getCursorSpelling(cursor)),
 			value = i64(clang.getEnumConstantDeclValue(cursor)),
+			doc   = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
 		}
 		append(&fill.members, member)
 	}
@@ -263,6 +270,9 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	usr := clone_clang_string(clang.getCursorUSR(cursor))
 	if ref, found := state.decl_map[usr]; usr != "" && found {
 		handle := Decl_Handle(ref.index)
+		if state.ir.records[int(handle)].doc == "" {
+			state.ir.records[int(handle)].doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
+		}
 		if clang.isCursorDefinition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
 			fill_record(state, handle, cursor)
 		}
@@ -277,6 +287,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	if clang.Cursor_isAnonymous(cursor) == 0 {
 		record.name = clone_clang_string(clang.getCursorSpelling(cursor))
 	}
+	record.doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
 	handle := ir_add_record(state.ir, record)
 	if usr != "" {
 		state.decl_map[usr] = Decl_Ref {
@@ -357,7 +368,7 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 			}
 			return .Continue
 		}
-		append(&fill.fields, Field{name = name, type = type})
+		append(&fill.fields, Field{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
 	case .PackedAttr:
 		fill.is_packed = true
 	case .StructDecl, .UnionDecl, .EnumDecl:
@@ -374,7 +385,7 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 				}
 				return .Continue
 			}
-			append(&fill.fields, Field{name = "", type = type})
+			append(&fill.fields, Field{name = "", type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
 		}
 	}
 	return .Continue
@@ -415,6 +426,7 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		return_type = return_type,
 		params      = params,
 		is_variadic = clang.Cursor_isVariadic(cursor) != 0,
+		doc         = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
 	}
 	ir_add_func(state.ir, func)
 }
@@ -424,7 +436,11 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 // the IR.
 clone_clang_string :: proc(s: clang.String) -> string {
 	defer clang.disposeString(s)
-	return strings.clone_from_cstring(clang.getCString(s))
+	c_str := clang.getCString(s)
+	if c_str == nil {
+		return ""
+	}
+	return strings.clone_from_cstring(c_str)
 }
 
 // A C parameter of array or function type is really a pointer — decay it

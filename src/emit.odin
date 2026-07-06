@@ -66,6 +66,7 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, uses_core
 		// or the typedef that names them); they have no standalone form.
 		return
 	}
+	write_doc(b, record.doc, 0)
 	fmt.sbprintf(b, "%s :: ", record.name)
 	write_record_body(b, ir, record, 0, uses_core_c)
 	strings.write_string(b, "\n\n")
@@ -92,6 +93,7 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 	}
 	strings.write_string(b, " {\n")
 	for field in record.fields {
+		write_doc(b, field.doc, indent + 1)
 		write_indent(b, indent + 1)
 		if field.name == "" {
 			// A C11 anonymous member: its fields read as the parent's.
@@ -109,6 +111,27 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 write_indent :: proc(b: ^strings.Builder, indent: int) {
 	for _ in 0 ..< indent {
 		strings.write_string(b, "\t")
+	}
+}
+
+write_doc :: proc(b: ^strings.Builder, doc: string, indent: int) {
+	if doc == "" {
+		return
+	}
+	line_start := 0
+	for i in 0 ..< len(doc) {
+		if doc[i] != '\n' {
+			continue
+		}
+		write_indent(b, indent)
+		strings.write_string(b, doc[line_start:i])
+		strings.write_string(b, "\n")
+		line_start = i + 1
+	}
+	if line_start < len(doc) {
+		write_indent(b, indent)
+		strings.write_string(b, doc[line_start:])
+		strings.write_string(b, "\n")
 	}
 }
 
@@ -133,6 +156,7 @@ emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, uses_core_c: ^b
 		strings.write_string(b, "\n")
 		return
 	}
+	write_doc(b, decl.doc, 0)
 	fmt.sbprintf(b, "%s :: ", decl.name)
 	write_enum_body(b, ir, decl, 0, uses_core_c)
 	strings.write_string(b, "\n\n")
@@ -143,6 +167,7 @@ write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: i
 	write_type(b, ir, decl.backing, indent, uses_core_c)
 	strings.write_string(b, " {\n")
 	for member in decl.members {
+		write_doc(b, member.doc, indent + 1)
 		write_indent(b, indent + 1)
 		fmt.sbprintf(b, "%s = ", member.name)
 		write_enum_value(b, ir, decl.backing, member.value)
@@ -189,12 +214,14 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, uses_core
 			return
 		}
 	}
+	write_doc(b, decl.doc, 0)
 	fmt.sbprintf(b, "%s :: ", decl.name)
 	write_type(b, ir, decl.aliased, 0, uses_core_c)
 	strings.write_string(b, "\n\n")
 }
 
 emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, uses_core_c: ^bool) {
+	write_doc(b, decl.doc, 1)
 	fmt.sbprintf(b, "\t%s: ", decl.name)
 	write_type(b, ir, decl.type, 1, uses_core_c)
 	strings.write_string(b, "\n")
@@ -210,6 +237,7 @@ emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl) {
 		return
 	}
 
+	write_doc(b, decl.doc, 0)
 	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
 }
 
@@ -231,6 +259,7 @@ macro_literal_can_emit :: proc(s: string) -> bool {
 }
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {
+	write_doc(b, func.doc, 1)
 	fmt.sbprintf(b, "\t%s :: proc(", func.name)
 	write_params(b, ir, func.params, func.is_variadic, uses_core_c)
 	strings.write_string(b, ")")
