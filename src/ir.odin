@@ -147,9 +147,17 @@ Decl_Ref :: struct {
 	index: u32,
 }
 
+Param_Facts :: struct {
+	is_length_like:            bool,
+	length_for_pointer_index:  i32,
+	has_length_like_neighbour: bool,
+	length_param_index:        i32,
+}
+
 Param :: struct {
-	name: string, // "" when the parameter is unnamed in the header
-	type: Type_Handle,
+	name:  string, // "" when the parameter is unnamed in the header
+	type:  Type_Handle,
+	facts: Param_Facts,
 }
 
 Func_Decl :: struct {

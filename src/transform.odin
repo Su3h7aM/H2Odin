@@ -56,11 +56,17 @@ report_pointer_lowering_guesses :: proc(ir: ^IR) {
 			decl := ir.funcs[ref.index]
 			report_type_guesses(ir, decl.return_type, fmt.tprintf("function %q return type", decl.name))
 			for param, i in decl.params {
+				site: string
 				if param.name != "" {
-					report_type_guesses(ir, param.type, fmt.tprintf("function %q parameter %q", decl.name, param.name))
+					site = fmt.tprintf("function %q parameter %q", decl.name, param.name)
 				} else {
-					report_type_guesses(ir, param.type, fmt.tprintf("function %q parameter %d", decl.name, i))
+					site = fmt.tprintf("function %q parameter %d", decl.name, i)
 				}
+				if param.facts.has_length_like_neighbour {
+					length_param := decl.params[param.facts.length_param_index]
+					site = fmt.tprintf("%s (length-like neighbour %q)", site, length_param.name)
+				}
+				report_type_guesses(ir, param.type, site)
 			}
 		case .Record:
 			decl := ir.records[ref.index]
