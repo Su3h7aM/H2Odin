@@ -3,6 +3,7 @@ package h2odin
 import "base:runtime"
 import "core:c"
 import "core:fmt"
+import "core:os"
 import "core:strings"
 
 import clang "vendored:libclang"
@@ -33,7 +34,11 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	// -fparse-all-comments: attach any comment adjacent to a declaration as
 	// its documentation, not only doc-style ones (/** */, ///) — headers like
 	// sqlite3.h document everything in plain /* */ blocks.
-	args := [?]cstring{"-resource-dir=/usr/lib/clang/22", "-fparse-all-comments"}
+	args := make([dynamic]cstring, context.temp_allocator)
+	append(&args, "-fparse-all-comments")
+	if resource_arg, found := clang_resource_dir_arg(); found {
+		append(&args, resource_arg)
+	}
 	tu := clang.parseTranslationUnit(index, path, raw_data(args[:]), c.int(len(args)), nil, 0, {.DetailedPreprocessingRecord})
 	if tu == nil {
 		fmt.eprintfln("h2odin: failed to parse %q", header_path)
@@ -49,6 +54,24 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	}
 	clang.visitChildren(clang.getTranslationUnitCursor(tu), visit_top_level, &state)
 	return true
+}
+
+// The location of clang's builtin headers (stddef.h, stdbool.h, …). This
+// binding does not expose it, but the clang driver knows it exactly. Without
+// the right resource dir those headers are missing and clang error-recovers
+// size_t to int — a silently wrong ABI, the worst failure mode there is.
+// When the driver is unavailable the flag is simply omitted; the parse
+// diagnostics then report whatever actually breaks.
+clang_resource_dir_arg :: proc() -> (arg: cstring, ok: bool) {
+	state, stdout, _, err := os.process_exec({command = {"clang", "-print-resource-dir"}}, context.temp_allocator)
+	if err != nil || !state.exited || state.exit_code != 0 {
+		return "", false
+	}
+	dir := strings.trim_space(string(stdout))
+	if dir == "" {
+		return "", false
+	}
+	return strings.clone_to_cstring(fmt.tprintf("-resource-dir=%s", dir), context.temp_allocator), true
 }
 
 visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {
