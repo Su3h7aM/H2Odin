@@ -29,10 +29,14 @@ lower_type :: proc(ir: ^IR, handle: Type_Handle) {
 }
 
 lower_pointer :: proc(ir: ^IR, pointee: Type_Handle) -> Type_Lowered_Pointer {
-	#partial switch variant in ir_type(ir, pointee).variant {
+	pointee_info := ir_type(ir, pointee)
+	#partial switch variant in pointee_info.variant {
 	case Type_Builtin:
 		if variant.kind == .Void {
 			return Type_Lowered_Pointer{pointee = pointee, kind = .Rawptr, confidence = .Proven, reason = .Void_Pointer}
+		}
+		if variant.kind == .Char && pointee_info.is_const {
+			return Type_Lowered_Pointer{pointee = pointee, kind = .CString, confidence = .Proven, reason = .Const_Char_Pointer}
 		}
 	case Type_Proc:
 		return Type_Lowered_Pointer{pointee = pointee, kind = .Proc, confidence = .Proven, reason = .Function_Pointer}

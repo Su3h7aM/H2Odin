@@ -319,6 +319,9 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		case .Rawptr:
 			strings.write_string(b, "rawptr")
 			return
+		case .CString:
+			strings.write_string(b, "cstring")
+			return
 		case .Proc:
 			write_type(b, ir, variant.pointee, indent, uses_core_c)
 			return

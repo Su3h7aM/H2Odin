@@ -80,6 +80,7 @@ Type_Pointer :: struct {
 Pointer_Lowering_Kind :: enum {
 	Single, // T* → ^T
 	Rawptr, // void* → rawptr
+	CString, // const char* → cstring
 	Proc, // function pointer → proc "c" (...)
 }
 
@@ -90,6 +91,7 @@ Pointer_Lowering_Confidence :: enum {
 
 Pointer_Lowering_Reason :: enum {
 	Void_Pointer,
+	Const_Char_Pointer,
 	Function_Pointer,
 	Single_Pointer_Default,
 }
