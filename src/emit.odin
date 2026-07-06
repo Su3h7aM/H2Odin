@@ -277,6 +277,8 @@ write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic:
 		}
 		if param.name != "" {
 			fmt.sbprintf(b, "%s: ", param.name)
+		} else {
+			strings.write_string(b, "_: ")
 		}
 		write_type(b, ir, param.type, 1, uses_core_c)
 	}
