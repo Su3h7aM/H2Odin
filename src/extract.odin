@@ -62,8 +62,55 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 		record_decl_for_cursor(state, cursor)
 	case .EnumDecl:
 		enum_decl_for_cursor(state, cursor)
+	case .TypedefDecl:
+		typedef_decl_for_cursor(state, cursor)
 	}
 	return .Continue
+}
+
+// Get or create the IR declaration for a typedef cursor. The underlying type
+// is captured immediately; the decl is mapped first so a recursive mention —
+// typedef struct N { TD *p; } TD; — resolves to this decl instead of
+// recursing forever.
+typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
+	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	if ref, found := state.decl_map[usr]; usr != "" && found {
+		return Decl_Handle(ref.index)
+	}
+
+	decl := Typedef_Decl {
+		name = clone_clang_string(clang.getCursorSpelling(cursor)),
+	}
+	handle := ir_add_typedef(state.ir, decl)
+	if usr != "" {
+		state.decl_map[usr] = Decl_Ref {
+			kind  = .Typedef,
+			index = u32(handle),
+		}
+	}
+
+	aliased, aliased_ok := capture_type(state, clang.getTypedefDeclUnderlyingType(cursor))
+	if !aliased_ok {
+		state.ir.typedefs[int(handle)].is_unresolvable = true
+		fmt.eprintfln("h2odin: typedef %q aliases an unsupported type; skipped along with its uses", decl.name)
+		return handle
+	}
+	state.ir.typedefs[int(handle)].aliased = aliased
+
+	// When the typedef names an anonymous tag — typedef struct { … } Name —
+	// remember that on the tag: the tag's only Odin spelling will be the
+	// body emitted at this typedef.
+	#partial switch target in ir_type(state.ir, aliased).variant {
+	case Type_Record_Ref:
+		if state.ir.records[int(target.decl)].name == "" {
+			state.ir.records[int(target.decl)].is_typedef_named = true
+		}
+	case Type_Enum_Ref:
+		if state.ir.enums[int(target.decl)].name == "" {
+			state.ir.enums[int(target.decl)].is_typedef_named = true
+		}
+	}
+	return handle
 }
 
 // Get or create the IR declaration for an enum cursor; fill its members when
@@ -367,6 +414,13 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 	case .Enum:
 		decl := enum_decl_for_cursor(state, clang.getTypeDeclaration(type))
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Enum_Ref{decl = decl}}), true
+
+	case .Typedef:
+		decl := typedef_decl_for_cursor(state, clang.getTypeDeclaration(type))
+		if ir.typedefs[int(decl)].is_unresolvable {
+			return 0, false
+		}
+		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Typedef_Ref{decl = decl}}), true
 	}
 
 	// Builtins; anything else is not yet representable.

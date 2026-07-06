@@ -32,7 +32,9 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 			emit_record(&types_body, ir, ir.records[ref.index], &uses_core_c)
 		case .Enum:
 			emit_enum(&types_body, ir, ir.enums[ref.index], &uses_core_c)
-		case .Typedef, .Var, .Macro:
+		case .Typedef:
+			emit_typedef(&types_body, ir, ir.typedefs[ref.index], &uses_core_c)
+		case .Var, .Macro:
 		// Not yet emitted; extraction for these lands kind by kind.
 		}
 	}
@@ -115,9 +117,12 @@ emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, uses_core_c: ^b
 		return
 	}
 	if decl.name == "" {
+		if decl.is_typedef_named {
+			// Emitted as a named enum at the typedef that names it.
+			return
+		}
 		// A C anonymous enum is just a bag of integer constants; that is
-		// exactly what it becomes. (One a typedef names is emitted at the
-		// typedef instead.)
+		// exactly what it becomes.
 		for member in decl.members {
 			fmt.sbprintf(b, "%s :: ", member.name)
 			write_enum_value(b, ir, decl.backing, member.value)
@@ -162,6 +167,29 @@ builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
 		return true
 	}
 	return false
+}
+
+emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, uses_core_c: ^bool) {
+	if decl.is_unresolvable {
+		// Reported during extraction; nothing faithful to emit.
+		return
+	}
+	#partial switch target in ir_type(ir, decl.aliased).variant {
+	case Type_Record_Ref:
+		record := ir.records[target.decl]
+		if record.name == decl.name {
+			// The typedef struct Foo { … } Foo idiom: the record's own
+			// emission already claims the name.
+			return
+		}
+	case Type_Enum_Ref:
+		if ir.enums[target.decl].name == decl.name {
+			return
+		}
+	}
+	fmt.sbprintf(b, "%s :: ", decl.name)
+	write_type(b, ir, decl.aliased, 0, uses_core_c)
+	strings.write_string(b, "\n\n")
 }
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {
@@ -271,9 +299,9 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		}
 
 	case Type_Typedef_Ref:
-		// Extraction cannot produce these yet; their spellings land with
-		// their extraction, kind by kind.
-		panic("decl-ref type spellings land with their extraction")
+		// Unresolvable typedefs never reach emission: capture refuses to
+		// hand out references to them.
+		strings.write_string(b, ir.typedefs[variant.decl].name)
 	}
 }
 

@@ -161,9 +161,14 @@ Enum_Decl :: struct {
 }
 
 Typedef_Decl :: struct {
-	name:    string,
-	aliased: Type_Handle, // invalid handle → unsupported underlying type
-	doc:     string,
+	name:            string,
+	aliased:         Type_Handle,
+
+	// The underlying type could not be captured. The typedef is skipped and
+	// so is anything that uses it — emitting a dangling name would just move
+	// the failure into the generated code.
+	is_unresolvable: bool,
+	doc:             string,
 }
 
 Var_Decl :: struct {
