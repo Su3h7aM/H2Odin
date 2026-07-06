@@ -69,7 +69,7 @@ Reaching this means the architecture works. Everything after is widening a prove
 ## Milestone 7 — Robustness & polish
 
 - [ ] Diagnostics report: list every non-certain decision in a run.
-- [ ] Check libclang parse diagnostics; fail loudly on bad `-I`/`-D` rather than emitting partial output.
+- [x] Check libclang parse diagnostics; fail loudly on bad `-I`/`-D` rather than emitting partial output. _(pulled forward)_
 - [ ] Config validation with clear error messages.
 - [ ] Real build/usage instructions in the README; fill the verification commands in `AGENTS.md`.
 - [ ] Optionally sandbox the Lua config (withhold `io`/`os`) to make determinism structural.

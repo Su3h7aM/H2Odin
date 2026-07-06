@@ -27,7 +27,7 @@ Extract_State :: struct {
 }
 
 extract :: proc(header_path: string, ir: ^IR) -> bool {
-	index := clang.createIndex(0, 1) // 1: let libclang print parse diagnostics to stderr
+	index := clang.createIndex(0, 0) // diagnostics are printed by check_parse_diagnostics
 	defer clang.disposeIndex(index)
 
 	path := strings.clone_to_cstring(header_path, context.temp_allocator)
@@ -46,6 +46,10 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	}
 	defer clang.disposeTranslationUnit(tu)
 
+	if !check_parse_diagnostics(tu, header_path) {
+		return false
+	}
+
 	state := Extract_State {
 		ctx      = context,
 		ir       = ir,
@@ -54,6 +58,31 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	}
 	clang.visitChildren(clang.getTranslationUnitCursor(tu), visit_top_level, &state)
 	return true
+}
+
+// Print every parse diagnostic; refuse to continue past errors. Clang
+// error-recovers from a bad parse (a missing stddef.h turns size_t into
+// int), so an AST with errors in it describes an ABI the header does not
+// have — no output at all beats silently wrong output.
+check_parse_diagnostics :: proc(tu: clang.Translation_Unit, header_path: string) -> bool {
+	ok := true
+	for i in 0 ..< clang.getNumDiagnostics(tu) {
+		diag := clang.getDiagnostic(tu, i)
+		defer clang.disposeDiagnostic(diag)
+
+		severity := clang.getDiagnosticSeverity(diag)
+		if severity == .Ignored {
+			continue
+		}
+		fmt.eprintln(clone_clang_string(clang.formatDiagnostic(diag, clang.defaultDiagnosticDisplayOptions())))
+		if severity >= .Error {
+			ok = false
+		}
+	}
+	if !ok {
+		fmt.eprintfln("h2odin: %q did not parse cleanly; refusing to generate from a guessed AST", header_path)
+	}
+	return ok
 }
 
 // The location of clang's builtin headers (stddef.h, stdbool.h, …). This
