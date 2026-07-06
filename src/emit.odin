@@ -307,11 +307,24 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 	}
 	switch variant in info.variant {
 	case Type_Builtin:
-		strings.write_string(b, abi_builtin_name(variant.kind, uses_core_c))
+		spelling := builtin_spellings[variant.kind]
+		if spelling.abi == "" {
+			// C void never appears as a parameter in the IR, and void
+			// returns are handled by the caller omitting the result.
+			panic("void type has no ABI spelling")
+		}
+		uses_core_c^ = true
+		strings.write_string(b, spelling.abi)
 
 	case Type_Std:
+		mapping, known := std_mapping_for(variant.name)
+		if !known {
+			// Extraction only builds Type_Std for names it found in
+			// std_mappings, so a miss here is a pipeline bug.
+			panic("std typedef reached emission without a spelling")
+		}
 		uses_core_c^ = true
-		fmt.sbprintf(b, "c.%s", variant.name)
+		strings.write_string(b, mapping.abi)
 
 	case Type_Pointer:
 		panic("raw pointer reached emission before Transformation lowered it")
@@ -319,10 +332,10 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 	case Type_Lowered_Pointer:
 		#partial switch variant.kind {
 		case .Rawptr:
-			strings.write_string(b, "rawptr")
+			strings.write_string(b, SPELLING_RAWPTR)
 			return
 		case .CString:
-			strings.write_string(b, "cstring")
+			strings.write_string(b, SPELLING_CSTRING)
 			return
 		case .Proc:
 			write_type(b, ir, variant.pointee, indent, uses_core_c)
@@ -378,45 +391,4 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		// hand out references to them.
 		strings.write_string(b, ir.typedefs[variant.decl].name)
 	}
-}
-
-// Exhaustive over Builtin_Kind on purpose: adding a builtin without deciding
-// its ABI spelling must not compile.
-abi_builtin_name :: proc(kind: Builtin_Kind, uses_core_c: ^bool) -> string {
-	uses_core_c^ = true
-	switch kind {
-	case .Void:
-		// C void never appears as a parameter in the IR, and void returns
-		// are handled by the caller omitting the result entirely.
-		panic("void type has no ABI spelling")
-	case .Bool:
-		return "c.bool"
-	case .Char:
-		return "c.char"
-	case .S_Char:
-		return "c.schar"
-	case .U_Char:
-		return "c.uchar"
-	case .Short:
-		return "c.short"
-	case .U_Short:
-		return "c.ushort"
-	case .Int:
-		return "c.int"
-	case .U_Int:
-		return "c.uint"
-	case .Long:
-		return "c.long"
-	case .U_Long:
-		return "c.ulong"
-	case .Long_Long:
-		return "c.longlong"
-	case .U_Long_Long:
-		return "c.ulonglong"
-	case .Float:
-		return "c.float"
-	case .Double:
-		return "c.double"
-	}
-	return ""
 }

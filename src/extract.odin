@@ -547,31 +547,6 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 	return handle, true
 }
 
-// The standard C typedefs that core:c spells under the same name, so the
-// generated code can say c.uint32_t instead of re-declaring libc's chain.
-is_std_c_type :: proc(name: string) -> bool {
-	switch name {
-	case "size_t",
-	     "ssize_t",
-	     "wchar_t",
-	     "ptrdiff_t",
-	     "int8_t",
-	     "int16_t",
-	     "int32_t",
-	     "int64_t",
-	     "uint8_t",
-	     "uint16_t",
-	     "uint32_t",
-	     "uint64_t",
-	     "intptr_t",
-	     "uintptr_t",
-	     "intmax_t",
-	     "uintmax_t":
-		return true
-	}
-	return false
-}
-
 builtin_kind_from_clang :: proc(clang_kind: clang.Type_Kind) -> (kind: Builtin_Kind, ok: bool) {
 	#partial switch clang_kind {
 	case .Void:
