@@ -189,6 +189,10 @@ Param :: struct {
 
 Func_Decl :: struct {
 	name:        string,
+
+	// The C symbol when a rename changed the Odin-visible name; "" means
+	// name still is the symbol and no @(link_name) is needed.
+	link_name:   string,
 	return_type: Type_Handle,
 	params:      []Param,
 	is_variadic: bool,
@@ -243,9 +247,10 @@ Typedef_Decl :: struct {
 }
 
 Var_Decl :: struct {
-	name: string,
-	type: Type_Handle,
-	doc:  string,
+	name:      string,
+	link_name: string, // as in Func_Decl
+	type:      Type_Handle,
+	doc:       string,
 }
 
 Macro_Token_Kind :: enum {

@@ -66,7 +66,7 @@ main :: proc() {
 		os.exit(1)
 	}
 	analyze(&ir)
-	transform(&ir, mode)
+	transform(&ir, mode, &policy)
 
 	// The package and foreign library names default to the header's stem;
 	// the config may override either.

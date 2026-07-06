@@ -227,6 +227,9 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, uses_core
 
 emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, uses_core_c: ^bool) {
 	write_doc(b, decl.doc, 1)
+	if decl.link_name != "" {
+		fmt.sbprintfln(b, "\t@(link_name = %q)", decl.link_name)
+	}
 	fmt.sbprintf(b, "\t%s: ", decl.name)
 	write_type(b, ir, decl.type, 1, uses_core_c)
 	strings.write_string(b, "\n")
@@ -265,6 +268,9 @@ macro_literal_can_emit :: proc(s: string) -> bool {
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {
 	write_doc(b, func.doc, 1)
+	if func.link_name != "" {
+		fmt.sbprintfln(b, "\t@(link_name = %q)", func.link_name)
+	}
 	fmt.sbprintf(b, "\t%s :: proc(", func.name)
 	write_params(b, ir, func.params, func.is_variadic, uses_core_c)
 	strings.write_string(b, ")")

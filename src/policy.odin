@@ -2,6 +2,7 @@ package h2odin
 
 import "core:c"
 import "core:fmt"
+import "core:os"
 import "core:strings"
 
 import lua "vendor:lua/5.4"
@@ -28,6 +29,42 @@ Policy :: struct {
 	foreign_lib:      string,
 	type_mode:        Type_Mode,
 	type_mode_is_set: bool,
+
+	// Which callbacks the config actually defines, checked once at load so
+	// the common no-callback run never touches the VM per declaration.
+	has_rename:       bool,
+}
+
+// What kind of thing a symbol is. Renaming rules commonly differ by kind,
+// so the kind travels with every symbol handed to a callback.
+Symbol_Kind :: enum {
+	Func,
+	Type, // struct/union/enum/typedef names
+	Var,
+	Const, // macro constants
+	Enum_Member,
+	Field,
+}
+
+// The kind names as the Lua side sees them.
+@(rodata)
+symbol_kind_names := [Symbol_Kind]cstring {
+	.Func        = "function",
+	.Type        = "type",
+	.Var         = "variable",
+	.Const       = "constant",
+	.Enum_Member = "enum_member",
+	.Field       = "field",
+}
+
+// Everything a rename callback gets to see about one symbol. A single table
+// on the Lua side, so richer context can be added without breaking existing
+// configurations.
+Rename_Context :: struct {
+	name:         string, // the original C name
+	default_name: string, // the generator's default choice
+	kind:         Symbol_Kind,
+	parent:       string, // owning declaration for members/fields; "" otherwise
 }
 
 // Load and execute the Lua configuration once, at startup. The file must
@@ -61,6 +98,8 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	policy.state = L
 	lua.setfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
 
+	policy.has_rename = policy_has_function(&policy, "rename")
+
 	policy.package_name = policy_string_field(&policy, "package")
 	policy.foreign_lib = policy_string_field(&policy, "foreign_lib")
 	switch mode := policy_string_field(&policy, "type_mode"); mode {
@@ -79,11 +118,66 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	return policy, true
 }
 
+// Ask the config to rename a symbol. decided = false means no rename
+// callback exists or it returned nil — the caller keeps the default. The
+// returned name is copied into the generation arena. A callback that errors
+// or returns a non-string halts the run: guessing what a broken config meant
+// would generate something the user did not ask for.
+policy_rename :: proc(policy: ^Policy, ctx: Rename_Context) -> (name: string, decided: bool) {
+	if !policy.has_rename {
+		return "", false
+	}
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	lua.getfield(L, -1, "rename")
+	push_symbol_table(L, ctx)
+	if lua.pcall(L, 1, 1, 0) != 0 {
+		fmt.eprintfln("h2odin: config rename callback failed: %s", lua.tostring(L, -1))
+		os.exit(1)
+	}
+	defer lua.pop(L, 2) // the result and the config table
+
+	if lua.isnil(L, -1) {
+		return "", false
+	}
+	// Exact type check: lua_isstring would accept numbers by coercion.
+	if lua.type(L, -1) != .STRING {
+		fmt.eprintfln("h2odin: config rename for %q must return a string or nil", ctx.name)
+		os.exit(1)
+	}
+	return strings.clone(string(lua.tostring(L, -1))), true
+}
+
+// Build the single context table a callback receives.
+push_symbol_table :: proc(L: ^lua.State, ctx: Rename_Context) {
+	lua.createtable(L, 0, 4)
+	push_string_field(L, "name", ctx.name)
+	push_string_field(L, "default", ctx.default_name)
+	lua.pushstring(L, symbol_kind_names[ctx.kind])
+	lua.setfield(L, -2, "kind")
+	if ctx.parent != "" {
+		push_string_field(L, "parent", ctx.parent)
+	}
+}
+
+push_string_field :: proc(L: ^lua.State, key: cstring, value: string) {
+	lua.pushstring(L, strings.clone_to_cstring(value, context.temp_allocator))
+	lua.setfield(L, -2, key)
+}
+
 policy_destroy :: proc(policy: ^Policy) {
 	if policy.state != nil {
 		lua.close(policy.state)
 		policy.state = nil
 	}
+}
+
+policy_has_function :: proc(policy: ^Policy, key: cstring) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 2)
+	lua.getfield(L, -1, key)
+	return lua.isfunction(L, -1)
 }
 
 // A string field from the config table, copied into the generation arena;

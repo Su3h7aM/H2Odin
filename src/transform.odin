@@ -12,7 +12,7 @@ Type_Mode :: enum {
 // together with the configuration policy and records the choices — renames,
 // drops, type picks, conversions. It is the only stage that consults policy.
 //
-transform :: proc(ir: ^IR, mode: Type_Mode) {
+transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	for _, i in ir.types {
 		lower_type(ir, Type_Handle(i))
 	}
@@ -21,6 +21,79 @@ transform :: proc(ir: ^IR, mode: Type_Mode) {
 	if mode == .Idiomatic {
 		substitute_leaf_types(ir)
 	}
+
+	apply_renames(ir, policy)
+}
+
+// Offer every named symbol to the config's rename callback. Functions and
+// variables that change name keep their C symbol via link_name; type names,
+// enum members, constants, and fields are not linkage-visible and just take
+// the new name.
+apply_renames :: proc(ir: ^IR, policy: ^Policy) {
+	if !policy.has_rename {
+		return
+	}
+	for ref in ir.order {
+		switch ref.kind {
+		case .Invalid:
+		case .Func:
+			decl := &ir.funcs[ref.index]
+			if new_name, decided := rename_of(policy, decl.name, .Func, ""); decided {
+				decl.link_name = decl.name
+				decl.name = new_name
+			}
+		case .Var:
+			decl := &ir.vars[ref.index]
+			if new_name, decided := rename_of(policy, decl.name, .Var, ""); decided {
+				decl.link_name = decl.name
+				decl.name = new_name
+			}
+		case .Record:
+			decl := &ir.records[ref.index]
+			if new_name, decided := rename_of(policy, decl.name, .Type, ""); decided {
+				decl.name = new_name
+			}
+			for &field in decl.fields {
+				if new_name, decided := rename_of(policy, field.name, .Field, decl.name); decided {
+					field.name = new_name
+				}
+			}
+		case .Enum:
+			decl := &ir.enums[ref.index]
+			if new_name, decided := rename_of(policy, decl.name, .Type, ""); decided {
+				decl.name = new_name
+			}
+			for &member in decl.members {
+				if new_name, decided := rename_of(policy, member.name, .Enum_Member, decl.name); decided {
+					member.name = new_name
+				}
+			}
+		case .Typedef:
+			decl := &ir.typedefs[ref.index]
+			if new_name, decided := rename_of(policy, decl.name, .Type, ""); decided {
+				decl.name = new_name
+			}
+		case .Macro:
+			decl := &ir.macros[ref.index]
+			if new_name, decided := rename_of(policy, decl.name, .Const, ""); decided {
+				decl.name = new_name
+			}
+		}
+	}
+}
+
+// Anonymous symbols have nothing to rename; everything else goes to the
+// policy with the generator's default (currently the original name — the
+// keyword-safe and prefix-stripped defaults land on top of this).
+rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: string) -> (string, bool) {
+	if name == "" {
+		return "", false
+	}
+	new_name, decided := policy_rename(policy, Rename_Context{name = name, default_name = name, kind = kind, parent = parent})
+	if !decided || new_name == name {
+		return "", false
+	}
+	return new_name, true
 }
 
 // Replace each leaf C type with its fixed-width Odin spelling when that is
