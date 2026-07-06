@@ -34,7 +34,9 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 			emit_enum(&types_body, ir, ir.enums[ref.index], &uses_core_c)
 		case .Typedef:
 			emit_typedef(&types_body, ir, ir.typedefs[ref.index], &uses_core_c)
-		case .Var, .Macro:
+		case .Var:
+			emit_var(&foreign_body, ir, ir.vars[ref.index], &uses_core_c)
+		case .Macro:
 		// Not yet emitted; extraction for these lands kind by kind.
 		}
 	}
@@ -190,6 +192,12 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, uses_core
 	fmt.sbprintf(b, "%s :: ", decl.name)
 	write_type(b, ir, decl.aliased, 0, uses_core_c)
 	strings.write_string(b, "\n\n")
+}
+
+emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, uses_core_c: ^bool) {
+	fmt.sbprintf(b, "\t%s: ", decl.name)
+	write_type(b, ir, decl.type, 1, uses_core_c)
+	strings.write_string(b, "\n")
 }
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {

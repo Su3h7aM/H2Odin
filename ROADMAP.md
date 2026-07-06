@@ -54,6 +54,7 @@ Reaching this means the architecture works. Everything after is widening a prove
 - [ ] Policy interface: explicit state (no captured closures); pure stages see only the policy, never `lua_State`.
 - [ ] Marshal callback context tables in; copy returned strings into the arena.
 - [ ] Wire `rename` and `keep` through Transformation. Filtering rebuilds the ordering list.
+- [ ] Keyword-safe default renames: a C symbol named like an Odin keyword (`matrix`, `map`, `proc`, …) gets a deterministic default rename plus `@(link_name)`; config can override.
 - [ ] Declarative shortcuts: `strip_prefixes`, `type_map`, package/output/foreign settings.
 
 ## Milestone 6 — Conversions (idiomatic wrappers)

@@ -64,8 +64,34 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 		enum_decl_for_cursor(state, cursor)
 	case .TypedefDecl:
 		typedef_decl_for_cursor(state, cursor)
+	case .VarDecl:
+		extract_var(state, cursor)
 	}
 	return .Continue
+}
+
+extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
+	name := clone_clang_string(clang.getCursorSpelling(cursor))
+
+	// static file-scope variables have no linkable symbol to bind.
+	if clang.Cursor_getStorageClass(cursor) == .Static {
+		fmt.eprintfln("h2odin: skipping %q: static variables have no external symbol", name)
+		return
+	}
+
+	type, type_ok := capture_type(state, clang.getCursorType(cursor))
+	if !type_ok {
+		fmt.eprintfln("h2odin: skipping %q: unsupported type", name)
+		return
+	}
+	// An extern array of unknown size has no honest Odin spelling — a
+	// zero-length array would defeat every bounds check on the symbol.
+	if array, is_array := ir_type(state.ir, type).variant.(Type_Array); is_array && array.is_incomplete {
+		fmt.eprintfln("h2odin: skipping %q: extern array of unknown size", name)
+		return
+	}
+
+	ir_add_var(state.ir, Var_Decl{name = name, type = type})
 }
 
 // Get or create the IR declaration for a typedef cursor. The underlying type
@@ -303,6 +329,12 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 
 extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	name := clone_clang_string(clang.getCursorSpelling(cursor))
+
+	// static (usually static inline) functions have no linkable symbol.
+	if clang.Cursor_getStorageClass(cursor) == .Static {
+		fmt.eprintfln("h2odin: skipping %q: static functions have no external symbol", name)
+		return
+	}
 
 	return_type, return_ok := capture_type(state, clang.getCursorResultType(cursor))
 	if !return_ok {
