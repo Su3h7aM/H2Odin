@@ -91,49 +91,52 @@ clone_clang_string :: proc(s: clang.String) -> string {
 	return strings.clone_from_cstring(clang.getCString(s))
 }
 
-// Map a clang type onto a type already in the IR pool. Capturing the type is
+// Map a clang type onto a type in the IR pool. Capturing the type is
 // faithful identity, not a judgment call — anything the IR cannot yet
 // represent is reported as unsupported rather than approximated.
 intern_clang_type :: proc(ir: ^IR, type: clang.Type) -> (handle: Type_Handle, ok: bool) {
-	kind := builtin_kind_from_clang(type.kind)
-	if kind == .Invalid {
-		return 0, false
+	kind := builtin_kind_from_clang(type.kind) or_return
+	handle = ir_builtin_type(ir, kind)
+	if clang.isConstQualifiedType(type) != 0 {
+		// Pre-seeded builtin entries are unqualified; a const-qualified use
+		// gets its own pool entry so the qualifier is not lost.
+		handle = ir_add_type(ir, Type_Info{is_const = true, variant = Type_Builtin{kind = kind}})
 	}
-	return ir_builtin_type(ir, kind), true
+	return handle, true
 }
 
-builtin_kind_from_clang :: proc(kind: clang.Type_Kind) -> Builtin_Kind {
-	#partial switch kind {
+builtin_kind_from_clang :: proc(clang_kind: clang.Type_Kind) -> (kind: Builtin_Kind, ok: bool) {
+	#partial switch clang_kind {
 	case .Void:
-		return .Void
+		return .Void, true
 	case .Bool:
-		return .Bool
+		return .Bool, true
 	case .Char_S, .Char_U:
-		return .Char
+		return .Char, true
 	case .SChar:
-		return .S_Char
+		return .S_Char, true
 	case .UChar:
-		return .U_Char
+		return .U_Char, true
 	case .Short:
-		return .Short
+		return .Short, true
 	case .UShort:
-		return .U_Short
+		return .U_Short, true
 	case .Int:
-		return .Int
+		return .Int, true
 	case .UInt:
-		return .U_Int
+		return .U_Int, true
 	case .Long:
-		return .Long
+		return .Long, true
 	case .ULong:
-		return .U_Long
+		return .U_Long, true
 	case .LongLong:
-		return .Long_Long
+		return .Long_Long, true
 	case .ULongLong:
-		return .U_Long_Long
+		return .U_Long_Long, true
 	case .Float:
-		return .Float
+		return .Float, true
 	case .Double:
-		return .Double
+		return .Double, true
 	}
-	return .Invalid
+	return {}, false
 }

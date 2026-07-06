@@ -25,6 +25,8 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 		case .Invalid:
 		case .Func:
 			emit_func(&body, ir, ir.funcs[ref.index], &uses_core_c)
+		case .Record, .Enum, .Typedef, .Var, .Macro:
+		// Not yet emitted; extraction for these lands kind by kind.
 		}
 	}
 
@@ -56,25 +58,39 @@ emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^b
 		strings.write_string(b, abi_type_name(ir, param.type, uses_core_c))
 	}
 	strings.write_string(b, ")")
-	if ir_type(ir, func.return_type).builtin != .Void {
+	if !type_is_void(ir, func.return_type) {
 		fmt.sbprintf(b, " -> %s", abi_type_name(ir, func.return_type, uses_core_c))
 	}
 	strings.write_string(b, " ---\n")
 }
 
+type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
+	builtin, is_builtin := ir_type(ir, handle).variant.(Type_Builtin)
+	return is_builtin && builtin.kind == .Void
+}
+
 // The faithful ABI spelling of a type, using Odin's C-compatible types from
-// core:c. Exhaustive over Builtin_Kind on purpose: adding a builtin without
-// deciding its ABI spelling must not compile.
+// core:c.
 abi_type_name :: proc(ir: ^IR, handle: Type_Handle, uses_core_c: ^bool) -> string {
 	info := ir_type(ir, handle)
-	if info.builtin != .Invalid && info.builtin != .Void {
-		uses_core_c^ = true
+	switch variant in info.variant {
+	case Type_Builtin:
+		return abi_builtin_name(variant.kind, uses_core_c)
+	case Type_Pointer, Type_Array, Type_Proc, Type_Record_Ref, Type_Enum_Ref, Type_Typedef_Ref:
+		// Extraction cannot produce these yet; their spellings land with
+		// their extraction, kind by kind.
+		panic("type variant not yet emittable")
 	}
-	switch info.builtin {
-	case .Invalid:
-		// Extraction rejects types the IR cannot represent, so an invalid
-		// handle reaching emission is a pipeline bug, not a user mistake.
-		panic("invalid type handle reached emission")
+	// nil variant: extraction rejects types the IR cannot represent, so an
+	// invalid handle reaching emission is a pipeline bug, not a user mistake.
+	panic("invalid type handle reached emission")
+}
+
+// Exhaustive over Builtin_Kind on purpose: adding a builtin without deciding
+// its ABI spelling must not compile.
+abi_builtin_name :: proc(kind: Builtin_Kind, uses_core_c: ^bool) -> string {
+	uses_core_c^ = true
+	switch kind {
 	case .Void:
 		// C void never appears as a parameter in the IR, and void returns
 		// are handled by the caller omitting the result entirely.
