@@ -51,6 +51,7 @@ Type_Info :: struct {
 // nil variant == the invalid type.
 Type_Variant :: union {
 	Type_Builtin,
+	Type_Std,
 	Type_Pointer,
 	Type_Array,
 	Type_Proc,
@@ -61,6 +62,14 @@ Type_Variant :: union {
 
 Type_Builtin :: struct {
 	kind: Builtin_Kind,
+}
+
+// A well-known C standard typedef (stdint.h / stddef.h) from an included
+// header, kept under its familiar name via core:c — uint32_t stays
+// c.uint32_t instead of dragging libc-internal typedef chains into the
+// output.
+Type_Std :: struct {
+	name: string,
 }
 
 Type_Pointer :: struct {

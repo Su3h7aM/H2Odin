@@ -248,6 +248,10 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 	case Type_Builtin:
 		strings.write_string(b, abi_builtin_name(variant.kind, uses_core_c))
 
+	case Type_Std:
+		uses_core_c^ = true
+		fmt.sbprintf(b, "c.%s", variant.name)
+
 	case Type_Pointer:
 		#partial switch pointee in ir_type(ir, variant.pointee).variant {
 		case Type_Builtin:

@@ -29,7 +29,8 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	defer clang.disposeIndex(index)
 
 	path := strings.clone_to_cstring(header_path, context.temp_allocator)
-	tu := clang.parseTranslationUnit(index, path, nil, 0, nil, 0, {})
+	args := [?]cstring{"-resource-dir=/usr/lib/clang/22"}
+	tu := clang.parseTranslationUnit(index, path, raw_data(args[:]), c.int(len(args)), nil, 0, {})
 	if tu == nil {
 		fmt.eprintfln("h2odin: failed to parse %q", header_path)
 		return false
@@ -448,7 +449,19 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Enum_Ref{decl = decl}}), true
 
 	case .Typedef:
-		decl := typedef_decl_for_cursor(state, clang.getTypeDeclaration(type))
+		decl_cursor := clang.getTypeDeclaration(type)
+		// Typedefs declared in included headers are not ours to re-declare.
+		// The C standard ones keep their familiar name via core:c; anything
+		// else resolves transparently to its underlying type — an alias adds
+		// no ABI information, only a name we must not claim.
+		if clang.Location_isFromMainFile(clang.getCursorLocation(decl_cursor)) == 0 {
+			name := clone_clang_string(clang.getCursorSpelling(decl_cursor))
+			if is_std_c_type(name) {
+				return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Std{name = name}}), true
+			}
+			return capture_type(state, clang.getTypedefDeclUnderlyingType(decl_cursor))
+		}
+		decl := typedef_decl_for_cursor(state, decl_cursor)
 		if ir.typedefs[int(decl)].is_unresolvable {
 			return 0, false
 		}
@@ -464,6 +477,31 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 		handle = ir_add_type(ir, Type_Info{is_const = true, variant = Type_Builtin{kind = kind}})
 	}
 	return handle, true
+}
+
+// The standard C typedefs that core:c spells under the same name, so the
+// generated code can say c.uint32_t instead of re-declaring libc's chain.
+is_std_c_type :: proc(name: string) -> bool {
+	switch name {
+	case "size_t",
+	     "ssize_t",
+	     "wchar_t",
+	     "ptrdiff_t",
+	     "int8_t",
+	     "int16_t",
+	     "int32_t",
+	     "int64_t",
+	     "uint8_t",
+	     "uint16_t",
+	     "uint32_t",
+	     "uint64_t",
+	     "intptr_t",
+	     "uintptr_t",
+	     "intmax_t",
+	     "uintmax_t":
+		return true
+	}
+	return false
 }
 
 builtin_kind_from_clang :: proc(clang_kind: clang.Type_Kind) -> (kind: Builtin_Kind, ok: bool) {
