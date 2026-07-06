@@ -312,18 +312,17 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		fmt.sbprintf(b, "c.%s", variant.name)
 
 	case Type_Pointer:
-		#partial switch pointee in ir_type(ir, variant.pointee).variant {
-		case Type_Builtin:
-			if pointee.kind == .Void {
-				// void* carries no pointee type worth preserving.
-				strings.write_string(b, "rawptr")
-				return
-			}
-		case Type_Proc:
-			// An Odin proc value is already a pointer, so a C function
-			// pointer spells as the proc type itself.
+		panic("raw pointer reached emission before Transformation lowered it")
+
+	case Type_Lowered_Pointer:
+		#partial switch variant.kind {
+		case .Rawptr:
+			strings.write_string(b, "rawptr")
+			return
+		case .Proc:
 			write_type(b, ir, variant.pointee, indent, uses_core_c)
 			return
+		case .Single:
 		}
 		strings.write_string(b, "^")
 		write_type(b, ir, variant.pointee, indent, uses_core_c)

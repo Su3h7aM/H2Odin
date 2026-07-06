@@ -53,6 +53,7 @@ Type_Variant :: union {
 	Type_Builtin,
 	Type_Std,
 	Type_Pointer,
+	Type_Lowered_Pointer,
 	Type_Array,
 	Type_Proc,
 	Type_Record_Ref,
@@ -74,6 +75,30 @@ Type_Std :: struct {
 
 Type_Pointer :: struct {
 	pointee: Type_Handle,
+}
+
+Pointer_Lowering_Kind :: enum {
+	Single, // T* → ^T
+	Rawptr, // void* → rawptr
+	Proc, // function pointer → proc "c" (...)
+}
+
+Pointer_Lowering_Confidence :: enum {
+	Proven,
+	Guessed,
+}
+
+Pointer_Lowering_Reason :: enum {
+	Void_Pointer,
+	Function_Pointer,
+	Single_Pointer_Default,
+}
+
+Type_Lowered_Pointer :: struct {
+	pointee:    Type_Handle,
+	kind:       Pointer_Lowering_Kind,
+	confidence: Pointer_Lowering_Confidence,
+	reason:     Pointer_Lowering_Reason,
 }
 
 Type_Array :: struct {
