@@ -37,7 +37,7 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 		case .Var:
 			emit_var(&foreign_body, ir, ir.vars[ref.index], &uses_core_c)
 		case .Macro:
-		// Not yet emitted; extraction for these lands kind by kind.
+			emit_macro(&types_body, ir.macros[ref.index])
 		}
 	}
 
@@ -198,6 +198,36 @@ emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, uses_core_c: ^boo
 	fmt.sbprintf(b, "\t%s: ", decl.name)
 	write_type(b, ir, decl.type, 1, uses_core_c)
 	strings.write_string(b, "\n")
+}
+
+emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl) {
+	if decl.is_function_like || len(decl.tokens) != 1 {
+		return
+	}
+
+	token := decl.tokens[0]
+	if token.kind != .Literal || !macro_literal_can_emit(token.spelling) {
+		return
+	}
+
+	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
+}
+
+macro_literal_can_emit :: proc(s: string) -> bool {
+	if len(s) == 0 {
+		return false
+	}
+	first := s[0]
+	if first == '"' || first == '\'' {
+		return true
+	}
+	last := s[len(s) - 1]
+	// Skip common C numeric suffixes until macro values get a real numeric
+	// parser. Emitting invalid Odin would be worse than omitting the macro.
+	if last == 'u' || last == 'U' || last == 'l' || last == 'L' || last == 'f' || last == 'F' {
+		return false
+	}
+	return true
 }
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {

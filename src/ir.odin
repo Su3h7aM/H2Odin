@@ -186,11 +186,24 @@ Var_Decl :: struct {
 	doc:  string,
 }
 
+Macro_Token_Kind :: enum {
+	Punctuation,
+	Keyword,
+	Identifier,
+	Literal,
+	Comment,
+}
+
+Macro_Token :: struct {
+	spelling: string,
+	kind:     Macro_Token_Kind,
+}
+
 // An object-like #define constant, or a function-like macro recorded so the
 // pipeline knows it exists (never emitted).
 Macro_Decl :: struct {
 	name:             string,
-	tokens:           []string, // raw token spellings after the name
+	tokens:           []Macro_Token, // raw replacement-list tokens after the name
 	is_function_like: bool,
 }
 

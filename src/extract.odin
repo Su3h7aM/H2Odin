@@ -17,6 +17,7 @@ import clang "vendored:libclang"
 Extract_State :: struct {
 	ctx:      runtime.Context,
 	ir:       ^IR,
+	tu:       clang.Translation_Unit,
 
 	// USR → already-created declaration, so every mention of a tagged type
 	// resolves to one IR decl. Anonymous declarations have no USR and are
@@ -30,7 +31,7 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 
 	path := strings.clone_to_cstring(header_path, context.temp_allocator)
 	args := [?]cstring{"-resource-dir=/usr/lib/clang/22"}
-	tu := clang.parseTranslationUnit(index, path, raw_data(args[:]), c.int(len(args)), nil, 0, {})
+	tu := clang.parseTranslationUnit(index, path, raw_data(args[:]), c.int(len(args)), nil, 0, {.DetailedPreprocessingRecord})
 	if tu == nil {
 		fmt.eprintfln("h2odin: failed to parse %q", header_path)
 		return false
@@ -40,6 +41,7 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	state := Extract_State {
 		ctx      = context,
 		ir       = ir,
+		tu       = tu,
 		decl_map = make(map[string]Decl_Ref),
 	}
 	clang.visitChildren(clang.getTranslationUnitCursor(tu), visit_top_level, &state)
@@ -67,8 +69,58 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 		typedef_decl_for_cursor(state, cursor)
 	case .VarDecl:
 		extract_var(state, cursor)
+	case .MacroDefinition:
+		extract_macro(state, cursor)
 	}
 	return .Continue
+}
+
+extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
+	if clang.Cursor_isMacroBuiltin(cursor) != 0 {
+		return
+	}
+
+	tokens: [^]clang.Token
+	num_tokens: c.uint
+	clang.tokenize(state.tu, clang.getCursorExtent(cursor), &tokens, &num_tokens)
+	if num_tokens > 0 {
+		defer clang.disposeTokens(state.tu, tokens, num_tokens)
+	}
+
+	replacement_count := max(int(num_tokens) - 1, 0)
+	replacement := make([]Macro_Token, replacement_count)
+	for i in 0 ..< replacement_count {
+		token := tokens[i + 1]
+		replacement[i] = Macro_Token {
+			spelling = clone_clang_string(clang.getTokenSpelling(state.tu, token)),
+			kind     = macro_token_kind_from_clang(clang.getTokenKind(token)),
+		}
+	}
+
+	ir_add_macro(
+		state.ir,
+		Macro_Decl {
+			name = clone_clang_string(clang.getCursorSpelling(cursor)),
+			tokens = replacement,
+			is_function_like = clang.Cursor_isMacroFunctionLike(cursor) != 0,
+		},
+	)
+}
+
+macro_token_kind_from_clang :: proc(kind: clang.Token_Kind) -> Macro_Token_Kind {
+	#partial switch kind {
+	case .Punctuation:
+		return .Punctuation
+	case .Keyword:
+		return .Keyword
+	case .Identifier:
+		return .Identifier
+	case .Literal:
+		return .Literal
+	case .Comment:
+		return .Comment
+	}
+	return .Punctuation
 }
 
 extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
