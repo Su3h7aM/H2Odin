@@ -15,8 +15,13 @@ import clang "vendored:libclang"
 // stage returns.
 
 Extract_State :: struct {
-	ctx: runtime.Context,
-	ir:  ^IR,
+	ctx:      runtime.Context,
+	ir:       ^IR,
+
+	// USR → already-created declaration, so every mention of a tagged type
+	// resolves to one IR decl. Anonymous declarations have no USR and are
+	// never shared, so they skip the map.
+	decl_map: map[string]Decl_Ref,
 }
 
 extract :: proc(header_path: string, ir: ^IR) -> bool {
@@ -32,8 +37,9 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	defer clang.disposeTranslationUnit(tu)
 
 	state := Extract_State {
-		ctx = context,
-		ir  = ir,
+		ctx      = context,
+		ir       = ir,
+		decl_map = make(map[string]Decl_Ref),
 	}
 	clang.visitChildren(clang.getTranslationUnitCursor(tu), visit_top_level, &state)
 	return true
@@ -52,6 +58,133 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 	#partial switch clang.getCursorKind(cursor) {
 	case .FunctionDecl:
 		extract_func(state, cursor)
+	case .StructDecl, .UnionDecl:
+		record_decl_for_cursor(state, cursor)
+	}
+	return .Continue
+}
+
+// Get or create the IR declaration for a struct/union cursor, and fill in
+// its fields when this cursor is the definition. Placeholders created for a
+// forward declaration (or a first mention inside another type) are completed
+// later when the definition shows up.
+record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
+	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	if ref, found := state.decl_map[usr]; usr != "" && found {
+		handle := Decl_Handle(ref.index)
+		if clang.isCursorDefinition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
+			fill_record(state, handle, cursor)
+		}
+		return handle
+	}
+
+	record := Record_Decl {
+		is_union = clang.getCursorKind(cursor) == .UnionDecl,
+	}
+	// Anonymous records keep "" as their name: recent libclang spells them
+	// as "struct (unnamed at file:line)", which is a description, not a name.
+	if clang.Cursor_isAnonymous(cursor) == 0 {
+		record.name = clone_clang_string(clang.getCursorSpelling(cursor))
+	}
+	handle := ir_add_record(state.ir, record)
+	if usr != "" {
+		state.decl_map[usr] = Decl_Ref {
+			kind  = .Record,
+			index = u32(handle),
+		}
+	}
+	if clang.isCursorDefinition(cursor) != 0 {
+		fill_record(state, handle, cursor)
+	}
+	return handle
+}
+
+Record_Fill :: struct {
+	ctx:           runtime.Context,
+	state:         ^Extract_State,
+	fields:        [dynamic]Field,
+	is_packed:     bool,
+	has_bitfields: bool,
+	failed_field:  string, // first field with an unsupported type; "" if none
+}
+
+fill_record :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cursor) {
+	// Mark complete before walking the fields: a self-referential field
+	// (struct Node { struct Node *next; }) resolves back to this record and
+	// must not re-enter the fill.
+	state.ir.records[int(handle)].is_complete = true
+
+	fill := Record_Fill {
+		ctx   = context,
+		state = state,
+	}
+	clang.visitChildren(cursor, visit_record_child, &fill)
+
+	// Written back by handle: the records pool may have grown while nested
+	// types were captured, so no pointer into it was held across the visit.
+	record := state.ir.records[int(handle)]
+	record.is_complete = true
+	record.is_packed = fill.is_packed
+	record.fields = fill.fields[:]
+	if fill.has_bitfields {
+		record.has_unrepresentable_fields = true
+		fmt.eprintfln("h2odin: %q uses bit-fields; emitted opaque — by-value use of it would be wrong", record_display_name(record))
+	}
+	if fill.failed_field != "" {
+		record.has_unrepresentable_fields = true
+		fmt.eprintfln(
+			"h2odin: %q field %q has an unsupported type; emitted opaque — by-value use of it would be wrong",
+			record_display_name(record),
+			fill.failed_field,
+		)
+	}
+	state.ir.records[int(handle)] = record
+}
+
+record_display_name :: proc(record: Record_Decl) -> string {
+	if record.name == "" {
+		return "(anonymous record)"
+	}
+	return record.name
+}
+
+visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {
+	fill := cast(^Record_Fill)client_data
+	context = fill.ctx
+
+	#partial switch clang.getCursorKind(cursor) {
+	case .FieldDecl:
+		name := clone_clang_string(clang.getCursorSpelling(cursor))
+		if clang.Cursor_isBitField(cursor) != 0 {
+			fill.has_bitfields = true
+			return .Continue
+		}
+		type, type_ok := capture_type(fill.state, clang.getCursorType(cursor))
+		if !type_ok {
+			if fill.failed_field == "" {
+				fill.failed_field = name
+			}
+			return .Continue
+		}
+		append(&fill.fields, Field{name = name, type = type})
+	case .PackedAttr:
+		fill.is_packed = true
+	case .StructDecl, .UnionDecl, .EnumDecl:
+		// A C11 anonymous member (union { ... }; with no declarator) never
+		// gets a FieldDecl — the bare tag declaration is the member, so it
+		// must become a field here or the record's layout silently shrinks.
+		// Named tag declarations are captured lazily when a field's type
+		// references them; nothing to do for those.
+		if clang.Cursor_isAnonymousRecordDecl(cursor) != 0 {
+			type, type_ok := capture_type(fill.state, clang.getCursorType(cursor))
+			if !type_ok {
+				if fill.failed_field == "" {
+					fill.failed_field = "(anonymous member)"
+				}
+				return .Continue
+			}
+			append(&fill.fields, Field{name = "", type = type})
+		}
 	}
 	return .Continue
 }
@@ -161,6 +294,10 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 			is_variadic = clang.isFunctionTypeVariadic(type) != 0,
 		}
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = proc_type}), true
+
+	case .Record:
+		decl := record_decl_for_cursor(state, clang.getTypeDeclaration(type))
+		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Record_Ref{decl = decl}}), true
 	}
 
 	// Builtins; anything else is not yet representable.

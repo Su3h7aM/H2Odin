@@ -15,17 +15,22 @@ Emit_Options :: struct {
 
 emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 	// Declarations are emitted in ordering-list order so the output reads
-	// like the original header. The body is built first so the prelude knows
-	// which imports the declarations actually use.
-	body: strings.Builder
+	// like the original header, routed into two sections: type declarations
+	// at file scope, functions and variables inside the foreign block. The
+	// sections are built first so the prelude knows which imports the
+	// declarations actually use.
+	types_body: strings.Builder
+	foreign_body: strings.Builder
 	uses_core_c := false
 
 	for ref in ir.order {
 		switch ref.kind {
 		case .Invalid:
 		case .Func:
-			emit_func(&body, ir, ir.funcs[ref.index], &uses_core_c)
-		case .Record, .Enum, .Typedef, .Var, .Macro:
+			emit_func(&foreign_body, ir, ir.funcs[ref.index], &uses_core_c)
+		case .Record:
+			emit_record(&types_body, ir, ir.records[ref.index], &uses_core_c)
+		case .Enum, .Typedef, .Var, .Macro:
 		// Not yet emitted; extraction for these lands kind by kind.
 		}
 	}
@@ -38,12 +43,67 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 	}
 	fmt.sbprintfln(&out, "foreign import lib \"system:%s\"", opts.foreign_lib)
 	strings.write_string(&out, "\n")
-	// Procedures in a foreign block already default to the C calling
-	// convention; no attribute needed.
-	strings.write_string(&out, "foreign lib {\n")
-	strings.write_string(&out, strings.to_string(body))
-	strings.write_string(&out, "}\n")
+	strings.write_string(&out, strings.to_string(types_body))
+	if strings.builder_len(foreign_body) > 0 {
+		// Procedures in a foreign block already default to the C calling
+		// convention; no attribute needed.
+		strings.write_string(&out, "foreign lib {\n")
+		strings.write_string(&out, strings.to_string(foreign_body))
+		strings.write_string(&out, "}\n")
+	}
 	return strings.to_string(out)
+}
+
+emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, uses_core_c: ^bool) {
+	if record.name == "" {
+		// Anonymous records are spelled inline where they are used (a field,
+		// or the typedef that names them); they have no standalone form.
+		return
+	}
+	fmt.sbprintf(b, "%s :: ", record.name)
+	write_record_body(b, ir, record, 0, uses_core_c)
+	strings.write_string(b, "\n\n")
+}
+
+write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, uses_core_c: ^bool) {
+	if !record.is_complete || record.has_unrepresentable_fields {
+		// No layout to preserve (forward-declared), or a layout the IR
+		// cannot represent yet — an opaque body is the honest fallback;
+		// pointers to it stay fully usable.
+		strings.write_string(b, "struct {}")
+		return
+	}
+	strings.write_string(b, "struct")
+	if record.is_union {
+		strings.write_string(b, " #raw_union")
+	}
+	if record.is_packed {
+		strings.write_string(b, " #packed")
+	}
+	if len(record.fields) == 0 {
+		strings.write_string(b, " {}")
+		return
+	}
+	strings.write_string(b, " {\n")
+	for field in record.fields {
+		write_indent(b, indent + 1)
+		if field.name == "" {
+			// A C11 anonymous member: its fields read as the parent's.
+			strings.write_string(b, "using _: ")
+		} else {
+			fmt.sbprintf(b, "%s: ", field.name)
+		}
+		write_type(b, ir, field.type, indent + 1, uses_core_c)
+		strings.write_string(b, ",\n")
+	}
+	write_indent(b, indent)
+	strings.write_string(b, "}")
+}
+
+write_indent :: proc(b: ^strings.Builder, indent: int) {
+	for _ in 0 ..< indent {
+		strings.write_string(b, "\t")
+	}
 }
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {
@@ -52,7 +112,7 @@ emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^b
 	strings.write_string(b, ")")
 	if !type_is_void(ir, func.return_type) {
 		strings.write_string(b, " -> ")
-		write_type(b, ir, func.return_type, uses_core_c)
+		write_type(b, ir, func.return_type, 1, uses_core_c)
 	}
 	strings.write_string(b, " ---\n")
 }
@@ -65,7 +125,7 @@ write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic:
 		if param.name != "" {
 			fmt.sbprintf(b, "%s: ", param.name)
 		}
-		write_type(b, ir, param.type, uses_core_c)
+		write_type(b, ir, param.type, 1, uses_core_c)
 	}
 	if is_variadic {
 		if len(params) > 0 {
@@ -81,8 +141,9 @@ type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 }
 
 // Write the faithful ABI spelling of a type, using Odin's C-compatible types
-// from core:c.
-write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, uses_core_c: ^bool) {
+// from core:c. indent is where this type sits, for the rare spellings that
+// span lines (inline anonymous record bodies).
+write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: int, uses_core_c: ^bool) {
 	info := ir_type(ir, handle)
 	if info.variant == nil {
 		// Extraction rejects types the IR cannot represent, so an invalid
@@ -104,11 +165,11 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, uses_core_
 		case Type_Proc:
 			// An Odin proc value is already a pointer, so a C function
 			// pointer spells as the proc type itself.
-			write_type(b, ir, variant.pointee, uses_core_c)
+			write_type(b, ir, variant.pointee, indent, uses_core_c)
 			return
 		}
 		strings.write_string(b, "^")
-		write_type(b, ir, variant.pointee, uses_core_c)
+		write_type(b, ir, variant.pointee, indent, uses_core_c)
 
 	case Type_Array:
 		if variant.is_incomplete {
@@ -118,7 +179,7 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, uses_core_
 		} else {
 			fmt.sbprintf(b, "[%d]", variant.count)
 		}
-		write_type(b, ir, variant.element, uses_core_c)
+		write_type(b, ir, variant.element, indent, uses_core_c)
 
 	case Type_Proc:
 		strings.write_string(b, "proc \"c\" (")
@@ -126,10 +187,19 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, uses_core_
 		strings.write_string(b, ")")
 		if !type_is_void(ir, variant.return_type) {
 			strings.write_string(b, " -> ")
-			write_type(b, ir, variant.return_type, uses_core_c)
+			write_type(b, ir, variant.return_type, indent, uses_core_c)
 		}
 
-	case Type_Record_Ref, Type_Enum_Ref, Type_Typedef_Ref:
+	case Type_Record_Ref:
+		record := ir.records[variant.decl]
+		if record.name != "" {
+			strings.write_string(b, record.name)
+		} else {
+			// Anonymous record: its body is its only spelling.
+			write_record_body(b, ir, record, indent, uses_core_c)
+		}
+
+	case Type_Enum_Ref, Type_Typedef_Ref:
 		// Extraction cannot produce these yet; their spellings land with
 		// their extraction, kind by kind.
 		panic("decl-ref type spellings land with their extraction")

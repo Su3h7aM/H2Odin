@@ -132,14 +132,18 @@ Field :: struct {
 
 // A C struct or union.
 Record_Decl :: struct {
-	name:             string, // "" when anonymous
-	fields:           []Field,
-	is_union:         bool,
-	is_packed:        bool,
-	is_complete:      bool, // false → opaque (forward-declared only)
-	has_bitfields:    bool, // layout the IR cannot represent yet; emitted opaque
-	is_typedef_named: bool, // anonymous tag that a typedef gives a name to
-	doc:              string,
+	name:                       string, // "" when anonymous
+	fields:                     []Field,
+	is_union:                   bool,
+	is_packed:                  bool,
+	is_complete:                bool, // false → opaque (forward-declared only)
+
+	// The header defines a layout the IR cannot represent yet (bit-fields,
+	// or a field of an unsupported type). Extraction reports why; emission
+	// falls back to an opaque body rather than guessing at the layout.
+	has_unrepresentable_fields: bool,
+	is_typedef_named:           bool, // anonymous tag that a typedef gives a name to
+	doc:                        string,
 }
 
 Enum_Member :: struct {
