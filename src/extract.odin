@@ -30,7 +30,10 @@ extract :: proc(header_path: string, ir: ^IR) -> bool {
 	defer clang.disposeIndex(index)
 
 	path := strings.clone_to_cstring(header_path, context.temp_allocator)
-	args := [?]cstring{"-resource-dir=/usr/lib/clang/22"}
+	// -fparse-all-comments: attach any comment adjacent to a declaration as
+	// its documentation, not only doc-style ones (/** */, ///) — headers like
+	// sqlite3.h document everything in plain /* */ blocks.
+	args := [?]cstring{"-resource-dir=/usr/lib/clang/22", "-fparse-all-comments"}
 	tu := clang.parseTranslationUnit(index, path, raw_data(args[:]), c.int(len(args)), nil, 0, {.DetailedPreprocessingRecord})
 	if tu == nil {
 		fmt.eprintfln("h2odin: failed to parse %q", header_path)
