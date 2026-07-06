@@ -36,7 +36,8 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 	}
 	fmt.sbprintfln(&out, "foreign import lib \"system:%s\"", opts.foreign_lib)
 	strings.write_string(&out, "\n")
-	strings.write_string(&out, "@(default_calling_convention = \"c\")\n")
+	// Procedures in a foreign block already default to the C calling
+	// convention; no attribute needed.
 	strings.write_string(&out, "foreign lib {\n")
 	strings.write_string(&out, strings.to_string(body))
 	strings.write_string(&out, "}\n")
