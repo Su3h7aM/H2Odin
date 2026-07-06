@@ -11,7 +11,9 @@ import "core:strings"
 // everything else.
 main :: proc() {
 	mode := Type_Mode.ABI
+	mode_from_cli := false
 	header_path: string
+	config_path: string
 	for arg in os.args[1:] {
 		if strings.has_prefix(arg, "-mode:") {
 			switch arg[len("-mode:"):] {
@@ -22,6 +24,9 @@ main :: proc() {
 			case:
 				usage()
 			}
+			mode_from_cli = true
+		} else if strings.has_prefix(arg, "-config:") {
+			config_path = arg[len("-config:"):]
 		} else if header_path == "" {
 			header_path = arg
 		} else {
@@ -43,6 +48,17 @@ main :: proc() {
 	defer vmem.arena_destroy(&arena)
 	context.allocator = vmem.arena_allocator(&arena)
 
+	policy, policy_ok := policy_load(config_path)
+	if !policy_ok {
+		os.exit(1)
+	}
+	defer policy_destroy(&policy)
+
+	// An explicit CLI mode wins; otherwise the config decides; otherwise ABI.
+	if !mode_from_cli && policy.type_mode_is_set {
+		mode = policy.type_mode
+	}
+
 	ir: IR
 	ir_init(&ir)
 
@@ -52,14 +68,18 @@ main :: proc() {
 	analyze(&ir)
 	transform(&ir, mode)
 
-	// Until the configuration layer lands, the package and foreign library
-	// names both default to the header's stem.
+	// The package and foreign library names default to the header's stem;
+	// the config may override either.
 	stem := filepath.stem(filepath.base(header_path))
-	code := emit(&ir, Emit_Options{package_name = stem, foreign_lib = stem})
+	opts := Emit_Options {
+		package_name = policy.package_name if policy.package_name != "" else stem,
+		foreign_lib  = policy.foreign_lib if policy.foreign_lib != "" else stem,
+	}
+	code := emit(&ir, opts)
 	fmt.print(code)
 }
 
 usage :: proc() -> ! {
-	fmt.eprintln("usage: h2odin [-mode:abi|idiomatic] <header.h>")
+	fmt.eprintln("usage: h2odin [-mode:abi|idiomatic] [-config:file.lua] <header.h>")
 	os.exit(2)
 }
