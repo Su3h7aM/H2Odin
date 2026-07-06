@@ -16,11 +16,11 @@ Drive one trivial header all the way through all four stages, ABI mode, no Lua.
 
 Target: `int add(int a, int b);` → `add :: proc(a: c.int, b: c.int) -> c.int ---`
 
-- [ ] Minimal IR: `Func_Decl`, `Param`, a type pool with builtin types, the ordering list, and the `add_*` construction helpers.
-- [ ] Extraction: parse a TU, walk cursors, pull one `FunctionDecl` (return type + params) into the IR. Copy every string into the arena. Filter by source location so system headers are ignored.
-- [ ] Pipeline frame: `main` calls all four stages in order, with Analysis and Transformation as empty pass-throughs.
-- [ ] Emission: walk the ordering list, emit the `package`, `foreign import`, and the one function in ABI mode.
-- [ ] Confirm the emitted file compiles as Odin.
+- [x] Minimal IR: `Func_Decl`, `Param`, a type pool with builtin types, the ordering list, and the `add_*` construction helpers.
+- [x] Extraction: parse a TU, walk cursors, pull one `FunctionDecl` (return type + params) into the IR. Copy every string into the arena. Filter by source location so system headers are ignored.
+- [x] Pipeline frame: `main` calls all four stages in order, with Analysis and Transformation as empty pass-throughs.
+- [x] Emission: walk the ordering list, emit the `package`, `foreign import`, and the one function in ABI mode.
+- [x] Confirm the emitted file compiles as Odin.
 
 Reaching this means the architecture works. Everything after is widening a proven thread.
 
