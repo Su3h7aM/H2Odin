@@ -63,6 +63,13 @@ Type_Variant :: union {
 
 Type_Builtin :: struct {
 	kind: Builtin_Kind,
+
+	// Size in bytes as reported by libclang on the extraction target — a
+	// measured fact, not an assumption, and the basis for later proving
+	// idiomatic substitutions ABI-safe. -1 means libclang could not size
+	// the type; downstream must treat -1 as "unknown, cannot prove a
+	// substitution", never substitute a plausible-looking value.
+	size: int,
 }
 
 // A well-known C standard typedef (stdint.h / stddef.h) from an included
@@ -71,6 +78,10 @@ Type_Builtin :: struct {
 // output.
 Type_Std :: struct {
 	name: string,
+
+	// Same contract as Type_Builtin.size: measured by libclang on the
+	// extraction target, -1 when unknown.
+	size: int,
 }
 
 Type_Pointer :: struct {
@@ -264,7 +275,10 @@ IR :: struct {
 ir_init :: proc(ir: ^IR) {
 	append(&ir.types, Type_Info{}) // slot 0: invalid
 	for kind in Builtin_Kind {
-		ir.builtins[kind] = ir_add_type(ir, Type_Info{variant = Type_Builtin{kind = kind}})
+		// Sizes start unknown (-1); extraction fills each shared entry the
+		// first time it measures that kind. One entry per kind stays sound
+		// because a builtin's size cannot vary within a single target.
+		ir.builtins[kind] = ir_add_type(ir, Type_Info{variant = Type_Builtin{kind = kind, size = -1}})
 	}
 }
 

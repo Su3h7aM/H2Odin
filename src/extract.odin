@@ -525,7 +525,7 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 		if clang.Location_isFromMainFile(clang.getCursorLocation(decl_cursor)) == 0 {
 			name := clone_clang_string(clang.getCursorSpelling(decl_cursor))
 			if is_std_c_type(name) {
-				return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Std{name = name}}), true
+				return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Std{name = name, size = measured_size_of(type)}}), true
 			}
 			return capture_type(state, clang.getTypedefDeclUnderlyingType(decl_cursor))
 		}
@@ -538,13 +538,34 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 
 	// Builtins; anything else is not yet representable.
 	kind := builtin_kind_from_clang(type.kind) or_return
+	size := measured_size_of(type)
 	handle = ir_builtin_type(ir, kind)
+	if shared, is_builtin := &ir.types[int(handle)].variant.(Type_Builtin); is_builtin && shared.size == -1 {
+		// The pre-seeded entry starts with an unknown size; the first use on
+		// this target measures it. Filling the shared entry keeps the
+		// one-entry-per-kind interning model intact, since a builtin's size
+		// cannot vary within a single extraction target.
+		shared.size = size
+	}
 	if is_const {
 		// Pre-seeded builtin entries are unqualified; a const-qualified use
 		// gets its own pool entry so the qualifier is not lost.
-		handle = ir_add_type(ir, Type_Info{is_const = true, variant = Type_Builtin{kind = kind}})
+		handle = ir_add_type(ir, Type_Info{is_const = true, variant = Type_Builtin{kind = kind, size = size}})
 	}
 	return handle, true
+}
+
+// The size of a Clang type in bytes on the extraction target. Extraction is
+// the only stage allowed to ask libclang, so the answer is stored in the IR
+// for later stages to read. clang_Type_getSizeOf returns a negative error
+// code for incomplete or invalid types; that becomes -1, and downstream code
+// must treat -1 as "unknown, cannot prove a substitution".
+measured_size_of :: proc(type: clang.Type) -> int {
+	size := clang.Type_getSizeOf(type)
+	if size < 0 {
+		return -1
+	}
+	return int(size)
 }
 
 builtin_kind_from_clang :: proc(clang_kind: clang.Type_Kind) -> (kind: Builtin_Kind, ok: bool) {
