@@ -48,20 +48,31 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {
 	fmt.sbprintf(b, "\t%s :: proc(", func.name)
-	for param, i in func.params {
+	write_params(b, ir, func.params, func.is_variadic, uses_core_c)
+	strings.write_string(b, ")")
+	if !type_is_void(ir, func.return_type) {
+		strings.write_string(b, " -> ")
+		write_type(b, ir, func.return_type, uses_core_c)
+	}
+	strings.write_string(b, " ---\n")
+}
+
+write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic: bool, uses_core_c: ^bool) {
+	for param, i in params {
 		if i > 0 {
 			strings.write_string(b, ", ")
 		}
 		if param.name != "" {
 			fmt.sbprintf(b, "%s: ", param.name)
 		}
-		strings.write_string(b, abi_type_name(ir, param.type, uses_core_c))
+		write_type(b, ir, param.type, uses_core_c)
 	}
-	strings.write_string(b, ")")
-	if !type_is_void(ir, func.return_type) {
-		fmt.sbprintf(b, " -> %s", abi_type_name(ir, func.return_type, uses_core_c))
+	if is_variadic {
+		if len(params) > 0 {
+			strings.write_string(b, ", ")
+		}
+		strings.write_string(b, "#c_vararg _: ..any")
 	}
-	strings.write_string(b, " ---\n")
 }
 
 type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
@@ -69,21 +80,60 @@ type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 	return is_builtin && builtin.kind == .Void
 }
 
-// The faithful ABI spelling of a type, using Odin's C-compatible types from
-// core:c.
-abi_type_name :: proc(ir: ^IR, handle: Type_Handle, uses_core_c: ^bool) -> string {
+// Write the faithful ABI spelling of a type, using Odin's C-compatible types
+// from core:c.
+write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, uses_core_c: ^bool) {
 	info := ir_type(ir, handle)
+	if info.variant == nil {
+		// Extraction rejects types the IR cannot represent, so an invalid
+		// handle reaching emission is a pipeline bug, not a user mistake.
+		panic("invalid type handle reached emission")
+	}
 	switch variant in info.variant {
 	case Type_Builtin:
-		return abi_builtin_name(variant.kind, uses_core_c)
-	case Type_Pointer, Type_Array, Type_Proc, Type_Record_Ref, Type_Enum_Ref, Type_Typedef_Ref:
+		strings.write_string(b, abi_builtin_name(variant.kind, uses_core_c))
+
+	case Type_Pointer:
+		#partial switch pointee in ir_type(ir, variant.pointee).variant {
+		case Type_Builtin:
+			if pointee.kind == .Void {
+				// void* carries no pointee type worth preserving.
+				strings.write_string(b, "rawptr")
+				return
+			}
+		case Type_Proc:
+			// An Odin proc value is already a pointer, so a C function
+			// pointer spells as the proc type itself.
+			write_type(b, ir, variant.pointee, uses_core_c)
+			return
+		}
+		strings.write_string(b, "^")
+		write_type(b, ir, variant.pointee, uses_core_c)
+
+	case Type_Array:
+		if variant.is_incomplete {
+			// T[] has no size to preserve; zero length keeps the ABI honest
+			// in the positions C allows it (trailing flexible members).
+			strings.write_string(b, "[0]")
+		} else {
+			fmt.sbprintf(b, "[%d]", variant.count)
+		}
+		write_type(b, ir, variant.element, uses_core_c)
+
+	case Type_Proc:
+		strings.write_string(b, "proc \"c\" (")
+		write_params(b, ir, variant.params, variant.is_variadic, uses_core_c)
+		strings.write_string(b, ")")
+		if !type_is_void(ir, variant.return_type) {
+			strings.write_string(b, " -> ")
+			write_type(b, ir, variant.return_type, uses_core_c)
+		}
+
+	case Type_Record_Ref, Type_Enum_Ref, Type_Typedef_Ref:
 		// Extraction cannot produce these yet; their spellings land with
 		// their extraction, kind by kind.
-		panic("type variant not yet emittable")
+		panic("decl-ref type spellings land with their extraction")
 	}
-	// nil variant: extraction rejects types the IR cannot represent, so an
-	// invalid handle reaching emission is a pipeline bug, not a user mistake.
-	panic("invalid type handle reached emission")
 }
 
 // Exhaustive over Builtin_Kind on purpose: adding a builtin without deciding
