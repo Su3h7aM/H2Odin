@@ -44,9 +44,9 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 4 — Idiomatic mode (no wrappers yet)
 
-- [ ] Type mode flag (`abi` | `idiomatic`), target detected via libclang.
-- [ ] Leaf renames proven safe on the target (`c.int`→`i32`, etc.), including enum backing types.
-- [ ] Confirm ABI and Idiomatic both emit correctly for the widened decl set.
+- [x] Type mode flag (`abi` | `idiomatic`), target detected via libclang.
+- [x] Leaf renames proven safe on the target (`c.int`→`i32`, etc.), including enum backing types.
+- [x] Confirm ABI and Idiomatic both emit correctly for the widened decl set.
 
 ## Milestone 5 — The Lua policy layer
 
