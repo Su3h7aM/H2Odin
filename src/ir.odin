@@ -88,15 +88,18 @@ Type_Std :: struct {
 Idiomatic_Reason :: enum {
 	Target_Independent, // core:c defines the name as the same Odin type on every target
 	Size_Proven, // the size measured during extraction equals the Odin type's size
+	Config_Override, // the config's type_map named this type explicitly
 }
 
-// Transformation's decision, in idiomatic mode, to spell a leaf C type with
-// a fixed-width Odin name. Created only when the substitution is proven safe;
-// unproven leaves keep their ABI spelling. The original type moves to its own
-// slot so the decision stays auditable (and signedness queries keep working).
+// Transformation's decision to spell a C type with an explicit Odin
+// spelling — either an idiomatic substitution proven safe on the target, or
+// a config's direct type_map override requested by name. Unproven,
+// unmapped leaves keep their ABI spelling. The original type moves to its
+// own slot so the decision stays auditable (and signedness queries on an
+// enum's backing type keep working).
 Type_Idiomatic_Leaf :: struct {
-	original: Type_Handle, // the Type_Builtin / Type_Std this decision replaced
-	spelling: string, // from the types.odin tables
+	original: Type_Handle, // the type this decision replaced
+	spelling: string, // from types.odin, or copied verbatim from a type_map value
 	reason:   Idiomatic_Reason,
 }
 

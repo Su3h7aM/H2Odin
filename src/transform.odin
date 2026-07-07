@@ -22,9 +22,71 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	if mode == .Idiomatic {
 		substitute_leaf_types(ir)
 	}
+	apply_type_map(ir, policy)
 
 	filter_declarations(ir, policy)
 	apply_renames(ir, policy)
+}
+
+// A type_map entry names an explicit Odin spelling for a C type by name —
+// stronger than an idiomatic proof, since the user asked for it directly —
+// so it applies in both type modes and can override an idiomatic
+// substitution already made. Anything not named in the map is untouched.
+// The record/enum/typedef the entry names is also dropped from the ordering
+// list: the user supplied its Odin spelling directly, so the generator's
+// own rendering of that declaration (its struct body, or a typedef line
+// that would just repeat the mapped spelling) would be redundant, and for
+// the "typedef struct { … } Name;" idiom, leaving it in would emit the same
+// name twice — the record's own definition sits under the same name that
+// clang's typedef borrowing gives the anonymous tag.
+apply_type_map :: proc(ir: ^IR, policy: ^Policy) {
+	if policy.type_map == nil {
+		return
+	}
+	count := len(ir.types) // matches substitute_leaf_types: don't revisit appended slots
+	for i in 0 ..< count {
+		info := ir.types[i]
+		name: string
+		#partial switch variant in info.variant {
+		case Type_Record_Ref:
+			name = ir.records[variant.decl].name
+		case Type_Enum_Ref:
+			name = ir.enums[variant.decl].name
+		case Type_Typedef_Ref:
+			name = ir.typedefs[variant.decl].name
+		case Type_Std:
+			name = variant.name
+		case:
+			continue
+		}
+		spelling, mapped := policy.type_map[name]
+		if !mapped {
+			continue
+		}
+		original := ir_add_type(ir, info)
+		ir.types[i] = Type_Info {
+			is_const = info.is_const,
+			variant = Type_Idiomatic_Leaf{original = original, spelling = spelling, reason = .Config_Override},
+		}
+	}
+
+	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
+	for ref in ir.order {
+		name: string
+		#partial switch ref.kind {
+		case .Record:
+			name = ir.records[ref.index].name
+		case .Enum:
+			name = ir.enums[ref.index].name
+		case .Typedef:
+			name = ir.typedefs[ref.index].name
+		}
+		if _, mapped := policy.type_map[name]; name != "" && mapped {
+			continue
+		}
+		append(&kept, ref)
+	}
+	ir.order = kept
 }
 
 // Offer every top-level declaration to the config's keep callback and
@@ -142,7 +204,7 @@ rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: stri
 	if name == "" {
 		return "", false
 	}
-	default_name := keyword_safe_default(name)
+	default_name := keyword_safe_default(strip_configured_prefix(policy, name, kind))
 	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = default_name, kind = kind, parent = parent})
 	if !decided {
 		new_name = default_name
@@ -151,6 +213,31 @@ rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: stri
 		return "", false
 	}
 	return new_name, true
+}
+
+// Strip the config's configured prefix for this symbol kind, if any and if
+// the name actually has it. strip_prefixes only covers func/type/const —
+// the common case named in the docs; a need to strip prefixes elsewhere can
+// go through the rename callback, which sees this result as sym.default.
+strip_configured_prefix :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -> string {
+	prefix: string
+	#partial switch kind {
+	case .Func:
+		prefix = policy.strip_prefix_func
+	case .Type:
+		prefix = policy.strip_prefix_type
+	case .Const:
+		prefix = policy.strip_prefix_const
+	}
+	if prefix == "" || !strings.has_prefix(name, prefix) {
+		return name
+	}
+	rest := name[len(prefix):]
+	if rest == "" {
+		// Stripping the whole name would leave nothing to emit.
+		return name
+	}
+	return rest
 }
 
 // Parameter names are not symbols — the policy is never consulted — but a

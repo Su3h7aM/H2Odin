@@ -50,12 +50,12 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 5 — The Lua policy layer
 
-- [ ] Load and execute a Lua config once at startup (`vendor:lua/5.4`).
-- [ ] Policy interface: explicit state (no captured closures); pure stages see only the policy, never `lua_State`.
-- [ ] Marshal callback context tables in; copy returned strings into the arena.
-- [ ] Wire `rename` and `keep` through Transformation. Filtering rebuilds the ordering list.
+- [x] Load and execute a Lua config once at startup (`vendor:lua/5.4`).
+- [x] Policy interface: explicit state (no captured closures); pure stages see only the policy, never `lua_State`.
+- [x] Marshal callback context tables in; copy returned strings into the arena.
+- [x] Wire `rename` and `keep` through Transformation. Filtering rebuilds the ordering list.
 - [x] Keyword-safe default renames: a C symbol named like an Odin keyword (`matrix`, `map`, `proc`, …) gets a deterministic default rename plus `@(link_name)`; config can override.
-- [ ] Declarative shortcuts: `strip_prefixes`, `type_map`, package/output/foreign settings.
+- [x] Declarative shortcuts: `strip_prefixes`, `type_map`, package/output/foreign settings.
 
 ## Milestone 6 — Conversions (idiomatic wrappers)
 
