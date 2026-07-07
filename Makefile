@@ -29,7 +29,7 @@ test: test-unit test-e2e
 test-unit:
 	$(ODIN) test $(SRC_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS)
 
-test-e2e:
+test-e2e: build
 	@if find $(TEST_DIR) -maxdepth 1 -name "*.odin" 2>/dev/null | grep -q .; then \
 		$(ODIN) test $(TEST_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS); \
 	else \
