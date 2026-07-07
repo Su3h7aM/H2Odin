@@ -15,7 +15,7 @@ This document describes what each stage is *for* and the boundaries we try to ke
 
 **Analysis** takes the IR and adds *facts* to it — things that are provably true about the C API regardless of any configuration. For example, noticing that a parameter looks length-like and sits next to a pointer. Analysis may surface candidates and hints; it does not commit to them. It reads and annotates; it decides nothing.
 
-**Transformation** is where decisions are made. It reads the analyzed IR together with the configuration policy and records the choices: what to rename, what to drop, which types to use, which idiomatic conversions to apply. It is the only stage that consults policy.
+**Transformation** is where decisions are made. It reads the analyzed IR together with the configuration policy and records the choices: what to rename, what to drop, and which type spellings to use. It is the only stage that consults policy.
 
 **Emission** turns the final IR into Odin text. By the time it runs, every decision has already been made, so emission should be close to boring — it serializes what earlier stages decided. If emission finds itself making a real decision, that decision probably belonged in an earlier stage.
 

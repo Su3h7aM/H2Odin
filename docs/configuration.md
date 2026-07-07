@@ -12,13 +12,13 @@ But power is bounded by a firm rule:
 
 > Configuration *selects and parameterizes*; it never *authors output*.
 
-Lua can say "rename this," "drop that," "treat this pointer as an array," "apply this conversion here." Lua does not return Odin code for the generator to paste in. The generator owns every byte of emitted Odin; the configuration only steers which of the generator's known behaviors fire. This is what keeps the output trustworthy and reviewable no matter what a user's configuration does.
+Lua can say "rename this," "drop that," "treat this pointer as an array," "spell this known type this way." Lua does not return Odin code for the generator to paste in. The generator owns every byte of emitted Odin; the configuration only steers which of the generator's known behaviors fire. This is what keeps the output trustworthy and reviewable no matter what a user's configuration does.
 
 ## Data for the common case, functions for the hard case
 
 Most configuration should be plain data — inputs, output settings, prefix stripping, direct type substitutions. These cover the ordinary library with no functions at all.
 
-When a library needs real logic, callbacks take over. A callback receives a single table describing the thing being decided, and returns a decision — a name, a boolean, a type, or a conversion chosen from the generator's fixed set. Returning `nil` means "use the default," so a configuration only ever spells out the cases it actually cares about and lets everything else stay automatic.
+When a library needs real logic, callbacks take over. A callback receives a single table describing the thing being decided, and returns a decision — a name, a boolean, or a type spelling chosen from the generator's fixed set of behaviors. Returning `nil` means "use the default," so a configuration only ever spells out the cases it actually cares about and lets everything else stay automatic.
 
 ```lua
 return {
@@ -34,7 +34,6 @@ return {
 
   -- mode
   type_mode = "idiomatic",   -- "abi" | "idiomatic"
-  wrappers  = true,
   comments  = true,
 
   -- declarative common case

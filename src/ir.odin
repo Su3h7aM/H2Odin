@@ -26,7 +26,12 @@ Decl_Handle :: distinct u32
 Builtin_Kind :: enum {
 	Void,
 	Bool,
-	Char, // plain C char — distinct from schar/uchar, its signedness is implementation-defined
+	// Plain C char — distinct from schar/uchar. Its signedness is
+	// implementation-defined by the C standard, but not ambiguous: libclang
+	// reports which one the extraction target actually uses, split here into
+	// two kinds so that fact survives instead of being discarded.
+	Char_Signed,
+	Char_Unsigned,
 	S_Char,
 	U_Char,
 	Short,
@@ -78,25 +83,40 @@ Type_Builtin :: struct {
 // c.uint32_t instead of dragging libc-internal typedef chains into the
 // output.
 Type_Std :: struct {
-	name: string,
+	name:     string,
 
 	// Same contract as Type_Builtin.size: measured by libclang on the
 	// extraction target, -1 when unknown.
-	size: int,
+	size:     int,
+
+	// Signedness of the typedef's canonical type, as libclang reports it on
+	// the extraction target — a measured fact, never guessed from the name.
+	// Needed to derive a native spelling for typedefs whose width and sign
+	// both vary by target (wchar_t, the *_fast*_t family).
+	unsigned: bool,
 }
 
 Idiomatic_Reason :: enum {
-	Target_Independent, // core:c defines the name as the same Odin type on every target
-	Size_Proven, // the size measured during extraction equals the Odin type's size
-	Config_Override, // the config's type_map named this type explicitly
+	// The type table names a semantic preference for this C type (e.g.
+	// size_t -> uint) and the size libclang measured on the target confirms
+	// it — the confirmation is a honesty check, not a real expectation of
+	// failure.
+	Table_Preference,
+	// No table preference applies; the native spelling was derived directly
+	// from the measured size and signedness (e.g. an unsigned 2-byte type
+	// becomes u16). Complete for any integer leaf whose size was measured.
+	Derived_From_Measurement,
+	// The config's type_map named this type explicitly.
+	Config_Override,
 }
 
 // Transformation's decision to spell a C type with an explicit Odin
 // spelling — either an idiomatic substitution proven safe on the target, or
-// a config's direct type_map override requested by name. Unproven,
-// unmapped leaves keep their ABI spelling. The original type moves to its
-// own slot so the decision stays auditable (and signedness queries on an
-// enum's backing type keep working).
+// a config's direct type_map override requested by name. Leaves that could
+// not be resolved to a native spelling (rung 3: unknown size, or no scalar
+// shape at all) keep their ABI spelling. The original type moves to its own
+// slot so the decision stays auditable (and signedness queries on an enum's
+// backing type keep working).
 Type_Idiomatic_Leaf :: struct {
 	original: Type_Handle, // the type this decision replaced
 	spelling: string, // from types.odin, or copied verbatim from a type_map value

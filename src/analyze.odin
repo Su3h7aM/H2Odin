@@ -71,7 +71,7 @@ type_is_integer_like :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 	#partial switch variant in ir_type(ir, handle).variant {
 	case Type_Builtin:
 		#partial switch variant.kind {
-		case .Char, .S_Char, .U_Char, .Short, .U_Short, .Int, .U_Int, .Long, .U_Long, .Long_Long, .U_Long_Long:
+		case .Char_Signed, .Char_Unsigned, .S_Char, .U_Char, .Short, .U_Short, .Int, .U_Int, .Long, .U_Long, .Long_Long, .U_Long_Long:
 			return true
 		}
 	case Type_Std:

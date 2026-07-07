@@ -580,7 +580,14 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 		if clang.Location_isFromMainFile(clang.getCursorLocation(decl_cursor)) == 0 {
 			name := clone_clang_string(clang.getCursorSpelling(decl_cursor))
 			if is_std_c_type(name) {
-				return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Std{name = name, size = measured_size_of(type)}}), true
+				return ir_add_type(
+						ir,
+						Type_Info {
+							is_const = is_const,
+							variant = Type_Std{name = name, size = measured_size_of(type), unsigned = is_unsigned_integer_type(type)},
+						},
+					),
+					true
 			}
 			return capture_type(state, clang.getTypedefDeclUnderlyingType(decl_cursor))
 		}
@@ -623,14 +630,30 @@ measured_size_of :: proc(type: clang.Type) -> int {
 	return int(size)
 }
 
+// Signedness of an integer type's canonical (typedef-resolved) form, as
+// libclang reports it on the extraction target — never guessed from the
+// type's name. Used to derive a native spelling for std typedefs whose
+// signedness is not otherwise decided by the type table (e.g. wchar_t,
+// which is unsigned on Windows but a signed int on glibc).
+is_unsigned_integer_type :: proc(type: clang.Type) -> bool {
+	canonical := clang.getCanonicalType(type)
+	#partial switch canonical.kind {
+	case .Bool, .Char_U, .UChar, .UShort, .UInt, .ULong, .ULongLong, .UInt128:
+		return true
+	}
+	return false
+}
+
 builtin_kind_from_clang :: proc(clang_kind: clang.Type_Kind) -> (kind: Builtin_Kind, ok: bool) {
 	#partial switch clang_kind {
 	case .Void:
 		return .Void, true
 	case .Bool:
 		return .Bool, true
-	case .Char_S, .Char_U:
-		return .Char, true
+	case .Char_S:
+		return .Char_Signed, true
+	case .Char_U:
+		return .Char_Unsigned, true
 	case .SChar:
 		return .S_Char, true
 	case .UChar:

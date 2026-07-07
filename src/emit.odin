@@ -45,7 +45,10 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 	fmt.sbprintfln(&out, "package %s", opts.package_name)
 	strings.write_string(&out, "\n")
 	if uses_core_c {
-		strings.write_string(&out, "import \"core:c\"\n\n")
+		strings.write_string(&out, "import \"core:c\"\n")
+	}
+	if uses_core_c {
+		strings.write_string(&out, "\n")
 	}
 	fmt.sbprintfln(&out, "foreign import lib \"system:%s\"", opts.foreign_lib)
 	strings.write_string(&out, "\n")
@@ -195,7 +198,7 @@ write_enum_value :: proc(b: ^strings.Builder, ir: ^IR, backing: Type_Handle, val
 
 builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
 	#partial switch kind {
-	case .Bool, .U_Char, .U_Short, .U_Int, .U_Long, .U_Long_Long:
+	case .Bool, .Char_Unsigned, .U_Char, .U_Short, .U_Int, .U_Long, .U_Long_Long:
 		return true
 	}
 	return false
@@ -306,9 +309,8 @@ type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 	return is_builtin && builtin.kind == .Void
 }
 
-// Write the faithful ABI spelling of a type, using Odin's C-compatible types
-// from core:c. indent is where this type sits, for the rare spellings that
-// span lines (inline anonymous record bodies).
+// Write the type spelling decided by Transformation. indent is where this type
+// sits, for the rare spellings that span lines (inline anonymous record bodies).
 write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: int, uses_core_c: ^bool) {
 	info := ir_type(ir, handle)
 	if info.variant == nil {

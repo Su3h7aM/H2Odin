@@ -69,6 +69,32 @@ test_add_fixture_idiomatic_mode :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_idiomatic_mode_defaults_to_native_leaf_types :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-mode:idiomatic", "tests/fixtures/idiomatic.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	// Rung 1: table preference, size-verified.
+	expect_contains(t, stdout, "checksum :: proc(data: rawptr, nbytes: u64) -> u32 ---")
+	expect_contains(t, stdout, "ticks :: proc() -> i64 ---")
+	expect_contains(t, stdout, "uticks :: proc() -> u64 ---")
+	// Rung 1 for both: size_t -> uint, and plain char -> u8 (matching
+	// core:c.char, not the true per-target signedness).
+	expect_contains(t, stdout, "payload_len :: proc(tag: u8) -> uint ---")
+	// Enum backing types substitute through the same ladder.
+	expect_contains(t, stdout, "Mode :: enum u32")
+	expect_contains(t, stdout, "get_mode :: proc() -> Mode ---")
+	// The ABI fallback (c.X) should not appear anywhere on the idiomatic
+	// surface for this fixture — every leaf here is determinable, so
+	// nothing pulls in core:c at all.
+	expect_not_contains(t, stdout, "import \"core:c\"")
+}
+
+@(test)
 test_basic_config_sets_package_foreign_lib_and_type_mode :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/basic.lua", "tests/fixtures/add.h"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])

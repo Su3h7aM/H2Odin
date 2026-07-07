@@ -8,17 +8,16 @@ ABI mode preserves the C API and ABI as faithfully as it can, using Odin's C-com
 
 ## Idiomatic mode — aggressive
 
-Idiomatic mode tries to make the bindings feel as though the library had been written in Odin. It prefers native Odin types (`i32`, `f64`, `string`), Odin naming, and small conversions where they are safe. The ideal experience is that someone using the bindings would not realize they are calling into C at all.
+Idiomatic mode tries to make the bindings feel as though the library had been written in Odin. It prefers native Odin type spellings (`i32`, `f64`, `cstring`) and Odin naming where they are safe. The ideal experience is that someone using the bindings would not realize they are calling into C at all.
 
-Idiomatic mode is best understood as a layer *on top of* ABI mode. The real `foreign` declarations are always the faithful ABI ones; idiomatic wrappers are added only where a conversion does genuine, predictable work. Where no conversion applies, the idiomatic output is just the ABI output with nicer type names — no wrapper is generated. Wrappers should never appear as empty boilerplate; they exist only where they earn their place.
+Idiomatic mode is a different spelling policy for the same C declarations. It still emits one `foreign` declaration per C function; it does not author procedure bodies. The difference lives in the type names and symbol names Transformation chooses before Emission serializes them.
 
 ## Guidelines for choosing idiomatic types
 
 A few principles guide what idiomatic mode may and may not do:
 
 - **Only substitute a native type when it is provably the same on the target.** For example, whether a C `long` matches `i64` or `i32` depends on the platform. Idiomatic mode may only use a native type when it is known to have the same width and layout as the C type on the target being generated. "More idiomatic" never justifies a substitution that changes the ABI.
-- **A wrapper converts shape, it does not invent meaning.** Turning an Odin `string` into a C `cstring` is a shape conversion — safe and deterministic. Deciding that a `float *` and a nearby `count` form an array is *meaning*, and meaning is not something the generator infers on its own. Shape conversions can be automatic; meaning comes from configuration.
-- **Wrappers are optional.** Even in idiomatic mode, if wrappers are turned off, any declaration that would need one falls back to its ABI form. Idiomatic naming still applies, since renaming needs no wrapper.
+- **A spelling change converts representation, it does not invent meaning.** Turning a C `int` into Odin `i32` is safe when the measured size proves it. Deciding that a `float *` and a nearby `count` form an array is *meaning*, and meaning is not something the generator infers on its own. Meaning comes from configuration.
 
 ## Pointers
 
@@ -37,4 +36,4 @@ The default depends on the kind of pointer. As a sketch of the intent:
 
 Array semantics — `[^]T`, or a full slice — are chosen only when there is evidence for them, such as a neighbouring `count` / `len` / `size` parameter, or when the configuration asks for them. Defaulting a lone `int *out` to a single pointer keeps the common case honest; upgrading to an array is done on evidence, not on a hunch.
 
-Note that pointer lowering (which produces `cstring`, `rawptr`, and so on) happens first, as the faithful interop step. Idiomatic niceties — for instance turning a `cstring` into an Odin `string` with a wrapper — are a later layer on top of that.
+Note that pointer lowering (which produces `cstring`, `rawptr`, and so on) happens first, as the faithful interop step. It is still type spelling: `const char *` can become `cstring` without any generated conversion code.

@@ -17,18 +17,19 @@ Type_Spelling :: struct {
 	// no spelling at all (void), never an empty name.
 	abi:                string,
 
-	// The fixed-width Odin spelling idiomatic mode will use ("i32").
-	// "" means no idiomatic form has been decided. Nothing reads this yet.
+	// A semantic preference for how idiomatic mode should spell this type
+	// ("i32", or "uint" for size_t). This is rung 1 of the substitution
+	// ladder in substitute_leaf_types: still verified against the size
+	// libclang measured before use, never assumed. "" means the table has
+	// no preference — idiomatic mode does not fall back to the ABI spelling
+	// for that, it derives a fixed-width native spelling from the measured
+	// size and signedness instead (rung 2).
 	idiomatic:          string,
 
-	// true  — core:c defines this name as the same Odin type on every
-	//         supported target, so the idiomatic substitution is safe by
-	//         construction and needs no verification.
-	// false — the width varies with the target. The substitution must be
-	//         proven per-target (measured size against the Odin type's
-	//         size) before use, never assumed. This flag must never become
-	//         the thing that *decides* a substitution for a target-varying
-	//         type; it only says whether verification is required.
+	// Documentation only — nothing branches on this. true means core:c
+	// defines `idiomatic` as the same Odin type on every supported target,
+	// so the rung-1 size check is guaranteed to pass; false means it can
+	// vary and the check is doing real work. Either way the check runs.
 	target_independent: bool,
 }
 
@@ -40,23 +41,29 @@ Type_Spelling :: struct {
 builtin_spellings := [Builtin_Kind]Type_Spelling {
 	// C void never appears as a parameter in the IR, and void returns are
 	// handled by the caller omitting the result entirely.
-	.Void        = {"", "", false},
-	.Bool        = {"c.bool", "bool", true},
-	// Plain char's signedness is implementation-defined; no idiomatic form
-	// until a policy decides how to read it.
-	.Char        = {"c.char", "", false},
-	.S_Char      = {"c.schar", "i8", true},
-	.U_Char      = {"c.uchar", "u8", true},
-	.Short       = {"c.short", "i16", true},
-	.U_Short     = {"c.ushort", "u16", true},
-	.Int         = {"c.int", "i32", true},
-	.U_Int       = {"c.uint", "u32", true},
-	.Long        = {"c.long", "i64", false}, // i32 on Windows and 32-bit targets
-	.U_Long      = {"c.ulong", "u64", false},
-	.Long_Long   = {"c.longlong", "i64", true},
-	.U_Long_Long = {"c.ulonglong", "u64", true},
-	.Float       = {"c.float", "f32", true},
-	.Double      = {"c.double", "f64", true},
+	.Void          = {"", "", false},
+	.Bool          = {"c.bool", "bool", true},
+	// Plain char always prefers u8, regardless of which signedness libclang
+	// measured on the target: Odin's own core:c hardcodes char as u8
+	// ("assuming -funsigned-char", see core:c/c.odin), not the target's
+	// true default. Deriving from the measured signedness instead would
+	// pick i8 on the (common) targets where C's plain char is actually
+	// signed, producing a type distinct from — and un-assignable to —
+	// core:c.char, breaking interop with the rest of the Odin C-FFI ecosystem.
+	.Char_Signed   = {"c.char", "u8", true},
+	.Char_Unsigned = {"c.char", "u8", true},
+	.S_Char        = {"c.schar", "i8", true},
+	.U_Char        = {"c.uchar", "u8", true},
+	.Short         = {"c.short", "i16", true},
+	.U_Short       = {"c.ushort", "u16", true},
+	.Int           = {"c.int", "i32", true},
+	.U_Int         = {"c.uint", "u32", true},
+	.Long          = {"c.long", "i64", false}, // i32 on Windows and 32-bit targets
+	.U_Long        = {"c.ulong", "u64", false},
+	.Long_Long     = {"c.longlong", "i64", true},
+	.U_Long_Long   = {"c.ulonglong", "u64", true},
+	.Float         = {"c.float", "f32", true},
+	.Double        = {"c.double", "f64", true},
 }
 
 // A standard C typedef (stdint.h / stddef.h) that core:c spells under the
@@ -65,8 +72,8 @@ builtin_spellings := [Builtin_Kind]Type_Spelling {
 Std_Mapping :: struct {
 	c_name:             string, // the typedef name as C headers spell it
 	abi:                string,
-	idiomatic:          string,
-	target_independent: bool, // same meaning as in Type_Spelling
+	idiomatic:          string, // same rung-1-preference meaning as in Type_Spelling
+	target_independent: bool, // documentation only, same meaning as in Type_Spelling
 }
 
 // A flat slice, not an enum-indexed array: this set is open-ended and grows
@@ -75,7 +82,10 @@ Std_Mapping :: struct {
 std_mappings := []Std_Mapping {
 	{"size_t", "c.size_t", "uint", false},
 	{"ssize_t", "c.ssize_t", "int", false},
-	{"wchar_t", "c.wchar_t", "", false}, // u16 on Windows, u32 elsewhere
+	// No semantic preference: width and signedness both vary by target
+	// (unsigned 16-bit on Windows, a signed 32-bit int on glibc), so
+	// idiomatic mode derives the spelling from what libclang measures.
+	{"wchar_t", "c.wchar_t", "", false},
 	{"ptrdiff_t", "c.ptrdiff_t", "int", false},
 	{"int8_t", "c.int8_t", "i8", true},
 	{"int16_t", "c.int16_t", "i16", true},
@@ -98,7 +108,8 @@ std_mappings := []Std_Mapping {
 	{"uint_least32_t", "c.uint_least32_t", "u32", true},
 	{"uint_least64_t", "c.uint_least64_t", "u64", true},
 	// The fast families vary per architecture in core:c except at the 8- and
-	// 64-bit ends, which are fixed on every branch.
+	// 64-bit ends, which are fixed on every branch; the 16- and 32-bit
+	// entries carry no preference here, so idiomatic mode derives them.
 	{"int_fast8_t", "c.int_fast8_t", "i8", true},
 	{"int_fast16_t", "c.int_fast16_t", "", false},
 	{"int_fast32_t", "c.int_fast32_t", "", false},
@@ -115,11 +126,14 @@ std_mappings := []Std_Mapping {
 SPELLING_RAWPTR :: "rawptr"
 SPELLING_CSTRING :: "cstring"
 
-// The size in bytes of a fixed-width Odin type named in an idiomatic column;
-// -1 for spellings whose size is not fixed across targets (int, uint,
-// uintptr). Substitution proofs compare a size measured by libclang against
-// this — a -1 here can never prove anything, which is exactly right for
-// pointer-width types.
+// The size in bytes of an Odin type named in an idiomatic column, on the
+// architecture h2odin itself is running as (which, absent a cross-target
+// generation flag, is also the extraction target). Fixed-width spellings
+// have a size known at compile time; "int"/"uint"/"uintptr" are register-
+// width, so their size is asked of the Odin compiler building h2odin rather
+// than hardcoded — on every real target that width matches size_t's, which
+// is exactly the claim rung 1 needs verified, not assumed. -1 for anything
+// else, meaning "cannot prove a substitution with this spelling".
 odin_type_size :: proc(spelling: string) -> int {
 	switch spelling {
 	case "bool", "i8", "u8":
@@ -130,6 +144,10 @@ odin_type_size :: proc(spelling: string) -> int {
 		return 4
 	case "i64", "u64", "f64":
 		return 8
+	case "int", "uint":
+		return size_of(int)
+	case "uintptr":
+		return size_of(uintptr)
 	}
 	return -1
 }

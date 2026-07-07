@@ -128,7 +128,6 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 		policy_destroy(&policy)
 		return Policy{}, false
 	}
-
 	if strip_prefixes, prefixes_ok := policy_strip_prefixes(&policy); prefixes_ok {
 		policy.strip_prefix_func = strip_prefixes.func
 		policy.strip_prefix_type = strip_prefixes.type

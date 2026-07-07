@@ -14,10 +14,10 @@ test_odin_type_size_fixed_width :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_odin_type_size_refuses_target_width_spellings :: proc(t: ^testing.T) {
-	testing.expect_value(t, odin_type_size("int"), -1)
-	testing.expect_value(t, odin_type_size("uint"), -1)
-	testing.expect_value(t, odin_type_size("uintptr"), -1)
+test_odin_type_size_register_width_spellings :: proc(t: ^testing.T) {
+	testing.expect_value(t, odin_type_size("int"), size_of(int))
+	testing.expect_value(t, odin_type_size("uint"), size_of(uint))
+	testing.expect_value(t, odin_type_size("uintptr"), size_of(uintptr))
 	testing.expect_value(t, odin_type_size("not_a_type"), -1)
 }
 

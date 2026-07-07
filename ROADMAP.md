@@ -59,12 +59,12 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 6 — Conversions (idiomatic wrappers)
 
-- [ ] Closed conversion set as a union carrying its own data; `nil` = no conversion.
-- [ ] Two-layer emission: faithful ABI foreign decl + generated wrapper.
-- [ ] `cstring`→`string`.
+- [x] Closed conversion set as a union carrying its own data; `nil` = no conversion.
+- [x] Two-layer emission: faithful ABI foreign decl + generated wrapper.
+- [x] `cstring` parameter→`string` wrapper parameter; return `cstring` stays ABI-shaped until ownership/lifetime policy exists.
 - [ ] pointer+length→slice (config-driven).
 - [ ] flag enum→`bit_set` (heuristic + config confirm).
-- [ ] `wrappers = false` falls back to ABI form per declaration.
+- [x] `wrappers = false` falls back to ABI form per declaration.
 
 ## Milestone 7 — Robustness & polish
 

@@ -84,4 +84,5 @@ test_policy_load_rejects_bad_declarative_shapes :: proc(t: ^testing.T) {
 	defer policy_destroy(&policy)
 	defer delete_policy_test_data(&policy)
 	testing.expect(t, !ok)
+
 }

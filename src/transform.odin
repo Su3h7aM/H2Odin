@@ -11,7 +11,7 @@ Type_Mode :: enum {
 
 // Transformation is where decisions are made. It reads the analyzed IR
 // together with the configuration policy and records the choices — renames,
-// drops, type picks, conversions. It is the only stage that consults policy.
+// drops, and type picks. It is the only stage that consults policy.
 //
 transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	for _, i in ir.types {
@@ -309,44 +309,60 @@ is_odin_keyword :: proc(name: string) -> bool {
 // every target, or the size libclang measured during extraction equals the
 // Odin type's size. Anything unproven keeps its ABI spelling — correctness
 // over convenience, never a guess.
+// Idiomatic mode's default is a native Odin spelling; the ABI spelling
+// (core:c) is the fallback of last resort, used only when the target
+// genuinely gives us too little to choose a native type. Every leaf in the
+// type pool is resolved through a three-rung ladder:
+//
+//  1. Table preference — the type table names a semantic spelling for this
+//     C type (size_t -> uint). Used once the size libclang measured on the
+//     target confirms it; that confirmation is a honesty check, not a real
+//     expectation of failure.
+//  2. Derived from measurement — no table preference applies. Size and
+//     signedness, as libclang measured them, are a complete determination
+//     for any integer leaf, so a fixed-width native spelling (i16, u32,
+//     ...) is derived directly, never guessed.
+//  3. Fallback — the size is unknown, or the type has no scalar shape to
+//     derive from (e.g. void). The ABI spelling is kept, and this rung is
+//     diagnosed since it should be rare in practice.
 substitute_leaf_types :: proc(ir: ^IR) {
 	count := len(ir.types) // slots appended below carry no leaves to revisit
 	for i in 0 ..< count {
 		info := ir.types[i]
 		spelling: string
-		independent: bool
-		measured: int
+		reason: Idiomatic_Reason
+		measured := -1
+
 		#partial switch variant in info.variant {
 		case Type_Builtin:
-			row := builtin_spellings[variant.kind]
-			spelling = row.idiomatic
-			independent = row.target_independent
+			if variant.kind == .Void {
+				// No scalar shape; void is handled elsewhere (bare returns,
+				// void* pointer lowering), never substituted as a leaf.
+				continue
+			}
+			if variant.size == -1 {
+				// Builtins are pre-seeded for every kind at ir_init, whether
+				// or not the header actually uses them; a real capture
+				// always measures a size (builtins are never incomplete).
+				// -1 here means this kind was never used, not a genuine
+				// measurement failure — nothing to diagnose.
+				continue
+			}
 			measured = variant.size
+			spelling, reason = resolve_leaf_spelling(builtin_spellings[variant.kind].idiomatic, measured, builtin_is_unsigned(variant.kind))
 		case Type_Std:
 			row, known := std_mapping_for(variant.name)
 			if !known {
 				continue
 			}
-			spelling = row.idiomatic
-			independent = row.target_independent
 			measured = variant.size
+			spelling, reason = resolve_leaf_spelling(row.idiomatic, measured, variant.unsigned)
 		case:
-			continue
-		}
-		if spelling == "" {
-			// No idiomatic form decided for this type.
 			continue
 		}
 
-		reason: Idiomatic_Reason
-		switch {
-		case independent:
-			reason = .Target_Independent
-		case measured >= 0 && measured == odin_type_size(spelling):
-			reason = .Size_Proven
-		case:
-			// Unknown or mismatched size on this target: unproven, keep the
-			// ABI spelling.
+		if spelling == "" {
+			report_unresolved_idiomatic_leaf(info, measured)
 			continue
 		}
 
@@ -359,6 +375,53 @@ substitute_leaf_types :: proc(ir: ^IR) {
 			variant = Type_Idiomatic_Leaf{original = original, spelling = spelling, reason = reason},
 		}
 	}
+}
+
+// Rungs 1 and 2 of the substitution ladder: prefer the table's semantic
+// spelling if the measured size confirms it on this target, otherwise
+// derive a fixed-width native spelling straight from the measured size and
+// signedness. Returns "" when neither is possible — rung 3, the fallback,
+// is the caller's job.
+resolve_leaf_spelling :: proc(preferred: string, measured: int, unsigned: bool) -> (spelling: string, reason: Idiomatic_Reason) {
+	if preferred != "" && measured >= 0 && measured == odin_type_size(preferred) {
+		return preferred, .Table_Preference
+	}
+	if derived := derive_native_spelling(measured, unsigned); derived != "" {
+		return derived, .Derived_From_Measurement
+	}
+	return "", {}
+}
+
+// A fixed-width Odin spelling for an integer leaf of the given measured
+// size and signedness. Size and signedness together are a complete
+// determination for any C integer type — there is no partial case here,
+// only "measurable" or not.
+derive_native_spelling :: proc(size: int, unsigned: bool) -> string {
+	switch size {
+	case 1:
+		return "u8" if unsigned else "i8"
+	case 2:
+		return "u16" if unsigned else "i16"
+	case 4:
+		return "u32" if unsigned else "i32"
+	case 8:
+		return "u64" if unsigned else "i64"
+	}
+	return ""
+}
+
+// Rung 3: the type could not be resolved to a native Odin spelling on this
+// target. Idiomatic mode keeps the ABI spelling for it, but this should be
+// rare, so it is surfaced rather than passed over silently.
+report_unresolved_idiomatic_leaf :: proc(info: Type_Info, measured: int) {
+	name: string
+	#partial switch variant in info.variant {
+	case Type_Builtin:
+		name = builtin_spellings[variant.kind].abi
+	case Type_Std:
+		name = variant.name
+	}
+	fmt.eprintfln("h2odin: idiomatic mode: %s has no provable native spelling on this target (measured size %d); keeping ABI spelling", name, measured)
 }
 
 lower_type :: proc(ir: ^IR, handle: Type_Handle) {
@@ -386,7 +449,7 @@ lower_pointer :: proc(ir: ^IR, pointee: Type_Handle) -> Type_Lowered_Pointer {
 		if variant.kind == .Void {
 			return Type_Lowered_Pointer{pointee = pointee, kind = .Rawptr, confidence = .Proven, reason = .Void_Pointer}
 		}
-		if variant.kind == .Char && pointee_info.is_const {
+		if (variant.kind == .Char_Signed || variant.kind == .Char_Unsigned) && pointee_info.is_const {
 			return Type_Lowered_Pointer{pointee = pointee, kind = .CString, confidence = .Proven, reason = .Const_Char_Pointer}
 		}
 	case Type_Proc:
