@@ -1,6 +1,7 @@
 package h2odin
 
 import "core:fmt"
+import "core:strings"
 
 // Which spelling family Transformation aims for.
 Type_Mode :: enum {
@@ -70,14 +71,13 @@ filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
 	ir.order = kept
 }
 
-// Offer every named symbol to the config's rename callback. Functions and
-// variables that change name keep their C symbol via link_name; type names,
-// enum members, constants, and fields are not linkage-visible and just take
-// the new name.
+// Decide the Odin-visible name of every named symbol: the generator's
+// keyword-safe default first, then the config's rename callback on top.
+// Functions and variables that change name keep their C symbol via
+// link_name; type names, enum members, constants, and fields are not
+// linkage-visible and just take the new name. Runs with or without a
+// config — keyword collisions must be fixed either way.
 apply_renames :: proc(ir: ^IR, policy: ^Policy) {
-	if !policy.has_rename {
-		return
-	}
 	for ref in ir.order {
 		switch ref.kind {
 		case .Invalid:
@@ -87,6 +87,7 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 				decl.link_name = decl.name
 				decl.name = new_name
 			}
+			fix_param_names(decl.params)
 		case .Var:
 			decl := &ir.vars[ref.index]
 			if new_name, decided := rename_of(policy, decl.name, .Var, ""); decided {
@@ -125,20 +126,95 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 			}
 		}
 	}
+
+	// Function-pointer types carry parameter names of their own.
+	for &info in ir.types {
+		if variant, is_proc := &info.variant.(Type_Proc); is_proc {
+			fix_param_names(variant.params)
+		}
+	}
 }
 
 // Anonymous symbols have nothing to rename; everything else goes to the
-// policy with the generator's default (currently the original name — the
-// keyword-safe and prefix-stripped defaults land on top of this).
+// policy together with the generator's default, and the default applies
+// when the policy stays silent.
 rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: string) -> (string, bool) {
 	if name == "" {
 		return "", false
 	}
-	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = name, kind = kind, parent = parent})
-	if !decided || new_name == name {
+	default_name := keyword_safe_default(name)
+	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = default_name, kind = kind, parent = parent})
+	if !decided {
+		new_name = default_name
+	}
+	if new_name == name {
 		return "", false
 	}
 	return new_name, true
+}
+
+// Parameter names are not symbols — the policy is never consulted — but a
+// name that collides with an Odin keyword still cannot be emitted verbatim.
+fix_param_names :: proc(params: []Param) {
+	for &param in params {
+		param.name = keyword_safe_default(param.name)
+	}
+}
+
+// A C name that collides with an Odin keyword gets a deterministic default:
+// one trailing underscore. Deterministic so reruns and configs can rely on
+// it; the rename callback sees it as the default and may override.
+keyword_safe_default :: proc(name: string) -> string {
+	if !is_odin_keyword(name) {
+		return name
+	}
+	return strings.concatenate({name, "_"})
+}
+
+is_odin_keyword :: proc(name: string) -> bool {
+	switch name {
+	case "asm",
+	     "auto_cast",
+	     "bit_field",
+	     "bit_set",
+	     "break",
+	     "case",
+	     "cast",
+	     "context",
+	     "continue",
+	     "defer",
+	     "distinct",
+	     "do",
+	     "dynamic",
+	     "else",
+	     "enum",
+	     "fallthrough",
+	     "for",
+	     "foreign",
+	     "if",
+	     "import",
+	     "in",
+	     "map",
+	     "matrix",
+	     "not_in",
+	     "or_break",
+	     "or_continue",
+	     "or_else",
+	     "or_return",
+	     "package",
+	     "proc",
+	     "return",
+	     "struct",
+	     "switch",
+	     "transmute",
+	     "typeid",
+	     "union",
+	     "using",
+	     "when",
+	     "where":
+		return true
+	}
+	return false
 }
 
 // Replace each leaf C type with its fixed-width Odin spelling when that is
