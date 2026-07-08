@@ -10,7 +10,7 @@ H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings
 
 ## Features
 
-- **Two type modes.** *ABI mode* preserves the C API faithfully using Odin's C-compatible types (`c.int`, `c.size_t`, …). *Idiomatic mode* generates native Odin types (`i32`, `f64`, `string`) and small wrappers, so the bindings feel written in Odin.
+- **Two type modes.** *ABI mode* preserves the C API faithfully using Odin's C-compatible types (`c.int`, `c.size_t`, …). *Idiomatic mode* generates native Odin types (`i32`, `f64`, …) where the substitution is proven ABI-safe on the target. Generated wrapper procedures (e.g. `cstring → string` params, `pointer+length → []T` slices) are planned, not yet implemented.
 - **Correctness first.** A type is never swapped for a nicer-looking one if it would break behavior or the ABI. When the header is ambiguous, H2Odin picks a safe default, flags it, and lets you override it — it never silently guesses wrong.
 - **Deterministic.** Same headers plus same configuration always produce identical output.
 - **Configurable in Lua.** Simple libraries need a few lines of data; tricky ones drop into Lua functions for the hard cases — same small API either way.
@@ -35,7 +35,7 @@ return {
 
   -- mode
   type_mode = "idiomatic",   -- "abi" | "idiomatic"
-  wrappers  = true,
+  -- wrappers  = true,        -- planned, not yet implemented
   comments  = true,
 
   -- declarative common case

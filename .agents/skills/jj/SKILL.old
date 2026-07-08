@@ -1,0 +1,501 @@
+---
+name: jj
+description: Use Jujutsu (jj) as primary VCS interface with Git only as backend/transport. Use for Git-backed jj workflows, bookmarks, revsets, filesets, templates, conflict resolution, multi-remote setup, and Git interoperability. Prefer compact, non-interactive, scriptable jj usage.
+---
+
+# JJ for Agents
+
+Use `jj` as primary UX. Use Git as backend, auth, remotes, `.git` compatibility.
+
+## Hard Rules
+
+- Prefer `jj` over `git` for repo mutation
+- Prefer non-interactive commands
+- Use `-m`, explicit revsets, explicit filesets, explicit flags
+- Avoid editor/pager/TUI/merge UI by default
+- Use interactive `jj` only if both true:
+  1. `interactive_shell` tool exists
+  2. `interactive-shell` or `pi-interactive-shell` skill is loaded
+- Never run interactive TUI via plain `bash`
+- If docs unclear, re-check official docs. Do not guess
+
+## Core Model
+
+### Working copy
+
+- `@` = current working-copy commit
+- `@-` = parent of `@`
+- working copy **is commit**, not dirty area outside history
+- most `jj` commands snapshot working copy first
+
+### `jj new`
+
+`jj new <rev>` creates **new empty working-copy commit** on top of `<rev>`.
+Not Git checkout.
+
+Typical cycle:
+1. `jj new main`
+2. land on empty `@`
+3. edit files
+4. `jj st` / `jj diff` snapshots edits into `@`
+5. `jj commit -m "msg"`
+6. current change finalized; new empty `@` created on top
+
+### Tracking model
+
+By default:
+- new files auto-track
+- modified files auto-track
+- deleted tracked files auto-record
+- no `git add`
+- no normal `jj add` step
+
+Exceptions:
+- ignored files not auto-tracked
+- custom `snapshot.auto-track` may require `jj file track`
+- `jj file untrack <path>` removes from tracking but keeps file in working copy; ensure ignore/snapshot config prevents immediate re-track
+
+### No staging area
+
+Git index habits map to commit-rewrite commands:
+- `git add -p; git commit` -> `jj split`  # interactive, avoid by default
+- `git add -p; git commit --amend` -> `jj squash -i`  # interactive, avoid by default
+- edit arbitrary commit diff -> `jj diffedit -r <rev>`  # interactive, avoid by default
+
+### Bookmarks
+
+- `jj` uses **bookmarks**, not current branches
+- no current checked-out bookmark
+- new commits do **not** auto-move bookmark
+- local bookmark maps to Git branch on push/import
+- remote bookmark syntax: `<name>@<remote>`
+
+Commands:
+```bash
+jj bookmark list
+jj bookmark create <name> -r <rev>
+jj bookmark move <name> --to <rev>
+jj bookmark delete <name>
+jj bookmark track <name> --remote=<remote>
+jj bookmark untrack <name> --remote=<remote>
+```
+
+## Git Backend
+
+### Colocated
+
+Default for `jj git init` / `jj git clone`.
+Both `.jj/` and `.git/` present.
+
+Pros:
+- tools needing `.git` work
+- `jj` auto-imports/exports Git refs on every `jj` command
+- easiest incremental migration from Git
+
+Cons:
+- mutating `git` + mutating `jj` can cause bookmark conflicts/divergence
+- Git often appears detached HEAD; normal in jj
+- `jj` ignores Git staging area and unfinished Git rebase states
+- Git tools do not understand jj conflict storage well
+- many refs can slow auto-import
+
+### Non-colocated
+
+Use `--no-colocate` or `git.colocate = false`.
+Use `jj git import` / `jj git export` when needed.
+For `gh` in non-colocated repo, docs suggest:
+```bash
+GIT_DIR=$(jj git root) gh issue list
+```
+
+## Safe Defaults
+
+```bash
+jj git clone <url>
+jj st
+jj log
+jj new main
+# edit files
+jj diff
+jj commit -m "feat: ..."
+jj bookmark create my-topic -r @-
+jj bookmark track my-topic
+jj git push
+```
+
+Generated bookmark push:
+```bash
+jj git push --change @-
+```
+
+## Updating from remote
+
+No documented direct `jj pull` equivalent.
+Use:
+```bash
+jj git fetch
+jj rebase -o main
+```
+If multiple active stacks/bookmarks exist, rebase explicitly per stack.
+
+## Conflicts
+
+Conflicts are first-class commit state.
+No `--continue` flow.
+
+Preferred non-interactive flow:
+```bash
+jj new <conflicted-rev>
+# resolve files directly
+jj diff
+jj squash
+```
+Alternative:
+```bash
+jj edit <conflicted-rev>
+```
+Use only when direct-in-place edit is worth reduced inspectability.
+
+Facts:
+- descendants can auto-rebase on top of conflicted commit
+- conflict marker style may be jj default / `snapshot` / Git `diff3`
+- Git tools often mishandle jj conflict representation
+
+## Revsets
+
+Revsets select commits. Use them everywhere: `log`, `show`, `diff -r`, `new`, `edit`, `rebase`, config aliases, template checks.
+
+### Operator mental model
+
+- `x-` parents
+- `x+` children
+- `::x` ancestors incl `x`
+- `x::` descendants incl `x`
+- `x..y` ancestors of `y` excluding ancestors of `x`  # not path-only
+- `x::y` ancestry path from `x` to `y`
+- `x..` = not ancestors of `x`
+- `~x` complement
+- `x & y` intersection
+- `x | y` union
+- `x ~ y` subtraction
+
+Binding: unary/functions > ancestry operators > `~` > `&`/subtraction > `|`.
+Use parentheses when nontrivial.
+
+### Core symbols
+
+- `@` current working copy
+- `<workspace>@` other workspace working copy
+- `<bookmark>@<remote>` remote bookmark/tag
+- commit ID / change ID / unique prefixes
+- quote symbols if needed, e.g. `"x-"`
+
+### Symbol resolution priority
+
+1. tag
+2. bookmark
+3. Git ref
+4. commit/change ID
+
+For scripts, prefer explicit functions:
+- `commit_id(prefix)`
+- `change_id(prefix)`
+- `exactly(x, 1)` when single target required
+
+### Core functions agents should know
+
+Navigation:
+- `parents(x, [depth])`
+- `children(x, [depth])`
+- `ancestors(x, [depth])`
+- `descendants(x, [depth])`
+- `first_parent(x, [depth])`
+- `first_ancestors(x, [depth])`
+- `reachable(srcs, domain)`
+- `connected(x)`
+
+Sets:
+- `all()`
+- `none()`
+- `heads(x)`
+- `roots(x)`
+- `latest(x, [count])`
+- `fork_point(x)`
+- `merges()`
+- `visible_heads()`
+- `root()`
+
+Refs:
+- `bookmarks([pattern])`
+- `remote_bookmarks([name], [remote])`
+- `tracked_remote_bookmarks(...)`
+- `untracked_remote_bookmarks(...)`
+- `tags([pattern])`
+- `remote_tags(...)`
+
+Metadata:
+- `description(pattern)`
+- `subject(pattern)`
+- `author(pattern)` / `author_name` / `author_email`
+- `author_date(pattern)`
+- `mine()`
+- `committer(pattern)` / `committer_date(pattern)`
+- `signed()`
+- `empty()`
+- `conflicts()`
+- `divergent()`
+
+Content:
+- `files(fileset)`
+- `diff_lines(text, [files])`
+- `diff_lines_added(text, [files])`
+- `diff_lines_removed(text, [files])`
+
+Safety/helpers:
+- `present(x)`
+- `coalesce(a, b, ...)`
+- `working_copies()`
+- `at_operation(op, x)`
+
+Built-ins:
+- `trunk()`
+- `immutable()` / `mutable()`
+- `visible()` / `hidden()`
+
+### String/date patterns
+
+String patterns default to `glob:`. Also use:
+- `exact:"..."`
+- `glob:"..."`
+- `glob-i:"..."`
+- `regex:"..."`
+- `substring:"..."`
+
+Can combine: `~x`, `x & y`, `x | y`, `x ~ y`.
+
+Date patterns:
+- `after:"2024-02-01"`
+- `before:"2 days ago"`
+
+### Revset recipes
+
+```bash
+jj log -r @
+jj log -r ::@
+jj log -r 'remote_bookmarks()..'
+jj log -r 'remote_bookmarks(remote=origin)..'
+jj log -r '(remote_bookmarks()..@)::'
+jj log -r 'mine() & bookmarks() & ~remote_bookmarks()'
+jj log -r 'author(*alice*) & description(*fix*)'
+jj show -r 'exactly(bookmarks(main), 1)'
+jj diff -r 'fork_point(@ | trunk())..@'
+```
+
+Guidance:
+- use `exactly(..., 1)` in scripts when single target required
+- use `present(x)` for optional refs
+- use `first_ancestors()` for first-parent style history views
+- use `reachable(@, mutable())` for current mutable stack neighborhood
+
+## Filesets
+
+Filesets select paths. Used by path-aware revsets, `jj diff`, `jj file list`, templates, config.
+
+### Pattern kinds
+
+Default quoted path = `prefix-glob:` cwd-relative path prefix.
+Useful kinds:
+- `cwd:"path"`
+- `file:"path"`
+- `glob:"pattern"`
+- `prefix-glob:"pattern"`
+- `root:"path"`
+- `root-file:"path"`
+- `root-glob:"pattern"`
+- `root-prefix-glob:"pattern"`
+- add `-i` for case-insensitive glob kinds
+
+### Operators/functions
+
+- `~x`
+- `x & y`
+- `x | y`
+- `x ~ y`
+- `all()`
+- `none()`
+
+### Fileset recipes
+
+```bash
+jj diff 'src'
+jj diff 'src ~ glob:"**/*.gen.ts"'
+jj file list 'src & glob:"**/*.rs"'
+jj file list 'root:"src" ~ root-glob:"src/**/*.snap"'
+```
+
+Quoting:
+- shell quote whole fileset when special chars exist
+- inner quotes required for expressions with operators/functions/meta chars
+
+### Filesets inside revsets/templates
+
+```bash
+jj log -r 'files("src")'
+jj log -r 'diff_lines("*TODO*", "src")'
+```
+
+## Templates
+
+Templates customize output with `-T`. Agents use them for compact machine-readable output, scripted inspection, and precise filtering.
+
+### Core rules
+
+- prefer `--no-pager` with custom templates
+- prefer short, explicit templates
+- use template methods instead of parsing default human output
+- use `json(...)` or explicit separators for machine-readable output
+
+### Useful globals
+
+- `if(cond, then, [else])`
+- `coalesce(...)`
+- `concat(...)`
+- `join(sep, ...)`
+- `separate(sep, ...)`
+- `surround(prefix, suffix, content)`
+- `stringify(x)`
+- `json(x)`
+- `label(name, content)`
+- `config(name)`
+- `git_web_url([remote])`
+
+### Commit fields/methods agents should know
+
+IDs/refs:
+- `commit_id`, `change_id`
+- `bookmarks()`, `local_bookmarks()`, `remote_bookmarks()`
+- `tags()`
+
+State:
+- `current_working_copy()`
+- `mine()`
+- `divergent()`
+- `hidden()`
+- `immutable()`
+- `conflict()`
+- `empty()`
+- `root()`
+- `contained_in("revset")`
+
+Metadata:
+- `description()`
+- `trailers()`
+- `author()`, `committer()`, `signature()`
+
+Content:
+- `diff([files])`
+- `files([files])`
+- `conflicted_files()`
+
+Common nested methods:
+- `commit_id.short()` / `.shortest()`
+- `change_id.short()` / `.shortest()`
+- `author.email().local()`
+- `timestamp.ago()` / `.format("%Y-%m-%d")`
+- `diff().summary()` / `.git()` / `.stat()`
+- `list.map(|x| ...)`, `.join(", ")`, `.any(...)`, `.all(...)`
+
+### Template recipes
+
+Short IDs:
+```bash
+jj log --no-graph -r @ -T 'commit_id.short() ++ " " ++ change_id.short() ++ "\n"'
+```
+
+Parent IDs:
+```bash
+jj log --no-graph -r @ -T 'parents.map(|c| c.commit_id().short()).join(",") ++ "\n"'
+```
+
+Description fallback:
+```bash
+jj log --no-graph -r @ -T 'coalesce(description, "(no description set)\n")'
+```
+
+Changed files summary:
+```bash
+jj log --no-graph -r @ -T 'diff().summary()'
+```
+
+Machine-readable JSON lines:
+```bash
+jj log --no-graph -r 'bookmarks() | @' -T 'json(self) ++ "\n"'
+```
+
+Conditional marker:
+```bash
+jj log --no-graph -r @ -T 'if(conflict(), "CONFLICT ", "") ++ commit_id.short() ++ "\n"'
+```
+
+Revset membership check:
+```bash
+jj log --no-graph -r @ -T 'if(contained_in("trunk().."), "mutable\n", "base\n")'
+```
+
+## Multi-remote patterns
+
+Fork workflow:
+```bash
+jj config set --repo git.fetch '["upstream", "origin"]'
+jj config set --repo git.push origin
+jj bookmark track main
+jj config set --repo 'revset-aliases."trunk()"' main@upstream
+```
+
+Independent origin with upstream intake:
+```bash
+jj config set --repo git.fetch '["origin"]'
+jj config set --repo git.push origin
+jj bookmark track main --remote=origin
+jj bookmark untrack main --remote=upstream
+jj config set --repo 'revset-aliases."trunk()"' main@origin
+```
+
+## Recovery
+
+Use operation log early:
+```bash
+jj op log
+jj undo
+jj redo
+jj op revert
+```
+
+## Things not to claim
+
+- `jj` has staging area like Git
+- `jj new` means branch checkout
+- bookmarks auto-move because current branch exists
+- documented `jj pull` equivalent exists
+- Git submodules / Git LFS / `.gitattributes` / hooks are fully supported
+- colocated mode makes Git and jj semantics identical
+
+## Quick Git -> JJ map
+
+```text
+git init                 -> jj git init
+git clone                -> jj git clone
+git fetch                -> jj git fetch
+git status               -> jj st
+git diff HEAD            -> jj diff
+git commit -a            -> jj commit
+git branch               -> jj bookmark list
+git branch <n> <rev>     -> jj bookmark create <n> -r <rev>
+git branch -f <n> <rev>  -> jj bookmark move <n> --to <rev>
+git checkout <rev>       -> jj new <rev>
+git merge A              -> jj new @ A
+git rebase B A           -> jj rebase -b A -o B
+git cherry-pick <src>    -> jj duplicate <src> -o <dest>
+git stash                -> jj new @-
+git reflog               -> jj op log
+```

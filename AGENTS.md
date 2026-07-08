@@ -34,3 +34,17 @@ Plain, data-oriented Odin — data is data, code that transforms it is separate.
 Keep the early surface small. Before adding an option or abstraction: can richer callback context solve it? can it wait? If it must exist, keep it minimal. When in doubt, do the smaller thing and leave a note.
 
 These are guidelines, not law. If docs and code disagree, or a task fights an invariant, raise it rather than bend it silently.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live in the repo's GitHub Issues, managed via the `gh` CLI; external PRs are **not** a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles use their default label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

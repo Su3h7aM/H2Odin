@@ -59,12 +59,14 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 6 — Conversions (idiomatic wrappers)
 
-- [x] Closed conversion set as a union carrying its own data; `nil` = no conversion.
-- [x] Two-layer emission: faithful ABI foreign decl + generated wrapper.
-- [x] `cstring` parameter→`string` wrapper parameter; return `cstring` stays ABI-shaped until ownership/lifetime policy exists.
+> **Deferred.** Wrapper/conversion work has not started — the four boxes that were marked done described code that never existed. Slices (`pointer+length → []T`) and `cstring → string` both change arity or layout, so neither is a pure type swap: each needs a generated wrapper proc sitting in front of a faithful `foreign` decl, which is the bulk of this milestone. The plumbing is forward-looking: Analysis already records length-like-neighbour facts (`analyze.odin`) that a future pointer+length→slice decision will consume.
+
+- [ ] Closed conversion set as a union carrying its own data; `nil` = no conversion.
+- [ ] Two-layer emission: faithful ABI foreign decl + generated wrapper.
+- [ ] `cstring` parameter→`string` wrapper parameter; return `cstring` stays ABI-shaped until ownership/lifetime policy exists.
 - [ ] pointer+length→slice (config-driven).
 - [ ] flag enum→`bit_set` (heuristic + config confirm).
-- [x] `wrappers = false` falls back to ABI form per declaration.
+- [ ] `wrappers = false` falls back to ABI form per declaration.
 
 ## Milestone 7 — Robustness & polish
 
