@@ -1,24 +1,15 @@
 -- Example config for sqlite3.h.
 --
--- Demonstrates Milestone 8–10 config surface on a large, prefix-heavy C API:
--- foreign.link_prefix pairs with naming.strip_prefixes so stripped proc names
--- still resolve to the original C symbols without per-decl @(link_name);
--- types.map rewrites the well-known 64-bit typedefs at use sites; a macro
--- group turns the core result codes into an explicit-valued enum.
+-- Odin naming (examples wiki): Ada_Case types and enum values, snake_case
+-- procs/fields, SCREAMING_SNAKE constants. Library prefixes are stripped so
+-- the package carries the namespace (sqlite3_stmt → Stmt, sqlite3_open → open).
+-- The bare handle `sqlite3` cannot strip to empty, so it stays Sqlite3.
+-- foreign.link_prefix + proc strip omit per-decl link_name when
+-- C name == prefix + Odin name. types.map rewrites 64-bit typedefs at use
+-- sites; those typedef decls are removed as pure aliases. A macro group
+-- turns core result codes into Result_Code.
 
 local h2o = require "h2odin"
-
-local keep_sqlite_name = {
-	sqlite3 = true,
-	sqlite3_stmt = true,
-	sqlite3_value = true,
-	sqlite3_context = true,
-	sqlite3_vfs = true,
-	sqlite3_file = true,
-	sqlite3_blob = true,
-	sqlite3_backup = true,
-	sqlite3_snapshot = true,
-}
 
 local sqlite_non_result_prefixes = {
 	"SQLITE_OPEN_", "SQLITE_CONFIG_", "SQLITE_DBCONFIG_",
@@ -48,24 +39,39 @@ config.foreign.import_lib = "sqlite3"
 config.foreign.link_prefix = "sqlite3_"
 
 config.naming = h2o.naming.odin {
+	-- Longer / more specific prefixes first (first match wins).
 	strip_prefixes = {
 		proc = "sqlite3_",
+		type = { "sqlite3_", "sqlite3", "sqlite_" },
 	},
+	-- Fts5Tokenizer (opaque instance) and fts5_tokenizer (method table) both
+	-- become Fts5_Tokenizer under Ada_Case; keep the vtable distinct.
+	overrides = {
+		fts5_tokenizer = "Fts5_Tokenizer_Methods",
+	},
+	-- https://github.com/odin-lang/examples/wiki/Naming-and-style-convention
 	override = function(sym)
-		if sym.kind == "type" and keep_sqlite_name[sym.name] then
-			return sym.name
+		if sym.kind == "proc" or sym.kind == "var" or sym.kind == "field" then
+			return h2o.naming.snake_case(sym.default)
 		end
-		return sym.default
+		if sym.kind == "type" or sym.kind == "enum_value" then
+			return h2o.naming.ada_case(sym.default)
+		end
+		-- const: keep C SCREAMING_SNAKE (including SQLITE_ prefix on flags, etc.)
+		return nil
 	end,
 }
 
--- Reference rewrites only (the typedef decls stay out of the way as opaque
--- C names if present; map changes every use site to a native spelling).
+-- Use sites become native i64/u64; drop the C typedef aliases so stripped
+-- names (Int64 / Uint64) do not collide across sqlite_int64 vs sqlite3_int64.
 config.types.map = {
 	sqlite_int64  = "i64",
 	sqlite3_int64 = "i64",
 	sqlite_uint64 = "u64",
 	sqlite3_uint64 = "u64",
+}
+config.symbols.remove.names = {
+	"sqlite_int64", "sqlite3_int64", "sqlite_uint64", "sqlite3_uint64",
 }
 
 config.macros.groups = {
