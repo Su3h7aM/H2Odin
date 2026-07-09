@@ -63,7 +63,7 @@ STRIP_KIND_KEYS := [?]cstring{"proc", "type", "const", "enum_value"}
 // Sections h2o.config() creates but that have no wired fields yet. Empty
 // tables / nil are fine; any real content fails the load.
 @(rodata)
-CONFIG_UNWIRED_SECTIONS := [?]cstring{"diagnostics"}
+CONFIG_UNWIRED_SECTIONS := [?]cstring{}
 
 // Lua prelude for require "h2odin". Table-shaping only; algorithms are
 // registered from Odin onto h2o.str / h2o.naming.
@@ -136,6 +136,8 @@ Macro_Group_Enum :: struct {
 	emit_original_consts: bool, // default true when field absent
 	has_include:          bool,
 	lua_index:            int, // 1-based index into config.macros.groups
+	// Local diagnostics overrides beat config.diagnostics for this group.
+	diag_overrides:       Diag_Local_Overrides,
 }
 
 Enum_Anonymous_Rule :: struct {
@@ -144,9 +146,11 @@ Enum_Anonymous_Rule :: struct {
 }
 
 Enum_Bit_Set_Rule :: struct {
-	enum_name: string, // C enum to transform
-	name:      string, // Odin bit_set type name
-	mode:      string, // must be "log2" today
+	enum_name:      string, // C enum to transform
+	name:           string, // Odin bit_set type name
+	mode:           string, // must be "log2" today
+	// Local diagnostics overrides beat config.diagnostics for this rule.
+	diag_overrides: Diag_Local_Overrides,
 }
 
 // A type/tag (or type/default) action from structs.fields / procs.params.
@@ -230,6 +234,11 @@ Policy :: struct {
 	has_struct_field:    bool, // structs.field
 	has_proc_param:      bool, // procs.param
 	has_proc_result:     bool, // procs.result
+
+	// config.diagnostics: per-category severity. Zero value is Warn for
+	// every category (default posture). Local constructor overrides beat
+	// these when present on a rule.
+	diag_severity:       [Diag_Category]Diag_Severity,
 }
 
 Symbol_Kind :: enum {
@@ -693,7 +702,8 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 		policy_read_enums(policy) &&
 		policy_read_structs(policy) &&
 		policy_read_procs(policy) &&
-		policy_read_output(policy) \
+		policy_read_output(policy) &&
+		policy_read_diagnostics(policy) \
 	)
 }
 
@@ -717,6 +727,96 @@ policy_read_comments :: proc(policy: ^Policy) -> bool {
 		fmt.eprintln("h2odin: config: comments must be a boolean")
 		lua.pop(L, 1)
 		return false
+	}
+}
+
+// config.diagnostics: category → "warn" | "error". Absent categories stay
+// warn (the default posture). Unknown category names fail the load.
+policy_read_diagnostics :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "diagnostics")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: diagnostics must be a table of category → \"warn\"|\"error\"")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	overrides, ok := policy_parse_diag_severity_table(L, -1, "diagnostics")
+	if !ok {
+		return false
+	}
+	for cat in Diag_Category {
+		if sev, has := overrides.set[cat].?; has {
+			policy.diag_severity[cat] = sev
+		}
+	}
+	return true
+}
+
+// Table is at `index`. Keys must be known category names; values "warn"/"error".
+// Returns a local-overrides shape (Some only for keys that were present).
+policy_parse_diag_severity_table :: proc(L: ^lua.State, index: c.int, path: string) -> (out: Diag_Local_Overrides, ok: bool) {
+	idx := lua.absindex(L, index)
+	lua.pushnil(L)
+	for lua.next(L, idx) != 0 {
+		// stack: key, value
+		if lua.type(L, -2) != .STRING {
+			fmt.eprintfln("h2odin: config: %s keys must be category name strings", path)
+			lua.pop(L, 2)
+			return {}, false
+		}
+		key := string(lua.tostring(L, -2))
+		cat, cat_ok := diag_category_from_name(key)
+		if !cat_ok {
+			fmt.eprintfln("h2odin: config: %s: unknown category %q (known: %s)", path, key, diag_known_category_list())
+			lua.pop(L, 2)
+			return {}, false
+		}
+		if lua.type(L, -1) != .STRING {
+			fmt.eprintfln("h2odin: config: %s[%q] must be \"warn\" or \"error\"", path, key)
+			lua.pop(L, 2)
+			return {}, false
+		}
+		sev_name := string(lua.tostring(L, -1))
+		sev, sev_ok := diag_severity_from_name(sev_name)
+		if !sev_ok {
+			fmt.eprintfln("h2odin: config: %s[%q] must be \"warn\" or \"error\", got %q", path, key, sev_name)
+			lua.pop(L, 2)
+			return {}, false
+		}
+		out.set[cat] = sev
+		lua.pop(L, 1) // keep key for next
+	}
+	return out, true
+}
+
+// Read optional field "diagnostics" from the table at stack top into local
+// overrides. Absent/nil → empty overrides (ok).
+policy_read_local_diag_overrides :: proc(L: ^lua.State, path: string) -> (out: Diag_Local_Overrides, ok: bool) {
+	field_type := lua.getfield(L, -1, "diagnostics")
+	#partial switch lua.Type(field_type) {
+	case .NIL:
+		lua.pop(L, 1)
+		return {}, true
+	case .TABLE:
+		overrides, parse_ok := policy_parse_diag_severity_table(L, -1, path)
+		lua.pop(L, 1)
+		if !parse_ok {
+			return {}, false
+		}
+		return overrides, true
+	case:
+		fmt.eprintfln("h2odin: config: %s.diagnostics must be a table", path)
+		lua.pop(L, 1)
+		return {}, false
 	}
 }
 
@@ -1082,7 +1182,7 @@ policy_read_macros :: proc(policy: ^Policy) -> bool {
 
 // Group table is at stack top.
 policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: Macro_Group_Enum, ok: bool) {
-	allowed := []cstring{"id", "name", "base_type", "prefix", "exclude_prefixes", "include", "member_strip_prefix", "emit_original_consts"}
+	allowed := []cstring{"id", "name", "base_type", "prefix", "exclude_prefixes", "include", "member_strip_prefix", "emit_original_consts", "diagnostics"}
 	if !policy_reject_unknown_subkeys(L, "macros.groups[]", allowed) {
 		return {}, false
 	}
@@ -1153,6 +1253,12 @@ policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: M
 		lua.pop(L, 1)
 		return {}, false
 	}
+
+	local_diags, local_ok := policy_read_local_diag_overrides(L, "macros.groups[]")
+	if !local_ok {
+		return {}, false
+	}
+	group.diag_overrides = local_diags
 
 	return group, true
 }
@@ -1269,7 +1375,7 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 			lua.pop(L, 1)
 			return false
 		}
-		if !policy_reject_unknown_subkeys(L, "enums.bit_sets[]", []cstring{"enum", "name", "mode"}) {
+		if !policy_reject_unknown_subkeys(L, "enums.bit_sets[]", []cstring{"enum", "name", "mode", "diagnostics"}) {
 			lua.pop(L, 1)
 			return false
 		}
@@ -1277,16 +1383,20 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 		enum_name, enum_ok := policy_optional_string_field(L, "enums.bit_sets[]", "enum")
 		name, name_ok := policy_optional_string_field(L, "enums.bit_sets[]", "name")
 		mode, mode_ok := policy_optional_string_field(L, "enums.bit_sets[]", "mode")
+		local_diags, local_ok := policy_read_local_diag_overrides(L, "enums.bit_sets[]")
 		lua.pop(L, 1)
 		if !enum_ok || !name_ok || !mode_ok || enum_name == "" || name == "" {
 			fmt.eprintln("h2odin: config: enums.bit_sets[] requires enum, name, and mode")
+			return false
+		}
+		if !local_ok {
 			return false
 		}
 		if mode != "log2" {
 			fmt.eprintfln("h2odin: config: enums.bit_sets[].mode must be \"log2\", got %q", mode)
 			return false
 		}
-		append(&rules, Enum_Bit_Set_Rule{enum_name = enum_name, name = name, mode = mode})
+		append(&rules, Enum_Bit_Set_Rule{enum_name = enum_name, name = name, mode = mode, diag_overrides = local_diags})
 	}
 	policy.enum_bit_sets = rules[:]
 	return true

@@ -418,7 +418,7 @@ default_odin_name :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_K
 		// callbacks that call h2o.naming.* on sym.default / related names.
 		_, ambiguous := naming_tokenize(stripped, policy.known_tokens, context.temp_allocator)
 		if ambiguous {
-			ir_diag(ir, "naming_ambiguity: %q has an uncertain word split; set naming.overrides or refine known_tokens", name)
+			ir_diag(ir, .Naming_Ambiguity, "%q has an uncertain word split; set naming.overrides or refine known_tokens", name)
 		}
 	}
 	return keyword_safe_default(stripped)
@@ -502,7 +502,14 @@ apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
 			}
 			if claimed[u32(mi)] {
 				label := group.id if group.id != "" else group.name
-				ir_diag(ir, "macro_group_conflict: %q already claimed by an earlier group; skipping for %q", macro.name, label)
+				ir_diag_with_local(
+					ir,
+					group.diag_overrides,
+					.Macro_Group_Conflict,
+					"%q already claimed by an earlier group; skipping for %q",
+					macro.name,
+					label,
+				)
 				continue
 			}
 			claimed[u32(mi)] = true
@@ -518,7 +525,7 @@ apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
 		}
 		if len(members) == 0 {
 			label := group.id if group.id != "" else group.name
-			ir_diag(ir, "macro group %q matched no macros", label)
+			ir_diag_with_local(ir, group.diag_overrides, .Macro_Group_Empty, "macro group %q matched no macros", label)
 			continue
 		}
 		arena_members := make([]Enum_Member, len(members))
@@ -595,20 +602,22 @@ apply_enum_bit_sets :: proc(ir: ^IR, policy: ^Policy) {
 			}
 		}
 		if enum_index < 0 {
-			ir_diag(ir, "enums.bit_sets: enum %q not found", rule.enum_name)
+			ir_diag_with_local(ir, rule.diag_overrides, .Bit_Set_Target_Missing, "enums.bit_sets: enum %q not found", rule.enum_name)
 			continue
 		}
 		decl := &ir.enums[enum_index]
 		if decl.members == nil {
-			ir_diag(ir, "enums.bit_sets: enum %q has no members", rule.enum_name)
+			ir_diag_with_local(ir, rule.diag_overrides, .Bit_Set_Target_Missing, "enums.bit_sets: enum %q has no members", rule.enum_name)
 			continue
 		}
 		ok := true
 		for &member in decl.members {
 			if member.value <= 0 || !is_power_of_two_u64(u64(member.value)) {
-				ir_diag(
+				ir_diag_with_local(
 					ir,
-					"bit_set_non_power_of_two: %s.%s = %d is not a power of two; skipping bit_set %q",
+					rule.diag_overrides,
+					.Bit_Set_Non_Power_Of_Two,
+					"%s.%s = %d is not a power of two; skipping bit_set %q",
 					rule.enum_name,
 					member.name,
 					member.value,
@@ -829,7 +838,13 @@ report_unresolved_idiomatic_leaf :: proc(ir: ^IR, info: Type_Info, measured: int
 	case Type_Std:
 		name = variant.name
 	}
-	ir_diag(ir, "idiomatic mode: %s has no provable native spelling on this target (measured size %d); keeping ABI spelling", name, measured)
+	ir_diag(
+		ir,
+		.Unresolved_Idiomatic_Leaf,
+		"idiomatic mode: %s has no provable native spelling on this target (measured size %d); keeping ABI spelling",
+		name,
+		measured,
+	)
 }
 
 lower_type :: proc(ir: ^IR, handle: Type_Handle) {
@@ -913,7 +928,7 @@ report_type_guesses :: proc(ir: ^IR, handle: Type_Handle, site: string) {
 	#partial switch variant in ir_type(ir, handle).variant {
 	case Type_Lowered_Pointer:
 		if variant.confidence == .Guessed {
-			ir_diag(ir, "guessed pointer lowering in %s: defaulted to ^T", site)
+			ir_diag(ir, .Pointer_Lowering_Guess, "guessed pointer lowering in %s: defaulted to ^T", site)
 		}
 		report_type_guesses(ir, variant.pointee, site)
 	case Type_Array:

@@ -90,7 +90,11 @@ main :: proc() {
 	if !write_emit_result(result, &policy, stem) {
 		os.exit(1)
 	}
-	report_diagnostics(&ir)
+	// Emit first, then report: errors still leave usable output on stdout /
+	// disk, but a non-zero exit marks the run as failed.
+	if !report_diagnostics(&ir, &policy) {
+		os.exit(1)
+	}
 }
 
 // Prefer config.inputs when set; otherwise the CLI header is required.

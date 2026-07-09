@@ -174,6 +174,7 @@ test_diagnostics_report_lists_guessed_pointer_lowerings :: proc(t: ^testing.T) {
 	// Generated code stays on stdout; the report is a single stderr block.
 	expect_contains(t, stdout, "fill :: proc")
 	expect_contains(t, stderr, "non-certain")
+	expect_contains(t, stderr, "warning[pointer_lowering_guess]:")
 	expect_contains(t, stderr, `guessed pointer lowering in function "fill" parameter "out": defaulted to ^T`)
 	expect_contains(t, stderr, `guessed pointer lowering in function "make_row" return type: defaulted to ^T`)
 	// Proven lowerings (void*, const char*, function pointers) must not appear.
@@ -193,10 +194,28 @@ test_diagnostics_report_lists_unknown_size_extern_arrays :: proc(t: ^testing.T) 
 
 	expect_contains(t, stdout, "version:")
 	expect_contains(t, stderr, "non-certain")
+	expect_contains(t, stderr, "warning[incomplete_extern_array]:")
 	expect_contains(t, stderr, `extern array "version" has unknown size; emitted as [0]T`)
 	expect_contains(t, stderr, `extern array "values" has unknown size; emitted as [0]T`)
 	// Known bounds are certain — no note for them.
 	expect_not_contains(t, stderr, "known_values")
+}
+
+@(test)
+test_diagnostics_error_severity_exits_nonzero_after_emit :: proc(t: ^testing.T) {
+	// pointer_lowering_guess = error still emits bindings, then fails the run.
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/diag_pointer_error.lua", "tests/fixtures/pointers.h"}
+	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	testing.expect(t, exit_code != 0)
+	expect_contains(t, stdout, "fill :: proc")
+	expect_contains(t, stderr, "error[pointer_lowering_guess]:")
+	expect_contains(t, stderr, `guessed pointer lowering in function "fill" parameter "out": defaulted to ^T`)
 }
 
 @(test)

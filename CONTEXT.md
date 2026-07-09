@@ -174,8 +174,9 @@ rather than bend it silently.
   shape plus naming, macros, enums, structs, procs, multi-header inputs, and
   output knobs. `docs/configuration.md` describes what is wired today and the
   migration from the old flat keys (including the `keep` →
-  `symbols.remove.where` polarity flip). Diagnostics severity is still open
-  (Milestone 11).
+  `symbols.remove.where` polarity flip). Diagnostics severity is wired
+  (Milestone 11): named categories, `config.diagnostics`, constructor-local
+  overrides.
 
 ---
 

@@ -234,6 +234,91 @@ return config
 }
 
 @(test)
+test_policy_load_diagnostics_severity :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"diag-severity",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.diagnostics = {
+	pointer_lowering_guess = "error",
+	naming_ambiguity = "warn",
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.diag_severity[.Pointer_Lowering_Guess], Diag_Severity.Error)
+	testing.expect_value(t, policy.diag_severity[.Naming_Ambiguity], Diag_Severity.Warn)
+	// Unmentioned categories keep the default warn posture.
+	testing.expect_value(t, policy.diag_severity[.Opaque_Layout_Fallback], Diag_Severity.Warn)
+}
+
+@(test)
+test_policy_load_rejects_unknown_diag_category :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"diag-unknown",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.diagnostics = { not_a_real_category = "warn" }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_load_bit_set_local_diag_override :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"diag-local",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.diagnostics = { bit_set_non_power_of_two = "error" }
+config.enums.bit_sets = {
+	h2o.enum.bit_set {
+		enum = "Flag",
+		name = "Flags",
+		mode = "log2",
+		diagnostics = { bit_set_non_power_of_two = "warn" },
+	},
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.diag_severity[.Bit_Set_Non_Power_Of_Two], Diag_Severity.Error)
+	testing.expect(t, len(policy.enum_bit_sets) == 1)
+	sev, has := policy.enum_bit_sets[0].diag_overrides.set[.Bit_Set_Non_Power_Of_Two].?
+	testing.expect(t, has)
+	testing.expect_value(t, sev, Diag_Severity.Warn)
+}
+
+@(test)
 test_policy_load_rejects_bad_declarative_shapes :: proc(t: ^testing.T) {
 	bad_strip, bad_strip_ok := write_test_config(
 		t,

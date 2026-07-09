@@ -223,7 +223,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	// array type, so preserve the array object shape as [0]T: callers can
 	// take its address, but no bound is invented.
 	if array, is_array := ir_type(state.ir, type).variant.(Type_Array); is_array && array.is_incomplete {
-		ir_diag(state.ir, "extern array %q has unknown size; emitted as [0]T", name)
+		ir_diag(state.ir, .Incomplete_Extern_Array, "extern array %q has unknown size; emitted as [0]T", name)
 	}
 
 	ir_add_var(state.ir, Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
@@ -411,12 +411,13 @@ fill_record :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cu
 	record.fields = fill.fields[:]
 	if fill.has_bitfields {
 		record.has_unrepresentable_fields = true
-		ir_diag(state.ir, "%q uses bit-fields; emitted opaque — by-value use of it would be wrong", record_display_name(record))
+		ir_diag(state.ir, .Opaque_Layout_Fallback, "%q uses bit-fields; emitted opaque — by-value use of it would be wrong", record_display_name(record))
 	}
 	if fill.failed_field != "" {
 		record.has_unrepresentable_fields = true
 		ir_diag(
 			state.ir,
+			.Opaque_Layout_Fallback,
 			"%q field %q has an unsupported type; emitted opaque — by-value use of it would be wrong",
 			record_display_name(record),
 			fill.failed_field,

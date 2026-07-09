@@ -43,7 +43,7 @@ return config
 
 The config file must **return** the config table. Prefer building it with `h2o.config()` so every section exists up front.
 
-### Supported surface (through Milestone 10)
+### Supported surface (through Milestone 11)
 
 | Path | Type | Role |
 |------|------|------|
@@ -80,10 +80,9 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `output.imports_file` | string | put package / `import` / `foreign import` in this file |
 | `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output |
 | `comments` | bool | default `true`: emit C doc comments; `false` suppresses them |
+| `diagnostics` | category → `"warn"` \| `"error"` | per-category severity; default posture is `warn` |
 
 `h2o.naming.odin { ... }`, `h2o.macro_group.enum { ... }`, `h2o.enum.anonymous { ... }`, and `h2o.enum.bit_set { ... }` are constructor sugar: they type-check the table and return it. Field validation still runs on the Odin side at load.
-
-Empty sections that are not yet wired (`diagnostics`) may appear; giving them real content fails with "not yet supported."
 
 Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migration message:
 
@@ -194,6 +193,49 @@ config.enums.bit_sets = {
 
 `mode = "log2"` rewrites flag masks to bit positions. Non-power-of-two members emit a `bit_set_non_power_of_two` diagnostic and skip the transform.
 
+Constructors that emit diagnostics may carry a local severity table; when present it **beats** `config.diagnostics` for that rule only:
+
+```lua
+h2o.enum.bit_set {
+  enum = "Config_Flag",
+  name = "Config_Flags",
+  mode = "log2",
+  diagnostics = { bit_set_non_power_of_two = "warn" },
+}
+```
+
+## Diagnostics
+
+```lua
+config.diagnostics = {
+  pointer_lowering_guess    = "warn",
+  unresolved_idiomatic_leaf = "warn",
+  opaque_layout_fallback    = "warn",
+  naming_ambiguity          = "warn",
+  macro_group_conflict      = "warn",
+  macro_group_empty         = "warn",
+  bit_set_non_power_of_two  = "error",
+  bit_set_target_missing    = "warn",
+  incomplete_extern_array   = "warn",
+  -- reserved (no emitter yet): duplicate_enum_value, unresolved_type,
+  -- unsupported_macro, symbol_collision
+}
+```
+
+Every non-certain decision is recorded under a **named category**. Unmentioned categories default to `warn`. Severity `error` still emits usable Odin, then exits non-zero. The end-of-run report on stderr looks like:
+
+```text
+h2odin: 2 non-certain decisions:
+  - warning[pointer_lowering_guess]: guessed pointer lowering in …
+```
+
+or, when any item is an error:
+
+```text
+h2odin: 2 diagnostics (1 warning, 1 error):
+  - error[pointer_lowering_guess]: …
+```
+
 ## Structs and procedures
 
 ```lua
@@ -285,4 +327,4 @@ Pass order inside Transformation (config-spec): macro grouping → enum policies
 
 ## What we deliberately keep out for now
 
-Diagnostics severity (Milestone 11) and generated wrapper procs (Milestone 6). Each can land without disturbing the sectioned shape.
+Generated wrapper procs (Milestone 6). That can land without disturbing the sectioned shape.

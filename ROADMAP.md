@@ -125,10 +125,10 @@ boundary.
 
 ## Milestone 11 — Diagnostics as a system
 
-- [ ] Every heuristic registers a named category rather than printing ad-hoc.
-- [ ] `config.diagnostics` sets per-category severity (`warn` | `error`); default posture is `warn`.
-- [ ] Local overrides on a feature constructor beat the global block.
-- [ ] Name the categories that already exist: `pointer_lowering_guess`, `unresolved_idiomatic_leaf`, `opaque_layout_fallback`.
+- [x] Every heuristic registers a named category rather than printing ad-hoc.
+- [x] `config.diagnostics` sets per-category severity (`warn` | `error`); default posture is `warn`.
+- [x] Local overrides on a feature constructor beat the global block.
+- [x] Name the categories that already exist: `pointer_lowering_guess`, `unresolved_idiomatic_leaf`, `opaque_layout_fallback`.
 
 ## Later
 
@@ -141,6 +141,5 @@ boundary.
 
 ### Start here
 
-Milestones 0–5 and 7–10 are complete. The next work is **Milestone 11** —
-diagnostics as a system (named categories and per-category severity).
-**Milestone 6 (wrappers)** remains deferred and is independent of 11.
+Milestones 0–5 and 7–11 are complete. **Milestone 6 (wrappers)** remains
+deferred and is independent of the diagnostics work.
