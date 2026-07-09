@@ -70,20 +70,23 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 7 — Robustness & polish
 
-- [ ] Diagnostics report: list every non-certain decision in a run.
+- [x] Diagnostics report: list every non-certain decision in a run.
 - [x] Check libclang parse diagnostics; fail loudly on bad `-I`/`-D` rather than emitting partial output. _(pulled forward)_
-- [ ] Config validation with clear error messages.
-- [ ] Real build/usage instructions in the README; fill the verification commands in `AGENTS.md`.
-- [ ] Optionally sandbox the Lua config (withhold `io`/`os`) to make determinism structural.
+- [x] Config validation with clear error messages.
+- [x] Real build/usage instructions in the README; fill the verification commands in `AGENTS.md`.
+- [x] Sandbox the Lua config (withhold `io`/`os`/`package`/loaders) to make determinism structural.
 
 ## Later
 
+- [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
 - [ ] Self-hosted libclang bindings — H2Odin generates the bindings it uses.
 - [ ] Multi-target runs (generate per target, merge).
+- [ ] Config-driven inputs (`headers`, `include_dirs`, `defines`) and `output` path.
 - [ ] A license.
 
 ---
 
 ### Start here
 
-Milestone 0, first box: **make libclang link and print its version.** Until that compiles, everything else is theory.
+Milestones 0–5 and 7 are complete. Next large feature when wanted: **Milestone 6
+(wrappers)**. Smaller follow-ups live under **Later**.

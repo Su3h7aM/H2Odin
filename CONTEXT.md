@@ -14,8 +14,8 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: early development. The pipeline is proven end-to-end; features are being
-widened milestone by milestone (see [`ROADMAP.md`](ROADMAP.md)).
+Status: usable pipeline (Milestones 0–5 complete, Milestone 7 polish landed).
+Milestone 6 (idiomatic wrappers) is deferred. See [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
@@ -77,10 +77,11 @@ these, not by convenience.
    right answer, H2Odin picks a conservative default, makes the guess *visible*
    (a diagnostic), and lets config override it — it never silently guesses wrong.
 
-5. **Determinism.** Same headers + same config → byte-identical output. (Honest
-   caveat: a Lua policy *can* do arbitrary work, so determinism is a convention the
-   config is expected to honor, not something the architecture forces. Analysis,
-   which consults no policy, is deterministic unconditionally.)
+5. **Determinism.** Same headers + same config → byte-identical output. The Lua
+   config is sandboxed (no `io`/`os`/`package`, loaders withheld), so host side
+   effects are blocked structurally; pure non-determinism inside allowed libs is
+   still a config convention. Analysis, which consults no policy, is deterministic
+   unconditionally.
 
 ---
 

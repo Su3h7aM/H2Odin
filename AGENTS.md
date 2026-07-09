@@ -25,6 +25,8 @@ Yes → a fact → **Analysis** (or captured raw in Extraction). No → a decisi
 
 This project uses **Jujutsu (`jj`)** as its VCS — always use `jj`, not raw `git`, for any repository operation (status, diff, describe, rebase, bookmark, push, conflict resolution, history). Git is the backend only. Prefer the non-interactive `jj desc` + `jj new` workflow over `jj commit`: start work from an empty working-copy commit, set a `WIP:` description before editing, replace it with the final description after, then `jj new` to leave a fresh empty working copy.
 
+**Before every `jj new` (and before considering a change finished):** run `make check`, `make format`, and `make test` in that order. Fix any failure; if the fix is formatting or a small correction that belongs in an earlier commit of the stack, use `jj absorb` (or squash into the right change) rather than leaving a drive-by follow-up commit.
+
 ## Style
 
 Plain, data-oriented Odin — data is data, code that transforms it is separate. Prefer readable over clever, match surrounding conventions, keep procedures small. Pass state explicitly; Odin procedures do not capture. Keep the pure stages testable without a live libclang or Lua.
@@ -34,6 +36,28 @@ Plain, data-oriented Odin — data is data, code that transforms it is separate.
 Keep the early surface small. Before adding an option or abstraction: can richer callback context solve it? can it wait? If it must exist, keep it minimal. When in doubt, do the smaller thing and leave a note.
 
 These are guidelines, not law. If docs and code disagree, or a task fights an invariant, raise it rather than bend it silently.
+
+## Verification
+
+Run from the repo root. Prefer the Makefile targets:
+
+```sh
+make check    # odin check src (vet + strict-style)
+make build    # build/h2odin
+make test     # unit tests (src/*_test.odin) + e2e (tests/)
+make format   # odinfmt via odinfmt.json
+```
+
+After emission changes, regenerate and check the checked-in examples:
+
+```sh
+./build/h2odin -config:examples/sqlite3/config.lua examples/sqlite3/sqlite3.h > examples/sqlite3/sqlite3.odin
+./build/h2odin -config:examples/fff/config.lua examples/fff/fff.h > examples/fff/fff.odin
+odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
+odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
+```
+
+Unit tests must stay runnable without inventing new foreign deps in the pure stages. E2e tests drive `build/h2odin` against `tests/fixtures/`.
 
 ## Agent skills
 
