@@ -14,7 +14,7 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: usable pipeline (Milestones 0–5, 7–8 complete). Milestone 6 (idiomatic
+Status: usable pipeline (Milestones 0–5, 7–9 complete). Milestone 6 (idiomatic
 wrappers) is deferred. See [`ROADMAP.md`](ROADMAP.md).
 
 ---

@@ -106,13 +106,13 @@ The three sections that carry real algorithms. Each needs a pure Odin module tha
 `policy.odin` merely registers into the VM — never logic living behind the Lua
 boundary.
 
-- [ ] Identifier tokenizer + case conversion in a pure module; exposed as `h2o.naming.snake_case` / `ada_case` and reused by the generator's automatic naming.
-- [ ] `known_tokens` dictionary; ambiguous splits emit `naming_ambiguity` and are resolved per-symbol via `override`.
-- [ ] `naming.strip_suffixes`, `naming.overrides`.
-- [ ] `symbols.remove.names` / `.patterns` (declarative tiers gate before `where` runs).
-- [ ] `macros.groups` via `h2o.macro_group.enum{...}`: `prefix` → `exclude_prefixes` → value-kind → `include`, in that order. Synthesizes an ordinary explicit-valued IR enum.
-- [ ] Macro view with `m.name`, `m.value`, `m:is_integer()`. `m.expr` is deliberately not exposed.
-- [ ] `enums.member` callback; `enums.anonymous`; `enums.bit_sets` with explicit `mode = "log2"` and a `bit_set_non_power_of_two` diagnostic.
+- [x] Identifier tokenizer + case conversion in a pure module; exposed as `h2o.naming.snake_case` / `ada_case`. Automatic naming keeps C case (foreign porting convention) after affix strip + keyword safety; helpers are for deliberate recasing in callbacks.
+- [x] `known_tokens` dictionary; ambiguous splits emit `naming_ambiguity` and are resolved per-symbol via `override` / `overrides`.
+- [x] `naming.strip_suffixes`, `naming.overrides`.
+- [x] `symbols.remove.names` / `.patterns` (declarative tiers gate before `where` runs).
+- [x] `macros.groups` via `h2o.macro_group.enum{...}`: `prefix` → `exclude_prefixes` → value-kind → `include`, in that order. Synthesizes an ordinary explicit-valued IR enum.
+- [x] Macro view with `m.name`, `m.value`, `m:is_integer()`, `m:has_prefix(...)`. `m.expr` is deliberately not exposed.
+- [x] `enums.member` callback; `enums.anonymous`; `enums.bit_sets` with explicit `mode = "log2"` and a `bit_set_non_power_of_two` diagnostic.
 
 ## Milestone 10 — Structs, procs, inputs, output
 
@@ -141,7 +141,6 @@ boundary.
 
 ### Start here
 
-Milestones 0–5, 7, and 8 are complete. The next work is **Milestone 9** — naming
-tokenizer/case conversion, macro groups, and enum policies — on top of the
-sectioned `h2o` shape. **Milestone 6 (wrappers)** remains deferred and is
-independent of 9–11.
+Milestones 0–5 and 7–9 are complete. The next work is **Milestone 10** — structs,
+procs, multi-header inputs, and output knobs — on top of the sectioned `h2o`
+shape. **Milestone 6 (wrappers)** remains deferred and is independent of 10–11.

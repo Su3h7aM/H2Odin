@@ -57,15 +57,15 @@ CONFIG_LEGACY_KEYS := [?]cstring{"foreign_lib", "strip_prefixes", "type_map", "r
 CONFIG_UNSUPPORTED_KEYS := [?]cstring{"headers", "include_dirs", "defines", "comments", "wrappers"}
 
 @(rodata)
-STRIP_PREFIX_KEYS := [?]cstring{"proc", "type", "const"}
+STRIP_KIND_KEYS := [?]cstring{"proc", "type", "const", "enum_value"}
 
 // Sections h2o.config() creates but that have no wired fields yet. Empty
 // tables / nil are fine; any real content fails the load.
 @(rodata)
-CONFIG_UNWIRED_SECTIONS := [?]cstring{"inputs", "output_folder", "preprocess", "macros", "enums", "structs", "procs", "output", "diagnostics"}
+CONFIG_UNWIRED_SECTIONS := [?]cstring{"inputs", "output_folder", "preprocess", "structs", "procs", "output", "diagnostics"}
 
 // Lua prelude for require "h2odin". Table-shaping only; algorithms are
-// registered from Odin onto h2o.str.
+// registered from Odin onto h2o.str / h2o.naming.
 H2ODIN_PRELUDE :: `-- H2Odin config prelude (require "h2odin")
 local h2o = {}
 
@@ -93,21 +93,59 @@ function h2o.config()
 	}
 end
 
--- Constructor sugar: h2o.naming.odin { ... } returns the table after a type
--- check. Field validation lives on the Odin side at load.
-h2o.naming = {}
-function h2o.naming.odin(opts)
-	if type(opts) ~= "table" then
-		error("h2o.naming.odin expects a table", 2)
+-- Constructor sugar: type-checks the table and returns it. Field validation
+-- lives on the Odin side at load.
+local function ctor(name)
+	return function(opts)
+		if type(opts) ~= "table" then
+			error(name .. " expects a table", 2)
+		end
+		return opts
 	end
-	return opts
 end
+
+h2o.naming = {}
+h2o.naming.odin = ctor("h2o.naming.odin")
+-- snake_case / ada_case filled by the host (pure Odin algorithms).
+
+h2o.macro_group = {}
+h2o.macro_group["enum"] = ctor("h2o.macro_group.enum")
+
+h2o["enum"] = {}
+h2o["enum"].anonymous = ctor("h2o.enum.anonymous")
+h2o["enum"].bit_set = ctor("h2o.enum.bit_set")
 
 -- Filled by the host with Odin-registered helpers.
 h2o.str = {}
 
 return h2o
 `
+
+// A macros.groups entry of kind enum. The include callback, when present,
+// lives in the Lua config table at groups[lua_index]; Odin never stores a
+// Lua reference beyond the state + index.
+Macro_Group_Enum :: struct {
+	id:                   string,
+	name:                 string, // Odin enum type name
+	base_type:            string, // optional spelling hint; empty → c.int / Int
+	prefix:               string,
+	exclude_prefixes:     []string,
+	member_strip_prefix:  string,
+	emit_original_consts: bool, // default true when field absent
+	has_include:          bool,
+	lua_index:            int, // 1-based index into config.macros.groups
+}
+
+Enum_Anonymous_Rule :: struct {
+	name:         string, // Odin name to give the anonymous enum
+	first_member: string, // match by first member's C name
+}
+
+Enum_Bit_Set_Rule :: struct {
+	enum_name: string, // C enum to transform
+	name:      string, // Odin bit_set type name
+	mode:      string, // must be "log2" today
+}
 
 Policy :: struct {
 	// Private to the policy_* procedures. nil when no config was given.
@@ -119,19 +157,41 @@ Policy :: struct {
 	type_mode:          Type_Mode,
 	type_mode_is_set:   bool,
 
-	// naming.strip_prefixes — first matching prefix wins per kind.
+	// naming.strip_prefixes / strip_suffixes — first match wins per kind.
 	// Backing memory lives in the generation arena (or the test allocator).
 	strip_prefix_proc:  []string,
 	strip_prefix_type:  []string,
 	strip_prefix_const: []string,
+	strip_prefix_enum:  []string,
+	strip_suffix_proc:  []string,
+	strip_suffix_type:  []string,
+	strip_suffix_const: []string,
+	strip_suffix_enum:  []string,
+
+	// naming.known_tokens: surface spelling → lower form.
+	known_tokens:       map[string]string,
+	// naming.overrides: C name → Odin name (absolute).
+	naming_overrides:   map[string]string,
 
 	// types.map rewrites references; types.overrides also drops the decl.
 	type_map:           map[string]string,
 	type_overrides:     map[string]string,
 
+	// symbols.remove declarative tiers.
+	remove_names:       []string,
+	remove_patterns:    []string,
+
+	// macros.groups
+	macro_groups:       []Macro_Group_Enum,
+
+	// enums.*
+	enum_anonymous:     []Enum_Anonymous_Rule,
+	enum_bit_sets:      []Enum_Bit_Set_Rule,
+
 	// Callbacks present in the config (checked once at load).
 	has_rename:         bool, // naming.override
-	has_remove:         bool, // symbols.remove.where
+	has_remove_where:   bool, // symbols.remove.where
+	has_enum_member:    bool, // enums.member
 }
 
 Symbol_Kind :: enum {
@@ -300,7 +360,7 @@ policy_install_require :: proc(L: ^lua.State, config_dir: string) -> bool {
 	return true
 }
 
-// require "h2odin" opener: run the prelude, attach Odin str helpers.
+// require "h2odin" opener: run the prelude, attach Odin helpers.
 // L_error longjmps out of the C callback; the trailing return is unreachable
 // but keeps the procedure's type `-> c.int`.
 policy_open_h2odin :: proc "c" (L: ^lua.State) -> c.int {
@@ -320,14 +380,23 @@ policy_open_h2odin :: proc "c" (L: ^lua.State) -> c.int {
 		lua.L_error(L, "h2odin: prelude missing h2o.str")
 		return 0
 	}
-	regs := [?]lua.L_Reg {
+	str_regs := [?]lua.L_Reg {
 		{"has_prefix", policy_lua_str_has_prefix},
 		{"strip_prefix", policy_lua_str_strip_prefix},
 		{"has_suffix", policy_lua_str_has_suffix},
+		{"strip_suffix", policy_lua_str_strip_suffix},
 		{nil, nil},
 	}
-	lua.L_setfuncs(L, raw_data(regs[:]), 0)
+	lua.L_setfuncs(L, raw_data(str_regs[:]), 0)
 	lua.pop(L, 1) // str
+
+	if lua.getfield(L, -1, "naming"); !lua.istable(L, -1) {
+		lua.L_error(L, "h2odin: prelude missing h2o.naming")
+		return 0
+	}
+	naming_regs := [?]lua.L_Reg{{"snake_case", policy_lua_naming_snake_case}, {"ada_case", policy_lua_naming_ada_case}, {nil, nil}}
+	lua.L_setfuncs(L, raw_data(naming_regs[:]), 0)
+	lua.pop(L, 1) // naming
 	return 1
 }
 
@@ -427,6 +496,34 @@ policy_lua_str_strip_prefix :: proc "c" (L: ^lua.State) -> c.int {
 	s := policy_lua_check_string(L, 1)
 	prefix := policy_lua_check_string(L, 2)
 	policy_lua_push_string(L, str_strip_prefix(s, prefix))
+	return 1
+}
+
+policy_lua_str_strip_suffix :: proc "c" (L: ^lua.State) -> c.int {
+	context = runtime.default_context()
+	s := policy_lua_check_string(L, 1)
+	suffix := policy_lua_check_string(L, 2)
+	policy_lua_push_string(L, str_strip_suffix(s, suffix))
+	return 1
+}
+
+// h2o.naming.snake_case(s) / ada_case(s) — no known_tokens from Lua; the
+// generator passes its dictionary only on the Odin automatic-naming path.
+// Users who need known_tokens in a callback set naming.known_tokens and rely
+// on sym.default (already tokenized with that dictionary).
+policy_lua_naming_snake_case :: proc "c" (L: ^lua.State) -> c.int {
+	context = runtime.default_context()
+	s := policy_lua_check_string(L, 1)
+	result, _ := naming_snake_case(s, nil, context.temp_allocator)
+	policy_lua_push_string(L, result)
+	return 1
+}
+
+policy_lua_naming_ada_case :: proc "c" (L: ^lua.State) -> c.int {
+	context = runtime.default_context()
+	s := policy_lua_check_string(L, 1)
+	result, _ := naming_ada_case(s, nil, context.temp_allocator)
+	policy_lua_push_string(L, result)
 	return 1
 }
 
@@ -537,7 +634,14 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 
-	return policy_read_foreign(policy) && policy_read_naming(policy) && policy_read_types(policy) && policy_read_symbols(policy)
+	return(
+		policy_read_foreign(policy) &&
+		policy_read_naming(policy) &&
+		policy_read_types(policy) &&
+		policy_read_symbols(policy) &&
+		policy_read_macros(policy) &&
+		policy_read_enums(policy) \
+	)
 }
 
 // inputs / output_folder may be nil; a non-nil value means the user set
@@ -617,16 +721,9 @@ policy_read_naming :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	// Supported: strip_prefixes (data), override (callback).
-	// Not yet: overrides, strip_suffixes, known_tokens.
-	allowed := []cstring{"strip_prefixes", "override", "overrides", "strip_suffixes", "known_tokens"}
+	allowed := []cstring{"strip_prefixes", "strip_suffixes", "known_tokens", "overrides", "override"}
 	if !policy_reject_unknown_subkeys(L, "naming", allowed) {
 		return false
-	}
-	for not_yet in ([?]cstring{"overrides", "strip_suffixes", "known_tokens"}) {
-		if !policy_reject_nested_if_set(L, "naming", not_yet) {
-			return false
-		}
 	}
 
 	// Plural is data, singular is callback.
@@ -638,7 +735,7 @@ policy_read_naming :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		policy.has_rename = true
 	case .TABLE:
-		fmt.eprintln("h2odin: config: naming.override must be a function (plural naming.overrides is the data map — not yet supported)")
+		fmt.eprintln("h2odin: config: naming.override must be a function (plural naming.overrides is the data map)")
 		lua.pop(L, 1)
 		return false
 	case:
@@ -647,13 +744,42 @@ policy_read_naming :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 
-	prefixes, prefixes_ok := policy_strip_prefixes_from(L)
+	if lua.Type(lua.getfield(L, -1, "overrides")) == .FUNCTION {
+		fmt.eprintln("h2odin: config: naming.overrides must be a table (plural is data; singular naming.override is the callback)")
+		lua.pop(L, 1)
+		return false
+	}
+	lua.pop(L, 1)
+
+	prefixes, prefixes_ok := policy_strip_kinds_from(L, "strip_prefixes")
 	if !prefixes_ok {
 		return false
 	}
 	policy.strip_prefix_proc = prefixes.procs
 	policy.strip_prefix_type = prefixes.types
 	policy.strip_prefix_const = prefixes.constants
+	policy.strip_prefix_enum = prefixes.enum_values
+
+	suffixes, suffixes_ok := policy_strip_kinds_from(L, "strip_suffixes")
+	if !suffixes_ok {
+		return false
+	}
+	policy.strip_suffix_proc = suffixes.procs
+	policy.strip_suffix_type = suffixes.types
+	policy.strip_suffix_const = suffixes.constants
+	policy.strip_suffix_enum = suffixes.enum_values
+
+	known, known_ok := policy_string_map_nested(L, "naming", "known_tokens")
+	if !known_ok {
+		return false
+	}
+	policy.known_tokens = known
+
+	overrides, overrides_ok := policy_string_map_nested(L, "naming", "overrides")
+	if !overrides_ok {
+		return false
+	}
+	policy.naming_overrides = overrides
 	return true
 }
 
@@ -745,11 +871,18 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 	if !policy_reject_unknown_subkeys(L, "symbols.remove", []cstring{"where", "names", "patterns"}) {
 		return false
 	}
-	for not_yet in ([?]cstring{"names", "patterns"}) {
-		if !policy_reject_nested_if_set(L, "symbols.remove", not_yet) {
-			return false
-		}
+
+	names, names_ok := policy_string_list_field(L, "symbols.remove", "names")
+	if !names_ok {
+		return false
 	}
+	policy.remove_names = names
+
+	patterns, patterns_ok := policy_string_list_field(L, "symbols.remove", "patterns")
+	if !patterns_ok {
+		return false
+	}
+	policy.remove_patterns = patterns
 
 	where_type := lua.Type(lua.getfield(L, -1, "where"))
 	#partial switch where_type {
@@ -758,7 +891,7 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 		return true
 	case .FUNCTION:
 		lua.pop(L, 1)
-		policy.has_remove = true
+		policy.has_remove_where = true
 		return true
 	case .TABLE:
 		fmt.eprintln("h2odin: config: symbols.remove.where must be a function (predicate callback)")
@@ -769,6 +902,313 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		return false
 	}
+}
+
+// Read a pure list of strings from parent[key]. Absent/nil → nil slice.
+// Rejects non-array tables (string keys only).
+policy_string_list_field :: proc(L: ^lua.State, table_name: string, field_key: cstring) -> (list: []string, ok: bool) {
+	field_type := lua.getfield(L, -1, field_key)
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return nil, true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintfln("h2odin: config: %s.%s must be a list of strings", table_name, field_key)
+		lua.pop(L, 1)
+		return nil, false
+	}
+	defer lua.pop(L, 1)
+
+	n := int(lua.L_len(L, -1))
+	if n == 0 {
+		lua.pushnil(L)
+		if lua.next(L, -2) != 0 {
+			fmt.eprintfln("h2odin: config: %s.%s must be a list of strings", table_name, field_key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		return nil, true
+	}
+	out := make([]string, n)
+	for i in 0 ..< n {
+		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
+		if elem_type != c.int(lua.Type.STRING) {
+			fmt.eprintfln("h2odin: config: %s.%s[%d] must be a string", table_name, field_key, i + 1)
+			lua.pop(L, 1)
+			return nil, false
+		}
+		out[i] = strings.clone(string(lua.tostring(L, -1)))
+		lua.pop(L, 1)
+	}
+	return out, true
+}
+
+policy_read_macros :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "macros")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: macros must be a table")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	if !policy_reject_unknown_subkeys(L, "macros", []cstring{"groups"}) {
+		return false
+	}
+
+	groups_type := lua.getfield(L, -1, "groups")
+	if groups_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if groups_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: macros.groups must be a list of group tables")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	n := int(lua.L_len(L, -1))
+	if n == 0 {
+		return true
+	}
+	groups := make([dynamic]Macro_Group_Enum, 0, n)
+	for i in 0 ..< n {
+		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
+		if elem_type != c.int(lua.Type.TABLE) {
+			fmt.eprintfln("h2odin: config: macros.groups[%d] must be a table (use h2o.macro_group.enum{{...}})", i + 1)
+			lua.pop(L, 1)
+			return false
+		}
+		group, group_ok := policy_read_macro_group_enum(L, i + 1)
+		lua.pop(L, 1)
+		if !group_ok {
+			return false
+		}
+		append(&groups, group)
+	}
+	policy.macro_groups = groups[:]
+	return true
+}
+
+// Group table is at stack top.
+policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: Macro_Group_Enum, ok: bool) {
+	allowed := []cstring{"id", "name", "base_type", "prefix", "exclude_prefixes", "include", "member_strip_prefix", "emit_original_consts"}
+	if !policy_reject_unknown_subkeys(L, "macros.groups[]", allowed) {
+		return {}, false
+	}
+
+	name, name_ok := policy_optional_string_field(L, "macros.groups[]", "name")
+	if !name_ok || name == "" {
+		fmt.eprintln("h2odin: config: macros.groups[] requires name")
+		return {}, false
+	}
+	group.name = name
+	group.lua_index = lua_index
+
+	id, id_ok := policy_optional_string_field(L, "macros.groups[]", "id")
+	if !id_ok {
+		return {}, false
+	}
+	group.id = id
+
+	base, base_ok := policy_optional_string_field(L, "macros.groups[]", "base_type")
+	if !base_ok {
+		return {}, false
+	}
+	group.base_type = base
+
+	prefix, prefix_ok := policy_optional_string_field(L, "macros.groups[]", "prefix")
+	if !prefix_ok {
+		return {}, false
+	}
+	group.prefix = prefix
+
+	member_strip, member_strip_ok := policy_optional_string_field(L, "macros.groups[]", "member_strip_prefix")
+	if !member_strip_ok {
+		return {}, false
+	}
+	group.member_strip_prefix = member_strip
+
+	// exclude_prefixes: string or list
+	excl, excl_ok := policy_string_or_list_field(L, "macros.groups[]", "exclude_prefixes")
+	if !excl_ok {
+		return {}, false
+	}
+	group.exclude_prefixes = excl
+
+	// emit_original_consts defaults to true when absent.
+	group.emit_original_consts = true
+	emit_type := lua.getfield(L, -1, "emit_original_consts")
+	#partial switch lua.Type(emit_type) {
+	case .NIL:
+		lua.pop(L, 1)
+	case .BOOLEAN:
+		group.emit_original_consts = bool(lua.toboolean(L, -1))
+		lua.pop(L, 1)
+	case:
+		fmt.eprintln("h2odin: config: macros.groups[].emit_original_consts must be a boolean")
+		lua.pop(L, 1)
+		return {}, false
+	}
+
+	inc_type := lua.Type(lua.getfield(L, -1, "include"))
+	#partial switch inc_type {
+	case .NIL:
+		lua.pop(L, 1)
+	case .FUNCTION:
+		lua.pop(L, 1)
+		group.has_include = true
+	case:
+		fmt.eprintln("h2odin: config: macros.groups[].include must be a function")
+		lua.pop(L, 1)
+		return {}, false
+	}
+
+	return group, true
+}
+
+policy_read_enums :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "enums")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: enums must be a table")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	if !policy_reject_unknown_subkeys(L, "enums", []cstring{"member", "anonymous", "bit_sets"}) {
+		return false
+	}
+
+	member_type := lua.Type(lua.getfield(L, -1, "member"))
+	#partial switch member_type {
+	case .NIL:
+		lua.pop(L, 1)
+	case .FUNCTION:
+		lua.pop(L, 1)
+		policy.has_enum_member = true
+	case .TABLE:
+		fmt.eprintln("h2odin: config: enums.member must be a function")
+		lua.pop(L, 1)
+		return false
+	case:
+		fmt.eprintln("h2odin: config: enums.member must be a function")
+		lua.pop(L, 1)
+		return false
+	}
+
+	if !policy_read_enum_anonymous(L, policy) {
+		return false
+	}
+	return policy_read_enum_bit_sets(L, policy)
+}
+
+// enums table at stack top.
+policy_read_enum_anonymous :: proc(L: ^lua.State, policy: ^Policy) -> bool {
+	field_type := lua.getfield(L, -1, "anonymous")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: enums.anonymous must be a list of tables")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	n := int(lua.L_len(L, -1))
+	if n == 0 {
+		return true
+	}
+	rules := make([dynamic]Enum_Anonymous_Rule, 0, n)
+	for i in 0 ..< n {
+		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
+		if elem_type != c.int(lua.Type.TABLE) {
+			fmt.eprintfln("h2odin: config: enums.anonymous[%d] must be a table", i + 1)
+			lua.pop(L, 1)
+			return false
+		}
+		if !policy_reject_unknown_subkeys(L, "enums.anonymous[]", []cstring{"name", "first_member"}) {
+			lua.pop(L, 1)
+			return false
+		}
+		name, name_ok := policy_optional_string_field(L, "enums.anonymous[]", "name")
+		first, first_ok := policy_optional_string_field(L, "enums.anonymous[]", "first_member")
+		lua.pop(L, 1)
+		if !name_ok || !first_ok || name == "" || first == "" {
+			fmt.eprintln("h2odin: config: enums.anonymous[] requires name and first_member")
+			return false
+		}
+		append(&rules, Enum_Anonymous_Rule{name = name, first_member = first})
+	}
+	policy.enum_anonymous = rules[:]
+	return true
+}
+
+policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
+	field_type := lua.getfield(L, -1, "bit_sets")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: enums.bit_sets must be a list of tables")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	n := int(lua.L_len(L, -1))
+	if n == 0 {
+		return true
+	}
+	rules := make([dynamic]Enum_Bit_Set_Rule, 0, n)
+	for i in 0 ..< n {
+		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
+		if elem_type != c.int(lua.Type.TABLE) {
+			fmt.eprintfln("h2odin: config: enums.bit_sets[%d] must be a table", i + 1)
+			lua.pop(L, 1)
+			return false
+		}
+		if !policy_reject_unknown_subkeys(L, "enums.bit_sets[]", []cstring{"enum", "name", "mode"}) {
+			lua.pop(L, 1)
+			return false
+		}
+		// "enum" is a Lua keyword-friendly field name in the constructor table.
+		enum_name, enum_ok := policy_optional_string_field(L, "enums.bit_sets[]", "enum")
+		name, name_ok := policy_optional_string_field(L, "enums.bit_sets[]", "name")
+		mode, mode_ok := policy_optional_string_field(L, "enums.bit_sets[]", "mode")
+		lua.pop(L, 1)
+		if !enum_ok || !name_ok || !mode_ok || enum_name == "" || name == "" {
+			fmt.eprintln("h2odin: config: enums.bit_sets[] requires enum, name, and mode")
+			return false
+		}
+		if mode != "log2" {
+			fmt.eprintfln("h2odin: config: enums.bit_sets[].mode must be \"log2\", got %q", mode)
+			return false
+		}
+		append(&rules, Enum_Bit_Set_Rule{enum_name = enum_name, name = name, mode = mode})
+	}
+	policy.enum_bit_sets = rules[:]
+	return true
 }
 
 // Parent table at stack top; reject any string key not in allowed.
@@ -803,46 +1243,52 @@ policy_reject_nested_if_set :: proc(L: ^lua.State, parent: string, key: cstring)
 }
 
 // Internal field names avoid Odin keywords (`proc`, `const`); Lua keys are
-// "proc" / "type" / "const" as the config surface.
-Strip_Prefixes :: struct {
-	procs:     []string,
-	types:     []string,
-	constants: []string,
+// "proc" / "type" / "const" / "enum_value" as the config surface.
+Strip_Kinds :: struct {
+	procs:       []string,
+	types:       []string,
+	constants:   []string,
+	enum_values: []string,
 }
 
-// Read naming.strip_prefixes from the naming table at stack top.
-// Each kind accepts a string or a list of strings.
-policy_strip_prefixes_from :: proc(L: ^lua.State) -> (prefixes: Strip_Prefixes, ok: bool) {
-	outer_type := lua.getfield(L, -1, "strip_prefixes")
+// Read naming.strip_prefixes or naming.strip_suffixes from the naming table
+// at stack top. Each kind accepts a string or a list of strings.
+policy_strip_kinds_from :: proc(L: ^lua.State, field_key: cstring) -> (kinds: Strip_Kinds, ok: bool) {
+	path := fmt.tprintf("naming.%s", field_key)
+	outer_type := lua.getfield(L, -1, field_key)
 	if outer_type == c.int(lua.Type.NIL) {
 		lua.pop(L, 1)
 		return {}, true
 	}
 	if outer_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: naming.strip_prefixes must be a table")
+		fmt.eprintfln("h2odin: config: %s must be a table", path)
 		lua.pop(L, 1)
 		return {}, false
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "naming.strip_prefixes", STRIP_PREFIX_KEYS[:]) {
+	if !policy_reject_unknown_subkeys(L, path, STRIP_KIND_KEYS[:]) {
 		return {}, false
 	}
 
 	field_ok: bool
-	prefixes.procs, field_ok = policy_string_or_list_field(L, "naming.strip_prefixes", "proc")
+	kinds.procs, field_ok = policy_string_or_list_field(L, path, "proc")
 	if !field_ok {
 		return {}, false
 	}
-	prefixes.types, field_ok = policy_string_or_list_field(L, "naming.strip_prefixes", "type")
+	kinds.types, field_ok = policy_string_or_list_field(L, path, "type")
 	if !field_ok {
 		return {}, false
 	}
-	prefixes.constants, field_ok = policy_string_or_list_field(L, "naming.strip_prefixes", "const")
+	kinds.constants, field_ok = policy_string_or_list_field(L, path, "const")
 	if !field_ok {
 		return {}, false
 	}
-	return prefixes, true
+	kinds.enum_values, field_ok = policy_string_or_list_field(L, path, "enum_value")
+	if !field_ok {
+		return {}, false
+	}
+	return kinds, true
 }
 
 // Copies into context.allocator (generation arena during a normal run).
@@ -924,8 +1370,8 @@ policy_rename :: proc(policy: ^Policy, ctx: Symbol_Context) -> (name: string, de
 
 // symbols.remove.where — true means drop. nil/false mean keep (predicate
 // nil collapses to false per the config spec).
-policy_remove :: proc(policy: ^Policy, ctx: Symbol_Context) -> bool {
-	if !policy.has_remove {
+policy_remove_where :: proc(policy: ^Policy, ctx: Symbol_Context) -> bool {
+	if !policy.has_remove_where {
 		return false
 	}
 	L := policy.state
@@ -965,6 +1411,128 @@ push_symbol_table :: proc(L: ^lua.State, ctx: Symbol_Context) {
 	if ctx.parent != "" {
 		push_string_field(L, "parent", ctx.parent)
 	}
+}
+
+// macros.groups[i].include(m) — m has name, value, is_integer().
+// Order already applied by the caller: prefix → exclude → integer gate.
+// Returns true to include the macro in the group.
+policy_macro_include :: proc(policy: ^Policy, group: Macro_Group_Enum, decl: Macro_Decl) -> bool {
+	if !group.has_include {
+		return true
+	}
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	lua.getfield(L, -1, "macros")
+	lua.getfield(L, -1, "groups")
+	lua.geti(L, -1, lua.Integer(group.lua_index))
+	lua.getfield(L, -1, "include")
+	// stack: config, macros, groups, group, include
+	lua.remove(L, -2) // drop group
+	lua.remove(L, -2) // drop groups
+	lua.remove(L, -2) // drop macros → config, include
+	push_macro_view(L, decl)
+	if lua.pcall(L, 1, 1, 0) != 0 {
+		fmt.eprintfln("h2odin: config macros.groups[%d].include failed: %s", group.lua_index, lua.tostring(L, -1))
+		os.exit(1)
+	}
+	include := false
+	#partial switch lua.type(L, -1) {
+	case .NIL:
+		include = false
+	case .BOOLEAN:
+		include = bool(lua.toboolean(L, -1))
+	case:
+		fmt.eprintfln("h2odin: config macros.groups[%d].include for %q must return a boolean or nil", group.lua_index, decl.name)
+		os.exit(1)
+	}
+	lua.pop(L, 2) // result, config
+	return include
+}
+
+push_macro_view :: proc(L: ^lua.State, decl: Macro_Decl) {
+	lua.createtable(L, 0, 4)
+	push_string_field(L, "name", decl.name)
+	if value, is_int := macro_integer_value(decl); is_int {
+		lua.pushinteger(L, lua.Integer(value))
+		lua.setfield(L, -2, "value")
+	} else {
+		lua.pushnil(L)
+		lua.setfield(L, -2, "value")
+	}
+	lua.pushcfunction(L, policy_lua_macro_is_integer)
+	lua.setfield(L, -2, "is_integer")
+	lua.pushcfunction(L, policy_lua_macro_has_prefix)
+	lua.setfield(L, -2, "has_prefix")
+}
+
+policy_lua_macro_is_integer :: proc "c" (L: ^lua.State) -> c.int {
+	context = runtime.default_context()
+	// Method form: m:is_integer() → self at arg 1.
+	if !lua.istable(L, 1) {
+		lua.pushboolean(L, false)
+		return 1
+	}
+	lua.getfield(L, 1, "value")
+	is_int := lua.isnumber(L, -1)
+	lua.pop(L, 1)
+	lua.pushboolean(L, b32(is_int))
+	return 1
+}
+
+policy_lua_macro_has_prefix :: proc "c" (L: ^lua.State) -> c.int {
+	context = runtime.default_context()
+	if !lua.istable(L, 1) {
+		lua.pushboolean(L, false)
+		return 1
+	}
+	lua.getfield(L, 1, "name")
+	name := string(lua.tostring(L, -1))
+	lua.pop(L, 1)
+	prefix := policy_lua_check_string(L, 2)
+	lua.pushboolean(L, b32(str_has_prefix(name, prefix)))
+	return 1
+}
+
+// enums.member(member) → nil | { remove = true }
+// Returns true when the member should be dropped.
+policy_enum_member_remove :: proc(policy: ^Policy, enum_name, member_name: string, value: i64) -> bool {
+	if !policy.has_enum_member {
+		return false
+	}
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	lua.getfield(L, -1, "enums")
+	lua.getfield(L, -1, "member")
+	// stack: config, enums, member
+	lua.remove(L, -2) // config, member
+	lua.createtable(L, 0, 3)
+	push_string_field(L, "enum_name", enum_name)
+	push_string_field(L, "name", member_name)
+	lua.pushinteger(L, lua.Integer(value))
+	lua.setfield(L, -2, "value")
+	if lua.pcall(L, 1, 1, 0) != 0 {
+		fmt.eprintfln("h2odin: config enums.member failed: %s", lua.tostring(L, -1))
+		os.exit(1)
+	}
+	defer lua.pop(L, 2) // result, config
+
+	if lua.isnil(L, -1) {
+		return false
+	}
+	if !lua.istable(L, -1) {
+		fmt.eprintfln("h2odin: config enums.member for %q must return nil or a table", member_name)
+		os.exit(1)
+	}
+	lua.getfield(L, -1, "remove")
+	defer lua.pop(L, 1)
+	if lua.isnil(L, -1) {
+		return false
+	}
+	if lua.type(L, -1) != .BOOLEAN {
+		fmt.eprintfln("h2odin: config enums.member for %q: remove must be a boolean", member_name)
+		os.exit(1)
+	}
+	return bool(lua.toboolean(L, -1))
 }
 
 push_string_field :: proc(L: ^lua.State, key: cstring, value: string) {

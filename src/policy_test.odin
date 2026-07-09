@@ -20,20 +20,47 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 	if policy.foreign_lib != "" {
 		delete(policy.foreign_lib)
 	}
-	for p in policy.strip_prefix_proc {
-		delete(p)
-	}
-	delete(policy.strip_prefix_proc)
-	for p in policy.strip_prefix_type {
-		delete(p)
-	}
-	delete(policy.strip_prefix_type)
-	for p in policy.strip_prefix_const {
-		delete(p)
-	}
-	delete(policy.strip_prefix_const)
+	delete_string_slice(policy.strip_prefix_proc)
+	delete_string_slice(policy.strip_prefix_type)
+	delete_string_slice(policy.strip_prefix_const)
+	delete_string_slice(policy.strip_prefix_enum)
+	delete_string_slice(policy.strip_suffix_proc)
+	delete_string_slice(policy.strip_suffix_type)
+	delete_string_slice(policy.strip_suffix_const)
+	delete_string_slice(policy.strip_suffix_enum)
+	delete_string_slice(policy.remove_names)
+	delete_string_slice(policy.remove_patterns)
+	delete_string_map(&policy.known_tokens)
+	delete_string_map(&policy.naming_overrides)
 	delete_string_map(&policy.type_map)
 	delete_string_map(&policy.type_overrides)
+	for g in policy.macro_groups {
+		delete(g.id)
+		delete(g.name)
+		delete(g.base_type)
+		delete(g.prefix)
+		delete(g.member_strip_prefix)
+		delete_string_slice(g.exclude_prefixes)
+	}
+	delete(policy.macro_groups)
+	for r in policy.enum_anonymous {
+		delete(r.name)
+		delete(r.first_member)
+	}
+	delete(policy.enum_anonymous)
+	for r in policy.enum_bit_sets {
+		delete(r.enum_name)
+		delete(r.name)
+		delete(r.mode)
+	}
+	delete(policy.enum_bit_sets)
+}
+
+delete_string_slice :: proc(list: []string) {
+	for s in list {
+		delete(s)
+	}
+	delete(list)
 }
 
 delete_string_map :: proc(m: ^map[string]string) {
@@ -279,9 +306,9 @@ return config
 	defer policy_destroy(&policy)
 	defer delete_policy_test_data(&policy)
 	testing.expect(t, ok)
-	testing.expect(t, policy.has_remove)
-	testing.expect(t, policy_remove(&policy, Symbol_Context{name = "internal_x", default_name = "internal_x", kind = .Func}))
-	testing.expect(t, !policy_remove(&policy, Symbol_Context{name = "public", default_name = "public", kind = .Func}))
+	testing.expect(t, policy.has_remove_where)
+	testing.expect(t, policy_remove_where(&policy, Symbol_Context{name = "internal_x", default_name = "internal_x", kind = .Func}))
+	testing.expect(t, !policy_remove_where(&policy, Symbol_Context{name = "public", default_name = "public", kind = .Func}))
 }
 
 @(test)

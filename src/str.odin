@@ -28,3 +28,16 @@ str_strip_prefix :: proc(s, prefix: string) -> string {
 	}
 	return rest
 }
+
+// Drop suffix when present; otherwise return s unchanged. Same empty-name
+// refusal as strip_prefix.
+str_strip_suffix :: proc(s, suffix: string) -> string {
+	if suffix == "" || !strings.has_suffix(s, suffix) {
+		return s
+	}
+	rest := s[:len(s) - len(suffix)]
+	if rest == "" {
+		return s
+	}
+	return rest
+}

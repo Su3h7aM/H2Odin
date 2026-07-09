@@ -2,7 +2,7 @@
 
 H2Odin is configured with a Lua file. The goal is that a well-behaved library needs only a few lines of plain data, while a difficult library can drop into Lua functions for the awkward cases — both written against the same small API.
 
-This document describes **what the generator accepts today.** The full target shape — naming constructors, macro groups, enum transforms, diagnostics severity — is specified in [`config-spec.md`](config-spec.md). Where the two differ, the spec is the destination and this file is the map of the ground already covered.
+This document describes **what the generator accepts today.** The full target shape is specified in [`config-spec.md`](config-spec.md). Where the two differ, the spec is the destination and this file is the map of the ground already covered.
 
 ## Why Lua
 
@@ -43,22 +43,31 @@ return config
 
 The config file must **return** the config table. Prefer building it with `h2o.config()` so every section exists up front.
 
-### Supported surface (Milestone 8)
+### Supported surface (through Milestone 9)
 
 | Path | Type | Role |
 |------|------|------|
 | `package` | string | Odin package name (default: header stem) |
 | `type_mode` | `"abi"` \| `"idiomatic"` | leaf type spelling family |
 | `foreign.import_lib` | string | `foreign import` system library name (default: header stem) |
-| `naming.strip_prefixes` | `{ proc?, type?, const? }` | each value a string or list of strings |
+| `naming.strip_prefixes` | `{ proc?, type?, const?, enum_value? }` | string or list of strings |
+| `naming.strip_suffixes` | same shape | string or list of strings |
+| `naming.known_tokens` | string → string | tokenizer vocabulary (surface → lower form) |
+| `naming.overrides` | string → string | absolute C name → Odin name |
 | `naming.override` | `function(sym) → string\|nil` | rename a symbol |
 | `types.map` | string → string | rewrite every *reference* to a C type |
 | `types.overrides` | string → string | rewrite references **and** suppress the declaration |
+| `symbols.remove.names` | list of strings | drop exact C names |
+| `symbols.remove.patterns` | list of shell patterns | drop names matching `*` / `?` patterns |
 | `symbols.remove.where` | `function(sym) → bool\|nil` | **true drops** the symbol |
+| `macros.groups` | list of `h2o.macro_group.enum{...}` | synthesize enums from macros |
+| `enums.anonymous` | list of `h2o.enum.anonymous{...}` | name anonymous enums by first member |
+| `enums.member` | `function(member) → nil\|{remove=true}` | drop enum members |
+| `enums.bit_sets` | list of `h2o.enum.bit_set{...}` | flag enum → `bit_set` (`mode = "log2"`) |
 
-`h2o.naming.odin { ... }` is constructor sugar: it type-checks the table and returns it. Field validation still runs on the Odin side at load.
+`h2o.naming.odin { ... }`, `h2o.macro_group.enum { ... }`, `h2o.enum.anonymous { ... }`, and `h2o.enum.bit_set { ... }` are constructor sugar: they type-check the table and return it. Field validation still runs on the Odin side at load.
 
-Empty sections created by `h2o.config()` (`macros`, `enums`, `structs`, `procs`, `preprocess`, `output`, `diagnostics`, …) may appear; giving them real content fails with "not yet supported."
+Empty sections that are not yet wired (`structs`, `procs`, `preprocess`, `output`, `diagnostics`, `inputs`, `output_folder`) may appear; giving them real content fails with "not yet supported."
 
 Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migration message:
 
@@ -68,35 +77,99 @@ Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dir
 
 The header path is a CLI argument today; write stdout where you want the file.
 
-## Callback views
+## Naming convention (foreign porting)
 
-Callbacks receive a single table:
+Automatic naming **keeps C case** after prefix/suffix strip and keyword safety. That matches Odin's foreign/vendor guidance: keep the original authors' case so C and Odin call sites stay parallel ([foreign system](https://odin-lang.org/docs/overview/#foreign-system)).
+
+To recase deliberately, use the pure helpers in a callback:
+
+```lua
+override = function(sym)
+  if sym.kind == "proc" then
+    return h2o.naming.snake_case(h2o.str.strip_prefix(sym.name, "sqlite3_"))
+  end
+  return nil
+end
+```
+
+Or set absolute names with `naming.overrides`.
+
+## Callback views
 
 | Field | Meaning |
 |-------|---------|
 | `name` | original C name |
-| `default` | generator's default (after prefix strip + keyword safety) |
+| `default` | generator's default (after affix strip + keyword safety) |
 | `kind` | `"proc"` \| `"type"` \| `"var"` \| `"const"` \| `"enum_value"` \| `"field"` |
 | `parent` | owning declaration for members/fields when relevant |
 
+Macro `include` callbacks receive a macro view: `m.name`, `m.value` (number or nil), `m:is_integer()`, `m:has_prefix(p)`. Raw `m.expr` is not exposed.
+
+Enum `member` callbacks receive: `member.enum_name`, `member.name`, `member.value`.
+
 ### Predicate vs action
 
-- **`symbols.remove.where`** is a *predicate*: `true` acts (drops), `nil`/`false` keep. Polarity is the inverse of the old `keep` callback.
+- **`symbols.remove.where`** is a *predicate*: `true` acts (drops), `nil`/`false` keep.
 - **`naming.override`** is an *action*: return a string to rename, or `nil` for "use the default."
+- **`enums.member`** is an *action*: return `{ remove = true }` or `nil`.
+
+### Removal order
+
+`symbols.remove` applies **names → patterns → where**. Declarative tiers gate before the Lua predicate.
 
 ### Plural is data; singular is a callback
 
-`types.overrides` is a table; `types.override` would be a function (not wired yet). Validation rejects a table where a function belongs and vice versa for the keys that exist today.
+`naming.overrides` / `types.overrides` are tables; `naming.override` / `types.override` would be functions. Validation rejects a table where a function belongs and vice versa for wired keys.
 
-## Helpers: `h2o.str`
+## Helpers
 
 Registered from pure Odin (testable without a Lua VM):
 
 | Helper | Role |
 |--------|------|
-| `h2o.str.has_prefix(s, prefix)` | boolean |
-| `h2o.str.has_suffix(s, suffix)` | boolean |
-| `h2o.str.strip_prefix(s, prefix)` | string (unchanged if no match; never empties the whole name) |
+| `h2o.str.has_prefix` / `has_suffix` | boolean |
+| `h2o.str.strip_prefix` / `strip_suffix` | string (never empties the whole name) |
+| `h2o.naming.snake_case(s)` | lower snake_case via the tokenizer |
+| `h2o.naming.ada_case(s)` | Ada_Case via the tokenizer |
+
+## Macro groups
+
+```lua
+config.macros.groups = {
+  h2o.macro_group.enum {
+    id = "result_code",
+    name = "Result_Code",
+    prefix = "SQLITE_",
+    exclude_prefixes = { "SQLITE_OPEN_" },
+    member_strip_prefix = "SQLITE_",
+    emit_original_consts = false,
+    include = function(m)
+      return m:is_integer() and m.value <= 100
+    end,
+  },
+}
+```
+
+Per-macro order: `prefix` → `exclude_prefixes` → integer value-kind → `include`. Matching macros become an ordinary explicit-valued IR enum; with `emit_original_consts = false` they are dropped as standalone constants.
+
+## Enum policies
+
+```lua
+config.enums.anonymous = {
+  h2o.enum.anonymous { name = "Keyboard_Key", first_member = "KEY_NULL" },
+}
+config.enums.member = function(member)
+  if h2o.str.has_suffix(member.name, "_COUNT") then
+    return { remove = true }
+  end
+  return nil
+end
+config.enums.bit_sets = {
+  h2o.enum.bit_set { enum = "Config_Flag", name = "Config_Flags", mode = "log2" },
+}
+```
+
+`mode = "log2"` rewrites flag masks to bit positions. Non-power-of-two members emit a `bit_set_non_power_of_two` diagnostic and skip the transform.
 
 ## Sandbox
 
@@ -114,7 +187,7 @@ Determinism claim: *the same headers plus the same config tree produce byte-iden
 
 Configuration is consulted only during Transformation, and only through the policy layer. The generator loads and executes the configuration once at startup. Extraction, analysis, and emission never touch Lua.
 
-The config *registers* policy at load time; Transformation *executes* it later, once the data a rule needs exists. That is why the Lua state stays alive for the whole run.
+Pass order inside Transformation (config-spec): macro grouping → enum policies → type rewrites → symbol removal → naming.
 
 ## Migration from the flat surface
 
@@ -133,8 +206,8 @@ The config *registers* policy at load time; Transformation *executes* it later, 
 | kind `"constant"` | `"const"` |
 | kind `"enum_member"` | `"enum_value"` |
 
-**`keep` polarity inverts.** Translating key-for-key silently emits the wrong set of symbols. Validation rejects `keep` by name rather than accepting both.
+**`keep` polarity inverts.** Validation rejects `keep` by name rather than accepting both.
 
 ## What we deliberately keep out for now
 
-Struct field tags and alignment, defaulted parameters, macro grouping, enum-to-`bit_set` transforms, generated wrapper procs (Milestone 6), `naming.overrides` / `known_tokens` / case helpers (Milestone 9), multi-header inputs and preprocess knobs (Milestone 10), and diagnostics severity (Milestone 11). Each can land without disturbing the sectioned shape.
+Struct field tags and alignment, procedure signature spelling/defaults, multi-header inputs and preprocess knobs (Milestone 10), diagnostics severity (Milestone 11), and generated wrapper procs (Milestone 6). Each can land without disturbing the sectioned shape.

@@ -65,6 +65,7 @@ Type_Variant :: union {
 	Type_Record_Ref,
 	Type_Enum_Ref,
 	Type_Typedef_Ref,
+	Type_Bit_Set,
 }
 
 Type_Builtin :: struct {
@@ -179,6 +180,12 @@ Type_Typedef_Ref :: struct {
 	decl: Decl_Handle, // into IR.typedefs
 }
 
+// Odin `bit_set[Enum]` produced by enums.bit_sets (log2 transform). The
+// backing enum is a normal Enum_Decl; this type is only the set wrapper.
+Type_Bit_Set :: struct {
+	elem: Type_Handle, // Type_Enum_Ref to the flag enum
+}
+
 // ---------------------------------------------------------------- Decls
 
 Decl_Kind :: enum {
@@ -189,6 +196,7 @@ Decl_Kind :: enum {
 	Typedef,
 	Var,
 	Macro,
+	Bit_Set, // named bit_set[Enum] alias produced by enum policy
 }
 
 // An entry in the ordering list: which pool, and where in that pool.
@@ -298,6 +306,14 @@ Macro_Decl :: struct {
 	doc:              string,
 }
 
+// A named `Name :: bit_set[Enum]` produced by enums.bit_sets. Stored as its
+// own pool entry so emission stays a pure serialization of IR decls.
+Bit_Set_Decl :: struct {
+	name: string,
+	elem: Type_Handle, // Type_Enum_Ref
+	doc:  string,
+}
+
 IR :: struct {
 	types:       [dynamic]Type_Info,
 	funcs:       [dynamic]Func_Decl,
@@ -306,6 +322,7 @@ IR :: struct {
 	typedefs:    [dynamic]Typedef_Decl,
 	vars:        [dynamic]Var_Decl,
 	macros:      [dynamic]Macro_Decl,
+	bit_sets:    [dynamic]Bit_Set_Decl,
 	order:       [dynamic]Decl_Ref,
 
 	// Non-certain decisions and honesty notes collected during the run.
@@ -383,4 +400,9 @@ ir_add_var :: proc(ir: ^IR, decl: Var_Decl) {
 ir_add_macro :: proc(ir: ^IR, decl: Macro_Decl) {
 	append(&ir.macros, decl)
 	append(&ir.order, Decl_Ref{kind = .Macro, index = u32(len(ir.macros) - 1)})
+}
+
+ir_add_bit_set :: proc(ir: ^IR, decl: Bit_Set_Decl) {
+	append(&ir.bit_sets, decl)
+	append(&ir.order, Decl_Ref{kind = .Bit_Set, index = u32(len(ir.bit_sets) - 1)})
 }

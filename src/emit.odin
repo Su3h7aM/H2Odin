@@ -38,6 +38,8 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> string {
 			emit_var(&foreign_body, ir, ir.vars[ref.index], &uses_core_c)
 		case .Macro:
 			emit_macro(&types_body, ir.macros[ref.index])
+		case .Bit_Set:
+			emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], &uses_core_c)
 		}
 	}
 
@@ -252,6 +254,13 @@ emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl) {
 	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
 }
 
+emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, uses_core_c: ^bool) {
+	write_doc(b, decl.doc, 0)
+	fmt.sbprintf(b, "%s :: bit_set[", decl.name)
+	write_type(b, ir, decl.elem, 0, uses_core_c)
+	strings.write_string(b, "]\n\n")
+}
+
 macro_literal_can_emit :: proc(s: string) -> bool {
 	if len(s) == 0 {
 		return false
@@ -408,5 +417,10 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		// Unresolvable typedefs never reach emission: capture refuses to
 		// hand out references to them.
 		strings.write_string(b, ir.typedefs[variant.decl].name)
+
+	case Type_Bit_Set:
+		strings.write_string(b, "bit_set[")
+		write_type(b, ir, variant.elem, indent, uses_core_c)
+		strings.write_string(b, "]")
 	}
 }

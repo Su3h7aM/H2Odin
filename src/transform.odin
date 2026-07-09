@@ -1,6 +1,7 @@
 package h2odin
 
 import "core:fmt"
+import "core:path/slashpath"
 import "core:strings"
 
 // Which spelling family Transformation aims for.
@@ -13,6 +14,8 @@ Type_Mode :: enum {
 // together with the configuration policy and records the choices — renames,
 // drops, and type picks. It is the only stage that consults policy.
 //
+// Pass order follows docs/config-spec.md (macro grouping and enum policies
+// synthesize ordinary IR decls before naming and emission).
 transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	for _, i in ir.types {
 		lower_type(ir, Type_Handle(i))
@@ -22,6 +25,10 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	if mode == .Idiomatic {
 		substitute_leaf_types(ir)
 	}
+
+	apply_macro_groups(ir, policy)
+	apply_enum_policies(ir, policy)
+
 	// map first, then overrides so a types.overrides entry wins on conflict.
 	apply_type_rewrites(ir, policy.type_map, drop_decls = false)
 	apply_type_rewrites(ir, policy.type_overrides, drop_decls = true)
@@ -92,13 +99,13 @@ apply_type_rewrites :: proc(ir: ^IR, type_spelling: map[string]string, drop_decl
 	ir.order = kept
 }
 
-// Offer every top-level declaration to symbols.remove.where and rebuild the
-// ordering list with the survivors. Dropping is an ordering-list operation
-// only — the declaration stays in its pool, so handles held by other types
-// remain valid. Members and fields are never offered: dropping one would
-// change a layout or an enum the header defines.
+// symbols.remove: names → patterns → where. Rebuild the ordering list with
+// survivors. Dropping is an ordering-list operation only — pool entries stay
+// so handles remain valid. Members and fields are never offered here.
 filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
-	if !policy.has_remove {
+	has_names := len(policy.remove_names) > 0
+	has_patterns := len(policy.remove_patterns) > 0
+	if !has_names && !has_patterns && !policy.has_remove_where {
 		return
 	}
 	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
@@ -126,67 +133,99 @@ filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
 		case .Macro:
 			name = ir.macros[ref.index].name
 			kind = .Const
+		case .Bit_Set:
+			name = ir.bit_sets[ref.index].name
+			kind = .Type
 		}
 		// Anonymous declarations are spelled inline where they are used;
 		// they stand or fall with their user, not on their own.
-		if name == "" || !policy_remove(policy, Symbol_Context{name = name, default_name = name, kind = kind}) {
+		if name == "" || !should_remove_symbol(policy, name, kind) {
 			append(&kept, ref)
 		}
 	}
 	ir.order = kept
 }
 
-// Decide the Odin-visible name of every named symbol: the generator's
-// keyword-safe default first, then the config's rename callback on top.
-// Functions and variables that change name keep their C symbol via
-// link_name; type names, enum members, constants, and fields are not
-// linkage-visible and just take the new name. Runs with or without a
-// config — keyword collisions must be fixed either way.
+should_remove_symbol :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -> bool {
+	for n in policy.remove_names {
+		if n == name {
+			return true
+		}
+	}
+	for pattern in policy.remove_patterns {
+		matched, err := slashpath.match(pattern, name)
+		if err == nil && matched {
+			return true
+		}
+	}
+	if policy.has_remove_where {
+		return policy_remove_where(policy, Symbol_Context{name = name, default_name = name, kind = kind})
+	}
+	return false
+}
+
+// Decide the Odin-visible name of every named symbol.
+//
+// Pipeline: naming.overrides → (strip affixes + keyword_safe as default) →
+// naming.override callback. Functions/variables keep the C symbol via
+// link_name when the Odin name changes.
+//
+// Case conversion is NOT applied automatically. Odin's foreign guidance is to
+// keep the original authors' case so C and Odin call sites stay parallel
+// (odin-lang.org/docs/overview/#foreign-system — vendor note). Users who want
+// Ada/snake recasing use h2o.naming.ada_case / snake_case in an override, or
+// set naming.overrides. known_tokens feeds those helpers when the generator
+// builds sym.default with optional case (see default_odin_name).
 apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 	for ref in ir.order {
 		switch ref.kind {
 		case .Invalid:
 		case .Func:
 			decl := &ir.funcs[ref.index]
-			if new_name, decided := rename_of(policy, decl.name, .Func, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Func, ""); decided {
 				decl.link_name = decl.name
 				decl.name = new_name
 			}
 			fix_param_names(decl.params)
 		case .Var:
 			decl := &ir.vars[ref.index]
-			if new_name, decided := rename_of(policy, decl.name, .Var, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Var, ""); decided {
 				decl.link_name = decl.name
 				decl.name = new_name
 			}
 		case .Record:
 			decl := &ir.records[ref.index]
-			if new_name, decided := rename_of(policy, decl.name, .Type, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
 				decl.name = new_name
 			}
 			for &field in decl.fields {
-				if new_name, decided := rename_of(policy, field.name, .Field, decl.name); decided {
+				if new_name, decided := rename_of(ir, policy, field.name, .Field, decl.name); decided {
 					field.name = new_name
 				}
 			}
 		case .Enum:
 			decl := &ir.enums[ref.index]
-			if new_name, decided := rename_of(policy, decl.name, .Type, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
 				decl.name = new_name
 			}
 			for &member in decl.members {
-				if new_name, decided := rename_of(policy, member.name, .Enum_Member, decl.name); decided {
+				if new_name, decided := rename_of(ir, policy, member.name, .Enum_Member, decl.name); decided {
 					member.name = new_name
 				}
 			}
 		case .Typedef:
 			decl := &ir.typedefs[ref.index]
-			if new_name, decided := rename_of(policy, decl.name, .Type, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
 				decl.name = new_name
 			}
 		case .Macro:
 			decl := &ir.macros[ref.index]
-			if new_name, decided := rename_of(policy, decl.name, .Const, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Const, ""); decided {
+				decl.name = new_name
+			}
+		case .Bit_Set:
+			decl := &ir.bit_sets[ref.index]
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
 				decl.name = new_name
 			}
 		}
@@ -200,14 +239,24 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 	}
 }
 
-// Anonymous symbols have nothing to rename; everything else goes to the
-// policy together with the generator's default, and the default applies
-// when the policy stays silent.
-rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: string) -> (string, bool) {
+// Anonymous symbols have nothing to rename; everything else goes through
+// the naming pipeline. Returns decided=false when the final name equals
+// the original C name (no IR write needed).
+rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, parent: string) -> (string, bool) {
 	if name == "" {
 		return "", false
 	}
-	default_name := keyword_safe_default(strip_configured_prefix(policy, name, kind))
+
+	// Absolute map wins before automatic naming.
+	if odin_name, ok := policy.naming_overrides[name]; ok {
+		if odin_name == name {
+			return "", false
+		}
+		return odin_name, true
+	}
+
+	default_name := default_odin_name(ir, policy, name, kind)
+
 	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = default_name, kind = kind, parent = parent})
 	if !decided {
 		new_name = default_name
@@ -218,30 +267,250 @@ rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: stri
 	return new_name, true
 }
 
-// Strip the first matching configured prefix for this symbol kind.
-// naming.strip_prefixes only covers proc/type/const — the common case; a
-// need to strip elsewhere goes through naming.override, which sees this
-// result as sym.default.
-strip_configured_prefix :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -> string {
+// Generator default for a symbol: strip configured affixes, then keyword
+// safety. Spelling case is left as in the header (foreign porting convention).
+// If known_tokens is set and the stripped form still has an ambiguous split,
+// emit naming_ambiguity so the user can override that one symbol.
+default_odin_name :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind) -> string {
+	stripped := strip_configured_affixes(policy, name, kind)
+	if len(policy.known_tokens) > 0 {
+		// Touch the tokenizer so known_tokens collisions surface even when
+		// we do not recase — the dictionary is still load-bearing for
+		// callbacks that call h2o.naming.* on sym.default / related names.
+		_, ambiguous := naming_tokenize(stripped, policy.known_tokens, context.temp_allocator)
+		if ambiguous {
+			ir_diag(ir, "naming_ambiguity: %q has an uncertain word split; set naming.overrides or refine known_tokens", name)
+		}
+	}
+	return keyword_safe_default(stripped)
+}
+
+// Strip the first matching configured prefix, then the first matching
+// suffix, for this symbol kind.
+strip_configured_affixes :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -> string {
 	prefixes: []string
+	suffixes: []string
 	#partial switch kind {
 	case .Func:
 		prefixes = policy.strip_prefix_proc
+		suffixes = policy.strip_suffix_proc
 	case .Type:
 		prefixes = policy.strip_prefix_type
+		suffixes = policy.strip_suffix_type
 	case .Const:
 		prefixes = policy.strip_prefix_const
+		suffixes = policy.strip_suffix_const
+	case .Enum_Member:
+		prefixes = policy.strip_prefix_enum
+		suffixes = policy.strip_suffix_enum
 	}
+	result := name
 	for prefix in prefixes {
-		if stripped := str_strip_prefix(name, prefix); stripped != name {
-			return stripped
+		if stripped := str_strip_prefix(result, prefix); stripped != result {
+			result = stripped
+			break
 		}
 	}
-	return name
+	for suffix in suffixes {
+		if stripped := str_strip_suffix(result, suffix); stripped != result {
+			result = stripped
+			break
+		}
+	}
+	return result
+}
+
+// ---------------------------------------------------------------- Macros
+
+// Synthesize explicit-valued enums from macros.groups. Consumed macros are
+// dropped from the ordering list when emit_original_consts is false.
+//
+// Per-macro check order (config-spec): prefix → exclude_prefixes →
+// value-kind (integer) → include last.
+apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
+	if len(policy.macro_groups) == 0 {
+		return
+	}
+
+	drop_macros := make(map[u32]bool, context.temp_allocator)
+	claimed := make(map[u32]bool, context.temp_allocator)
+
+	for group in policy.macro_groups {
+		members := make([dynamic]Enum_Member, context.temp_allocator)
+		for macro, mi in ir.macros {
+			if macro.is_function_like {
+				continue
+			}
+			if group.prefix != "" && !strings.has_prefix(macro.name, group.prefix) {
+				continue
+			}
+			excluded := false
+			for excl in group.exclude_prefixes {
+				if excl != "" && strings.has_prefix(macro.name, excl) {
+					excluded = true
+					break
+				}
+			}
+			if excluded {
+				continue
+			}
+			value, is_int := macro_integer_value(macro)
+			if !is_int {
+				continue
+			}
+			if group.has_include && !policy_macro_include(policy, group, macro) {
+				continue
+			}
+			if claimed[u32(mi)] {
+				label := group.id if group.id != "" else group.name
+				ir_diag(ir, "macro_group_conflict: %q already claimed by an earlier group; skipping for %q", macro.name, label)
+				continue
+			}
+			claimed[u32(mi)] = true
+
+			member_name := macro.name
+			if group.member_strip_prefix != "" {
+				member_name = str_strip_prefix(member_name, group.member_strip_prefix)
+			}
+			append(&members, Enum_Member{name = strings.clone(member_name), value = value})
+			if !group.emit_original_consts {
+				drop_macros[u32(mi)] = true
+			}
+		}
+		if len(members) == 0 {
+			label := group.id if group.id != "" else group.name
+			ir_diag(ir, "macro group %q matched no macros", label)
+			continue
+		}
+		arena_members := make([]Enum_Member, len(members))
+		for m, i in members {
+			arena_members[i] = m
+		}
+		_ = ir_add_enum(ir, Enum_Decl{name = strings.clone(group.name), backing = ir_builtin_type(ir, .Int), members = arena_members})
+	}
+
+	if len(drop_macros) == 0 {
+		return
+	}
+	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
+	for ref in ir.order {
+		if ref.kind == .Macro && drop_macros[ref.index] {
+			continue
+		}
+		append(&kept, ref)
+	}
+	ir.order = kept
+}
+
+// ---------------------------------------------------------------- Enums
+
+apply_enum_policies :: proc(ir: ^IR, policy: ^Policy) {
+	apply_enum_anonymous(ir, policy)
+	apply_enum_member_policy(ir, policy)
+	apply_enum_bit_sets(ir, policy)
+}
+
+apply_enum_anonymous :: proc(ir: ^IR, policy: ^Policy) {
+	for rule in policy.enum_anonymous {
+		for &decl in ir.enums {
+			if decl.name != "" || decl.members == nil || len(decl.members) == 0 {
+				continue
+			}
+			if decl.members[0].name == rule.first_member {
+				decl.name = strings.clone(rule.name)
+				break
+			}
+		}
+	}
+}
+
+apply_enum_member_policy :: proc(ir: ^IR, policy: ^Policy) {
+	if !policy.has_enum_member {
+		return
+	}
+	for &decl in ir.enums {
+		if decl.members == nil {
+			continue
+		}
+		kept := make([dynamic]Enum_Member, 0, len(decl.members))
+		enum_name := decl.name // may be "" for anonymous
+		for member in decl.members {
+			if policy_enum_member_remove(policy, enum_name, member.name, member.value) {
+				continue
+			}
+			append(&kept, member)
+		}
+		if len(kept) != len(decl.members) {
+			decl.members = kept[:]
+		}
+	}
+}
+
+apply_enum_bit_sets :: proc(ir: ^IR, policy: ^Policy) {
+	for rule in policy.enum_bit_sets {
+		enum_index := -1
+		for decl, i in ir.enums {
+			if decl.name == rule.enum_name {
+				enum_index = i
+				break
+			}
+		}
+		if enum_index < 0 {
+			ir_diag(ir, "enums.bit_sets: enum %q not found", rule.enum_name)
+			continue
+		}
+		decl := &ir.enums[enum_index]
+		if decl.members == nil {
+			ir_diag(ir, "enums.bit_sets: enum %q has no members", rule.enum_name)
+			continue
+		}
+		ok := true
+		for &member in decl.members {
+			if member.value <= 0 || !is_power_of_two_u64(u64(member.value)) {
+				ir_diag(
+					ir,
+					"bit_set_non_power_of_two: %s.%s = %d is not a power of two; skipping bit_set %q",
+					rule.enum_name,
+					member.name,
+					member.value,
+					rule.name,
+				)
+				ok = false
+				break
+			}
+		}
+		if !ok {
+			continue
+		}
+		// Rewrite member values to bit positions (log2).
+		for &member in decl.members {
+			member.value = i64(log2_u64(u64(member.value)))
+		}
+		// Type handle for the enum (reuse an existing Type_Enum_Ref if any,
+		// otherwise add one).
+		enum_type := ir_add_type(ir, Type_Info{variant = Type_Enum_Ref{decl = Decl_Handle(enum_index)}})
+		ir_add_bit_set(ir, Bit_Set_Decl{name = strings.clone(rule.name), elem = enum_type})
+	}
+}
+
+is_power_of_two_u64 :: proc(v: u64) -> bool {
+	return v != 0 && (v & (v - 1)) == 0
+}
+
+log2_u64 :: proc(v: u64) -> u64 {
+	// v is a power of two ≥ 1.
+	n: u64 = 0
+	x := v
+	for x > 1 {
+		x >>= 1
+		n += 1
+	}
+	return n
 }
 
 // Parameter names are not symbols — the policy is never consulted — but a
 // name that collides with an Odin keyword still cannot be emitted verbatim.
+// Case is left as in the header (same foreign-porting convention as symbols).
 fix_param_names :: proc(params: []Param) {
 	for &param in params {
 		param.name = keyword_safe_default(param.name)
@@ -462,7 +731,7 @@ lower_pointer :: proc(ir: ^IR, pointee: Type_Handle) -> Type_Lowered_Pointer {
 report_pointer_lowering_guesses :: proc(ir: ^IR) {
 	for ref in ir.order {
 		switch ref.kind {
-		case .Invalid, .Macro:
+		case .Invalid, .Macro, .Bit_Set:
 		case .Func:
 			decl := ir.funcs[ref.index]
 			report_type_guesses(ir, decl.return_type, fmt.tprintf("function %q return type", decl.name))

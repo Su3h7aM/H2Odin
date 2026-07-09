@@ -13,18 +13,20 @@ test_keyword_safe_default_suffixes_keywords :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_strip_configured_prefix_by_symbol_kind :: proc(t: ^testing.T) {
+test_strip_configured_affixes_by_symbol_kind :: proc(t: ^testing.T) {
 	policy := Policy {
 		strip_prefix_proc  = {"gl_"},
 		strip_prefix_type  = {"GL"},
 		strip_prefix_const = {"GL_"},
+		strip_suffix_type  = {"_t"},
 	}
 
-	testing.expect_value(t, strip_configured_prefix(&policy, "gl_Draw", .Func), "Draw")
-	testing.expect_value(t, strip_configured_prefix(&policy, "GLVector", .Type), "Vector")
-	testing.expect_value(t, strip_configured_prefix(&policy, "GL_MAX", .Const), "MAX")
-	testing.expect_value(t, strip_configured_prefix(&policy, "gl_field", .Field), "gl_field")
-	testing.expect_value(t, strip_configured_prefix(&policy, "gl_", .Func), "gl_")
+	testing.expect_value(t, strip_configured_affixes(&policy, "gl_Draw", .Func), "Draw")
+	testing.expect_value(t, strip_configured_affixes(&policy, "GLVector", .Type), "Vector")
+	testing.expect_value(t, strip_configured_affixes(&policy, "GL_MAX", .Const), "MAX")
+	testing.expect_value(t, strip_configured_affixes(&policy, "gl_field", .Field), "gl_field")
+	testing.expect_value(t, strip_configured_affixes(&policy, "gl_", .Func), "gl_")
+	testing.expect_value(t, strip_configured_affixes(&policy, "size_t", .Type), "size")
 }
 
 @(test)

@@ -121,6 +121,7 @@ test_keyword_safe_defaults_emit_link_name :: proc(t: ^testing.T) {
 
 	expect_contains(t, stdout, "@(link_name = \"matrix\")")
 	expect_contains(t, stdout, "matrix_: [16]c.float")
+	// C names are kept (foreign porting convention); keyword collisions get _.
 	expect_contains(t, stdout, "map_ :: struct")
 	expect_contains(t, stdout, "context_: c.int")
 }
@@ -241,6 +242,69 @@ test_unsupported_config_key_fails_with_clear_message :: proc(t: ^testing.T) {
 	testing.expect(t, exit_code != 0)
 	testing.expect_value(t, len(stdout), 0)
 	expect_contains(t, stderr, `"wrappers" is not yet supported`)
+}
+
+@(test)
+test_m9_macro_groups_synthesize_enum :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_macros.lua", "tests/fixtures/m9_macros.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	// Grouped integer macros become an explicit-valued enum; originals dropped.
+	expect_contains(t, stdout, "Result_Code :: enum")
+	expect_contains(t, stdout, "OK = 0")
+	expect_contains(t, stdout, "ERR = 1")
+	expect_contains(t, stdout, "ROW = 100")
+	expect_not_contains(t, stdout, "LIB_OK ::")
+	// Excluded prefix stays as standalone consts; non-integers are not enum members.
+	expect_contains(t, stdout, "LIB_OPEN_RO ::")
+	expect_contains(t, stdout, "LIB_TITLE ::")
+}
+
+@(test)
+test_m9_enum_policies_anonymous_member_bit_set :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_enums.lua", "tests/fixtures/m9_enums.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Keyboard_Key :: enum")
+	expect_contains(t, stdout, "NULL = 0")
+	// FLAG_COUNT removed by enums.member; remaining flags log2'd.
+	expect_contains(t, stdout, "Config_Flag :: enum")
+	expect_contains(t, stdout, "VSYNC = 0")
+	expect_contains(t, stdout, "FULLSCREEN = 1")
+	expect_contains(t, stdout, "MSAA = 2")
+	expect_not_contains(t, stdout, "COUNT")
+	expect_contains(t, stdout, "Config_Flags :: bit_set[Config_Flag]")
+}
+
+@(test)
+test_m9_naming_overrides_and_remove_tiers :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_naming.lua", "tests/fixtures/m9_naming.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Widget ::")
+	expect_contains(t, stdout, "size_t_like ::") // strip_suffixes type _t
+	expect_contains(t, stdout, "@(link_name = \"lib_open\")")
+	expect_contains(t, stdout, "open :: proc")
+	expect_contains(t, stdout, "@(link_name = \"lib_special_do_thing\")")
+	expect_contains(t, stdout, "do_thing :: proc")
+	expect_not_contains(t, stdout, "lib_internal")
+	expect_not_contains(t, stdout, "LIB_ITEM_COUNT")
+	expect_contains(t, stdout, "LIB_OK ::")
 }
 
 @(test)

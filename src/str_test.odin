@@ -19,3 +19,11 @@ test_str_strip_prefix :: proc(t: ^testing.T) {
 	testing.expect_value(t, str_strip_prefix("sqlite3_", "sqlite3_"), "sqlite3_")
 	testing.expect_value(t, str_strip_prefix("x", ""), "x")
 }
+
+@(test)
+test_str_strip_suffix :: proc(t: ^testing.T) {
+	testing.expect_value(t, str_strip_suffix("size_t", "_t"), "size")
+	testing.expect_value(t, str_strip_suffix("size", "_t"), "size")
+	testing.expect_value(t, str_strip_suffix("_t", "_t"), "_t")
+	testing.expect_value(t, str_strip_suffix("x", ""), "x")
+}
