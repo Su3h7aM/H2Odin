@@ -18,6 +18,20 @@ import lua "vendor:lua/5.4"
 // lifetime of the run.
 CONFIG_REGISTRY_KEY :: "h2odin.config"
 
+// Top-level keys the policy layer actually reads. Anything else is either
+// not-yet-supported (clearer message) or unknown (typo).
+@(rodata)
+CONFIG_KNOWN_KEYS := [?]cstring{"package", "foreign_lib", "type_mode", "strip_prefixes", "type_map", "rename", "keep"}
+
+// Keys that appear in design docs / the README but are not wired yet.
+// Rejected explicitly so a silent no-op cannot look like success.
+@(rodata)
+CONFIG_UNSUPPORTED_KEYS := [?]cstring{"headers", "include_dirs", "defines", "output", "comments", "wrappers"}
+
+// Sub-keys allowed under strip_prefixes = { ... }.
+@(rodata)
+STRIP_PREFIX_KEYS := [?]cstring{"func", "type", "const"}
+
 Policy :: struct {
 	// Private to the policy_* procedures. nil when no config was given —
 	// every query then answers with the generator default.
@@ -110,12 +124,45 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	policy.state = L
 	lua.setfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
 
-	policy.has_rename = policy_has_function(&policy, "rename")
-	policy.has_keep = policy_has_function(&policy, "keep")
+	if !policy_validate_keys(&policy) {
+		policy_destroy(&policy)
+		return Policy{}, false
+	}
 
-	policy.package_name = policy_string_field(&policy, "package")
-	policy.foreign_lib = policy_string_field(&policy, "foreign_lib")
-	switch mode := policy_string_field(&policy, "type_mode"); mode {
+	has_rename, rename_ok := policy_optional_function(&policy, "rename")
+	if !rename_ok {
+		policy_destroy(&policy)
+		return Policy{}, false
+	}
+	policy.has_rename = has_rename
+
+	has_keep, keep_ok := policy_optional_function(&policy, "keep")
+	if !keep_ok {
+		policy_destroy(&policy)
+		return Policy{}, false
+	}
+	policy.has_keep = has_keep
+
+	package_name, package_ok := policy_optional_string_top(&policy, "package")
+	if !package_ok {
+		policy_destroy(&policy)
+		return Policy{}, false
+	}
+	policy.package_name = package_name
+
+	foreign_lib, foreign_ok := policy_optional_string_top(&policy, "foreign_lib")
+	if !foreign_ok {
+		policy_destroy(&policy)
+		return Policy{}, false
+	}
+	policy.foreign_lib = foreign_lib
+
+	mode, mode_ok := policy_optional_string_top(&policy, "type_mode")
+	if !mode_ok {
+		policy_destroy(&policy)
+		return Policy{}, false
+	}
+	switch mode {
 	case "":
 	case "abi":
 		policy.type_mode = .ABI
@@ -144,6 +191,47 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	}
 
 	return policy, true
+}
+
+// Reject unknown and not-yet-supported top-level keys up front so a typo or
+// a roadmap-only option cannot silently do nothing.
+policy_validate_keys :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	lua.pushnil(L) // first key for lua_next
+	for lua.next(L, -2) != 0 {
+		// stack: table, key, value
+		if lua.type(L, -2) != .STRING {
+			fmt.eprintln("h2odin: config: keys must be strings")
+			lua.pop(L, 2)
+			return false
+		}
+		key := string(lua.tostring(L, -2))
+		if config_key_in(key, CONFIG_KNOWN_KEYS[:]) {
+			lua.pop(L, 1) // drop value, keep key
+			continue
+		}
+		if config_key_in(key, CONFIG_UNSUPPORTED_KEYS[:]) {
+			fmt.eprintfln("h2odin: config: %q is not yet supported", key)
+			lua.pop(L, 2)
+			return false
+		}
+		fmt.eprintfln("h2odin: config: unknown key %q (known: package, foreign_lib, type_mode, strip_prefixes, type_map, rename, keep)", key)
+		lua.pop(L, 2)
+		return false
+	}
+	return true
+}
+
+config_key_in :: proc(key: string, list: []cstring) -> bool {
+	for candidate in list {
+		if key == string(candidate) {
+			return true
+		}
+	}
+	return false
 }
 
 // Ask the config to rename a symbol. decided = false means no rename
@@ -230,25 +318,45 @@ policy_destroy :: proc(policy: ^Policy) {
 	}
 }
 
-policy_has_function :: proc(policy: ^Policy, key: cstring) -> bool {
+// Optional top-level function field. Absent (nil) is fine; any other non-
+// function type is a config error — a table or string would otherwise be
+// silently ignored by the old "is it a function?" check.
+policy_optional_function :: proc(policy: ^Policy, key: cstring) -> (present: bool, ok: bool) {
 	L := policy.state
 	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
-	defer lua.pop(L, 2)
-	lua.getfield(L, -1, key)
-	return lua.isfunction(L, -1)
+	defer lua.pop(L, 1)
+	field_type := lua.getfield(L, -1, key)
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return false, true
+	}
+	if !lua.isfunction(L, -1) {
+		fmt.eprintfln("h2odin: config: %s must be a function", key)
+		lua.pop(L, 1)
+		return false, false
+	}
+	lua.pop(L, 1)
+	return true, true
 }
 
-// A string field from the config table, copied into the generation arena;
-// "" when the field is absent. Lua may collect its copy any time after the
-// pop, which is exactly why the copy happens here at the boundary.
-policy_string_field :: proc(policy: ^Policy, key: cstring) -> string {
+// Optional top-level string field, copied into the generation arena.
+// Absent → ""; present non-string → config error (never treated as absent).
+policy_optional_string_top :: proc(policy: ^Policy, key: cstring) -> (value: string, ok: bool) {
 	L := policy.state
 	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
-	defer lua.pop(L, 2)
-	if lua.getfield(L, -1, key) != c.int(lua.Type.STRING) {
-		return ""
+	defer lua.pop(L, 1)
+	field_type := lua.getfield(L, -1, key)
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return "", true
 	}
-	return strings.clone(string(lua.tostring(L, -1)))
+	if field_type != c.int(lua.Type.STRING) {
+		fmt.eprintfln("h2odin: config: %s must be a string", key)
+		lua.pop(L, 1)
+		return "", false
+	}
+	defer lua.pop(L, 1)
+	return strings.clone(string(lua.tostring(L, -1))), true
 }
 
 Strip_Prefixes :: struct {
@@ -258,7 +366,8 @@ Strip_Prefixes :: struct {
 }
 
 // Read strip_prefixes = { func = "...", type = "...", const = "..." }.
-// Absent fields are fine; present non-string fields are config errors.
+// Absent fields are fine; present non-string fields and unknown sub-keys
+// are config errors.
 policy_strip_prefixes :: proc(policy: ^Policy) -> (prefixes: Strip_Prefixes, ok: bool) {
 	L := policy.state
 	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
@@ -274,6 +383,23 @@ policy_strip_prefixes :: proc(policy: ^Policy) -> (prefixes: Strip_Prefixes, ok:
 		return {}, false
 	}
 	defer lua.pop(L, 1)
+
+	// Reject typos like strip_prefixes.function before reading known fields.
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		if lua.type(L, -2) != .STRING {
+			fmt.eprintln("h2odin: config: strip_prefixes keys must be strings")
+			lua.pop(L, 2)
+			return {}, false
+		}
+		sub := string(lua.tostring(L, -2))
+		if !config_key_in(sub, STRIP_PREFIX_KEYS[:]) {
+			fmt.eprintfln("h2odin: config: unknown strip_prefixes key %q (known: func, type, const)", sub)
+			lua.pop(L, 2)
+			return {}, false
+		}
+		lua.pop(L, 1)
+	}
 
 	field_ok: bool
 	prefixes.func, field_ok = policy_optional_string_field(L, "strip_prefixes", "func")

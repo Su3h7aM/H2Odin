@@ -84,5 +84,63 @@ test_policy_load_rejects_bad_declarative_shapes :: proc(t: ^testing.T) {
 	defer policy_destroy(&policy)
 	defer delete_policy_test_data(&policy)
 	testing.expect(t, !ok)
+}
 
+@(test)
+test_policy_load_rejects_wrong_string_field_types :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(t, "bad-package-type", `return { package = 42 }`)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_load_rejects_non_function_callbacks :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(t, "bad-rename-type", `return { rename = "nope" }`)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_load_rejects_unknown_and_unsupported_keys :: proc(t: ^testing.T) {
+	unknown, unknown_ok := write_test_config(t, "unknown-key", `return { typo_mode = "abi" }`)
+	if !unknown_ok {
+		return
+	}
+	policy, ok := policy_load(unknown)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+
+	unsupported, unsupported_ok := write_test_config(t, "unsupported-key", `return { wrappers = true }`)
+	if !unsupported_ok {
+		return
+	}
+	policy, ok = policy_load(unsupported)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_load_rejects_unknown_strip_prefix_keys :: proc(t: ^testing.T) {
+	// "functions" is a plausible typo for "func"; use a non-keyword name so
+	// Lua accepts the file and the policy layer's key check is what fails.
+	path, path_ok := write_test_config(t, "bad-strip-key", `return { strip_prefixes = { functions = "gl_" } }`)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
 }

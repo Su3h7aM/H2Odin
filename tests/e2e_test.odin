@@ -214,6 +214,36 @@ test_bad_config_fails_without_output :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_unknown_config_key_fails_with_clear_message :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/unknown_key.lua", "tests/fixtures/add.h"}
+	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	testing.expect(t, exit_code != 0)
+	testing.expect_value(t, len(stdout), 0)
+	expect_contains(t, stderr, `unknown key "typo_mode"`)
+}
+
+@(test)
+test_unsupported_config_key_fails_with_clear_message :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/unsupported_key.lua", "tests/fixtures/add.h"}
+	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	testing.expect(t, exit_code != 0)
+	testing.expect_value(t, len(stdout), 0)
+	expect_contains(t, stderr, `"wrappers" is not yet supported`)
+}
+
+@(test)
 test_parse_error_fails_without_output :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "tests/fixtures/bad_parse.h"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
