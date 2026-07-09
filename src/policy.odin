@@ -62,7 +62,7 @@ STRIP_KIND_KEYS := [?]cstring{"proc", "type", "const", "enum_value"}
 // Sections h2o.config() creates but that have no wired fields yet. Empty
 // tables / nil are fine; any real content fails the load.
 @(rodata)
-CONFIG_UNWIRED_SECTIONS := [?]cstring{"inputs", "output_folder", "preprocess", "structs", "procs", "output", "diagnostics"}
+CONFIG_UNWIRED_SECTIONS := [?]cstring{"diagnostics"}
 
 // Lua prelude for require "h2odin". Table-shaping only; algorithms are
 // registered from Odin onto h2o.str / h2o.naming.
@@ -147,51 +147,86 @@ Enum_Bit_Set_Rule :: struct {
 	mode:      string, // must be "log2" today
 }
 
+// A type/tag (or type/default) action from structs.fields / procs.params.
+// Empty strings mean "not set"; callbacks may refine further.
+Member_Action :: struct {
+	type:    string,
+	tag:     string, // structs only
+	default: string, // procs only
+}
+
 Policy :: struct {
 	// Private to the policy_* procedures. nil when no config was given.
-	state:              ^lua.State,
+	state:               ^lua.State,
+
+	// Directory containing the config file (absolute). Used to resolve
+	// relative inputs and preprocess paths. Empty when no config was given.
+	config_dir:          string,
 
 	// Declarative settings copied out of the config; "" means absent.
-	package_name:       string,
-	foreign_lib:        string, // foreign.import_lib
-	type_mode:          Type_Mode,
-	type_mode_is_set:   bool,
+	package_name:        string,
+	foreign_lib:         string, // foreign.import_lib
+	foreign_link_prefix: string, // foreign.link_prefix — C symbol prefix
+	type_mode:           Type_Mode,
+	type_mode_is_set:    bool,
+
+	// Multi-header inputs and clang preprocess knobs.
+	inputs:              []string,
+	include_paths:       []string,
+	defines:             map[string]string, // NAME → value ("" when -DNAME alone)
+
+	// Output layout.
+	output_folder:       string,
+	procedures_at_end:   bool, // default true when output section absent
+	imports_file:        string,
+	footer_per_header:   bool,
 
 	// naming.strip_prefixes / strip_suffixes — first match wins per kind.
 	// Backing memory lives in the generation arena (or the test allocator).
-	strip_prefix_proc:  []string,
-	strip_prefix_type:  []string,
-	strip_prefix_const: []string,
-	strip_prefix_enum:  []string,
-	strip_suffix_proc:  []string,
-	strip_suffix_type:  []string,
-	strip_suffix_const: []string,
-	strip_suffix_enum:  []string,
+	strip_prefix_proc:   []string,
+	strip_prefix_type:   []string,
+	strip_prefix_const:  []string,
+	strip_prefix_enum:   []string,
+	strip_suffix_proc:   []string,
+	strip_suffix_type:   []string,
+	strip_suffix_const:  []string,
+	strip_suffix_enum:   []string,
 
 	// naming.known_tokens: surface spelling → lower form.
-	known_tokens:       map[string]string,
+	known_tokens:        map[string]string,
 	// naming.overrides: C name → Odin name (absolute).
-	naming_overrides:   map[string]string,
+	naming_overrides:    map[string]string,
 
 	// types.map rewrites references; types.overrides also drops the decl.
-	type_map:           map[string]string,
-	type_overrides:     map[string]string,
+	type_map:            map[string]string,
+	type_overrides:      map[string]string,
 
 	// symbols.remove declarative tiers.
-	remove_names:       []string,
-	remove_patterns:    []string,
+	remove_names:        []string,
+	remove_patterns:     []string,
 
 	// macros.groups
-	macro_groups:       []Macro_Group_Enum,
+	macro_groups:        []Macro_Group_Enum,
 
 	// enums.*
-	enum_anonymous:     []Enum_Anonymous_Rule,
-	enum_bit_sets:      []Enum_Bit_Set_Rule,
+	enum_anonymous:      []Enum_Anonymous_Rule,
+	enum_bit_sets:       []Enum_Bit_Set_Rule,
+
+	// structs.* — "Struct.field" → action; align is C struct name → N.
+	struct_fields:       map[string]Member_Action,
+	struct_align:        map[string]int,
+
+	// procs.* — "Proc.param" / "Proc" (results) → action.
+	proc_params:         map[string]Member_Action,
+	proc_results:        map[string]Member_Action,
 
 	// Callbacks present in the config (checked once at load).
-	has_rename:         bool, // naming.override
-	has_remove_where:   bool, // symbols.remove.where
-	has_enum_member:    bool, // enums.member
+	has_rename:          bool, // naming.override
+	has_remove_where:    bool, // symbols.remove.where
+	has_enum_member:     bool, // enums.member
+	has_struct_field:    bool, // structs.field
+	has_proc_param:      bool, // procs.param
+	has_proc_result:     bool, // procs.result
 }
 
 Symbol_Kind :: enum {
@@ -266,6 +301,8 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 		policy_destroy(&policy)
 		return {}, false
 	}
+	// Clone only after a successful load so failed validation does not leak.
+	policy.config_dir = strings.clone(config_dir)
 	return policy, true
 }
 
@@ -611,6 +648,9 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 		}
 	}
 
+	// Default: procedures after types (current emit layout).
+	policy.procedures_at_end = true
+
 	package_name, package_ok := policy_optional_string_top(policy, "package")
 	if !package_ok {
 		return false
@@ -635,12 +675,18 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 	}
 
 	return(
+		policy_read_inputs(policy) &&
+		policy_read_output_folder(policy) &&
+		policy_read_preprocess(policy) &&
 		policy_read_foreign(policy) &&
 		policy_read_naming(policy) &&
 		policy_read_types(policy) &&
 		policy_read_symbols(policy) &&
 		policy_read_macros(policy) &&
-		policy_read_enums(policy) \
+		policy_read_enums(policy) &&
+		policy_read_structs(policy) &&
+		policy_read_procs(policy) &&
+		policy_read_output(policy) \
 	)
 }
 
@@ -693,7 +739,7 @@ policy_read_foreign :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "foreign", []cstring{"import_lib"}) {
+	if !policy_reject_unknown_subkeys(L, "foreign", []cstring{"import_lib", "link_prefix"}) {
 		return false
 	}
 	lib, lib_ok := policy_optional_string_field(L, "foreign", "import_lib")
@@ -701,6 +747,11 @@ policy_read_foreign :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 	policy.foreign_lib = lib
+	prefix, prefix_ok := policy_optional_string_field(L, "foreign", "link_prefix")
+	if !prefix_ok {
+		return false
+	}
+	policy.foreign_link_prefix = prefix
 	return true
 }
 
@@ -1211,6 +1262,388 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 	return true
 }
 
+// ---------------------------------------------------------------- Milestone 10
+
+policy_read_inputs :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	list, list_ok := policy_string_list_field(L, "config", "inputs")
+	if !list_ok {
+		return false
+	}
+	policy.inputs = list
+	return true
+}
+
+policy_read_output_folder :: proc(policy: ^Policy) -> bool {
+	folder, ok := policy_optional_string_top(policy, "output_folder")
+	if !ok {
+		return false
+	}
+	policy.output_folder = folder
+	return true
+}
+
+policy_read_preprocess :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "preprocess")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: preprocess must be a table")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	if !policy_reject_unknown_subkeys(L, "preprocess", []cstring{"include_paths", "defines"}) {
+		return false
+	}
+
+	paths, paths_ok := policy_string_list_field(L, "preprocess", "include_paths")
+	if !paths_ok {
+		return false
+	}
+	policy.include_paths = paths
+
+	defs, defs_ok := policy_string_map_nested(L, "preprocess", "defines")
+	if !defs_ok {
+		return false
+	}
+	// Allow non-string values only if we want -DNAME without value via true?
+	// Spec shows string values. Keep string→string.
+	policy.defines = defs
+	return true
+}
+
+policy_read_structs :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "structs")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: structs must be a table")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	if !policy_reject_unknown_subkeys(L, "structs", []cstring{"fields", "field", "align"}) {
+		return false
+	}
+
+	// Plural is data; singular is callback.
+	if lua.Type(lua.getfield(L, -1, "fields")) == .FUNCTION {
+		fmt.eprintln("h2odin: config: structs.fields must be a table (plural is data; singular structs.field is the callback)")
+		lua.pop(L, 1)
+		return false
+	}
+	lua.pop(L, 1)
+
+	field_cb := lua.Type(lua.getfield(L, -1, "field"))
+	#partial switch field_cb {
+	case .NIL:
+		lua.pop(L, 1)
+	case .FUNCTION:
+		lua.pop(L, 1)
+		policy.has_struct_field = true
+	case .TABLE:
+		fmt.eprintln("h2odin: config: structs.field must be a function (plural structs.fields is the data map)")
+		lua.pop(L, 1)
+		return false
+	case:
+		fmt.eprintln("h2odin: config: structs.field must be a function")
+		lua.pop(L, 1)
+		return false
+	}
+
+	fields, fields_ok := policy_member_action_map(L, "structs", "fields", allow_tag = true, allow_default = false)
+	if !fields_ok {
+		return false
+	}
+	policy.struct_fields = fields
+
+	align, align_ok := policy_int_map_nested(L, "structs", "align")
+	if !align_ok {
+		return false
+	}
+	policy.struct_align = align
+	return true
+}
+
+policy_read_procs :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "procs")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: procs must be a table")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	if !policy_reject_unknown_subkeys(L, "procs", []cstring{"params", "param", "results", "result"}) {
+		return false
+	}
+
+	if lua.Type(lua.getfield(L, -1, "params")) == .FUNCTION {
+		fmt.eprintln("h2odin: config: procs.params must be a table (plural is data; singular procs.param is the callback)")
+		lua.pop(L, 1)
+		return false
+	}
+	lua.pop(L, 1)
+	if lua.Type(lua.getfield(L, -1, "results")) == .FUNCTION {
+		fmt.eprintln("h2odin: config: procs.results must be a table (plural is data; singular procs.result is the callback)")
+		lua.pop(L, 1)
+		return false
+	}
+	lua.pop(L, 1)
+
+	param_cb := lua.Type(lua.getfield(L, -1, "param"))
+	#partial switch param_cb {
+	case .NIL:
+		lua.pop(L, 1)
+	case .FUNCTION:
+		lua.pop(L, 1)
+		policy.has_proc_param = true
+	case .TABLE:
+		fmt.eprintln("h2odin: config: procs.param must be a function (plural procs.params is the data map)")
+		lua.pop(L, 1)
+		return false
+	case:
+		fmt.eprintln("h2odin: config: procs.param must be a function")
+		lua.pop(L, 1)
+		return false
+	}
+
+	result_cb := lua.Type(lua.getfield(L, -1, "result"))
+	#partial switch result_cb {
+	case .NIL:
+		lua.pop(L, 1)
+	case .FUNCTION:
+		lua.pop(L, 1)
+		policy.has_proc_result = true
+	case .TABLE:
+		fmt.eprintln("h2odin: config: procs.result must be a function (plural procs.results is the data map)")
+		lua.pop(L, 1)
+		return false
+	case:
+		fmt.eprintln("h2odin: config: procs.result must be a function")
+		lua.pop(L, 1)
+		return false
+	}
+
+	params, params_ok := policy_member_action_map(L, "procs", "params", allow_tag = false, allow_default = true)
+	if !params_ok {
+		return false
+	}
+	policy.proc_params = params
+
+	results, results_ok := policy_member_action_map(L, "procs", "results", allow_tag = false, allow_default = false)
+	if !results_ok {
+		return false
+	}
+	policy.proc_results = results
+	return true
+}
+
+policy_read_output :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "output")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintln("h2odin: config: output must be a table")
+		lua.pop(L, 1)
+		return false
+	}
+	defer lua.pop(L, 1)
+
+	if !policy_reject_unknown_subkeys(L, "output", []cstring{"procedures_at_end", "imports_file", "footer_per_header"}) {
+		return false
+	}
+
+	end_type := lua.getfield(L, -1, "procedures_at_end")
+	#partial switch lua.Type(end_type) {
+	case .NIL:
+		lua.pop(L, 1)
+	case .BOOLEAN:
+		policy.procedures_at_end = bool(lua.toboolean(L, -1))
+		lua.pop(L, 1)
+	case:
+		fmt.eprintln("h2odin: config: output.procedures_at_end must be a boolean")
+		lua.pop(L, 1)
+		return false
+	}
+
+	footer_type := lua.getfield(L, -1, "footer_per_header")
+	#partial switch lua.Type(footer_type) {
+	case .NIL:
+		lua.pop(L, 1)
+	case .BOOLEAN:
+		policy.footer_per_header = bool(lua.toboolean(L, -1))
+		lua.pop(L, 1)
+	case:
+		fmt.eprintln("h2odin: config: output.footer_per_header must be a boolean")
+		lua.pop(L, 1)
+		return false
+	}
+
+	imports, imports_ok := policy_optional_string_field(L, "output", "imports_file")
+	if !imports_ok {
+		return false
+	}
+	policy.imports_file = imports
+	return true
+}
+
+// Read a map of "Parent.child" (or bare name for results) → action tables.
+// Parent table is at stack top. Absent/nil → empty map.
+policy_member_action_map :: proc(
+	L: ^lua.State,
+	parent_name: string,
+	key: cstring,
+	allow_tag: bool,
+	allow_default: bool,
+) -> (
+	result: map[string]Member_Action,
+	ok: bool,
+) {
+	field_type := lua.getfield(L, -1, key)
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return nil, true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintfln("h2odin: config: %s.%s must be a table", parent_name, key)
+		lua.pop(L, 1)
+		return nil, false
+	}
+	defer lua.pop(L, 1)
+
+	result = make(map[string]Member_Action)
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		if lua.type(L, -2) != .STRING {
+			fmt.eprintfln("h2odin: config: %s.%s keys must be strings", parent_name, key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		map_key := strings.clone(string(lua.tostring(L, -2)))
+		if !lua.istable(L, -1) {
+			fmt.eprintfln("h2odin: config: %s.%s[%q] must be a table", parent_name, key, map_key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		allowed := make([dynamic]cstring, context.temp_allocator)
+		append(&allowed, "type")
+		if allow_tag {
+			append(&allowed, "tag")
+		}
+		if allow_default {
+			append(&allowed, "default")
+		}
+		if !policy_reject_unknown_subkeys(L, fmt.tprintf("%s.%s[]", parent_name, key), allowed[:]) {
+			lua.pop(L, 2)
+			return nil, false
+		}
+		action: Member_Action
+		type_s, type_ok := policy_optional_string_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "type")
+		if !type_ok {
+			lua.pop(L, 2)
+			return nil, false
+		}
+		action.type = type_s
+		if allow_tag {
+			tag_s, tag_ok := policy_optional_string_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "tag")
+			if !tag_ok {
+				lua.pop(L, 2)
+				return nil, false
+			}
+			action.tag = tag_s
+		}
+		if allow_default {
+			def_s, def_ok := policy_optional_string_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "default")
+			if !def_ok {
+				lua.pop(L, 2)
+				return nil, false
+			}
+			action.default = def_s
+		}
+		if action.type == "" && action.tag == "" && action.default == "" {
+			fmt.eprintfln("h2odin: config: %s.%s[%q] must set at least one of type/tag/default", parent_name, key, map_key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		result[map_key] = action
+		lua.pop(L, 1)
+	}
+	return result, true
+}
+
+// string → int map nested under parent (at stack top).
+policy_int_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstring) -> (result: map[string]int, ok: bool) {
+	field_type := lua.getfield(L, -1, key)
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return nil, true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintfln("h2odin: config: %s.%s must be a table of integers", parent_name, key)
+		lua.pop(L, 1)
+		return nil, false
+	}
+	defer lua.pop(L, 1)
+
+	result = make(map[string]int)
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		if lua.type(L, -2) != .STRING {
+			fmt.eprintfln("h2odin: config: %s.%s keys must be strings", parent_name, key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		map_key := strings.clone(string(lua.tostring(L, -2)))
+		if !lua.isnumber(L, -1) {
+			fmt.eprintfln("h2odin: config: %s.%s[%q] must be an integer", parent_name, key, map_key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		n := int(lua.tointeger(L, -1))
+		if n <= 0 {
+			fmt.eprintfln("h2odin: config: %s.%s[%q] must be a positive integer", parent_name, key, map_key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		result[map_key] = n
+		lua.pop(L, 1)
+	}
+	return result, true
+}
+
 // Parent table at stack top; reject any string key not in allowed.
 policy_reject_unknown_subkeys :: proc(L: ^lua.State, table_name: string, allowed: []cstring) -> bool {
 	lua.pushnil(L)
@@ -1533,6 +1966,146 @@ policy_enum_member_remove :: proc(policy: ^Policy, enum_name, member_name: strin
 		os.exit(1)
 	}
 	return bool(lua.toboolean(L, -1))
+}
+
+// structs.field(field) → nil | { type?, tag? }
+policy_struct_field_action :: proc(policy: ^Policy, struct_name, field_name, type_spelling: string) -> (action: Member_Action, decided: bool) {
+	if !policy.has_struct_field {
+		return {}, false
+	}
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	lua.getfield(L, -1, "structs")
+	lua.getfield(L, -1, "field")
+	lua.remove(L, -2) // config, field
+	lua.createtable(L, 0, 3)
+	push_string_field(L, "struct_name", struct_name)
+	push_string_field(L, "name", field_name)
+	push_string_field(L, "type", type_spelling)
+	if lua.pcall(L, 1, 1, 0) != 0 {
+		fmt.eprintfln("h2odin: config structs.field failed: %s", lua.tostring(L, -1))
+		os.exit(1)
+	}
+	defer lua.pop(L, 2)
+	return policy_read_member_action_result(L, "structs.field", field_name, allow_tag = true, allow_default = false)
+}
+
+// procs.param(param) → nil | { type?, default? }
+policy_proc_param_action :: proc(policy: ^Policy, proc_name, param_name, type_spelling: string) -> (action: Member_Action, decided: bool) {
+	if !policy.has_proc_param {
+		return {}, false
+	}
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	lua.getfield(L, -1, "procs")
+	lua.getfield(L, -1, "param")
+	lua.remove(L, -2)
+	lua.createtable(L, 0, 3)
+	push_string_field(L, "proc_name", proc_name)
+	push_string_field(L, "name", param_name)
+	push_string_field(L, "type", type_spelling)
+	if lua.pcall(L, 1, 1, 0) != 0 {
+		fmt.eprintfln("h2odin: config procs.param failed: %s", lua.tostring(L, -1))
+		os.exit(1)
+	}
+	defer lua.pop(L, 2)
+	return policy_read_member_action_result(L, "procs.param", param_name, allow_tag = false, allow_default = true)
+}
+
+// procs.result(result) → nil | { type? }
+// View fields: proc_name, type.
+policy_proc_result_action :: proc(policy: ^Policy, proc_name, type_spelling: string) -> (action: Member_Action, decided: bool) {
+	if !policy.has_proc_result {
+		return {}, false
+	}
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	lua.getfield(L, -1, "procs")
+	lua.getfield(L, -1, "result")
+	lua.remove(L, -2)
+	lua.createtable(L, 0, 2)
+	push_string_field(L, "proc_name", proc_name)
+	push_string_field(L, "type", type_spelling)
+	if lua.pcall(L, 1, 1, 0) != 0 {
+		fmt.eprintfln("h2odin: config procs.result failed: %s", lua.tostring(L, -1))
+		os.exit(1)
+	}
+	defer lua.pop(L, 2)
+	return policy_read_member_action_result(L, "procs.result", proc_name, allow_tag = false, allow_default = false)
+}
+
+// Result at stack top; nil → decided=false. Table → action.
+policy_read_member_action_result :: proc(
+	L: ^lua.State,
+	callback_path: string,
+	subject: string,
+	allow_tag: bool,
+	allow_default: bool,
+) -> (
+	action: Member_Action,
+	decided: bool,
+) {
+	if lua.isnil(L, -1) {
+		return {}, false
+	}
+	if !lua.istable(L, -1) {
+		fmt.eprintfln("h2odin: config %s for %q must return nil or a table", callback_path, subject)
+		os.exit(1)
+	}
+	allowed := make([dynamic]cstring, context.temp_allocator)
+	append(&allowed, "type")
+	if allow_tag {
+		append(&allowed, "tag")
+	}
+	if allow_default {
+		append(&allowed, "default")
+	}
+	// Only allow known keys on the action table.
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		if lua.type(L, -2) != .STRING {
+			fmt.eprintfln("h2odin: config %s for %q: action keys must be strings", callback_path, subject)
+			os.exit(1)
+		}
+		k := string(lua.tostring(L, -2))
+		if !config_key_in(k, allowed[:]) {
+			fmt.eprintfln("h2odin: config %s for %q: unknown action key %q", callback_path, subject, k)
+			os.exit(1)
+		}
+		lua.pop(L, 1)
+	}
+	if lua.getfield(L, -1, "type"); !lua.isnil(L, -1) {
+		if lua.type(L, -1) != .STRING {
+			fmt.eprintfln("h2odin: config %s for %q: type must be a string", callback_path, subject)
+			os.exit(1)
+		}
+		action.type = strings.clone(string(lua.tostring(L, -1)))
+	}
+	lua.pop(L, 1)
+	if allow_tag {
+		if lua.getfield(L, -1, "tag"); !lua.isnil(L, -1) {
+			if lua.type(L, -1) != .STRING {
+				fmt.eprintfln("h2odin: config %s for %q: tag must be a string", callback_path, subject)
+				os.exit(1)
+			}
+			action.tag = strings.clone(string(lua.tostring(L, -1)))
+		}
+		lua.pop(L, 1)
+	}
+	if allow_default {
+		if lua.getfield(L, -1, "default"); !lua.isnil(L, -1) {
+			if lua.type(L, -1) != .STRING {
+				fmt.eprintfln("h2odin: config %s for %q: default must be a string", callback_path, subject)
+				os.exit(1)
+			}
+			action.default = strings.clone(string(lua.tostring(L, -1)))
+		}
+		lua.pop(L, 1)
+	}
+	if action.type == "" && action.tag == "" && action.default == "" {
+		return {}, false
+	}
+	return action, true
 }
 
 push_string_field :: proc(L: ^lua.State, key: cstring, value: string) {

@@ -8,37 +8,6 @@ SQLITE_SOURCE_ID :: "2026-06-03 19:12:13 d6e03d8c777cfa2d35e3b60d8ec3e0187f3e9f9
 SQLITE_SCM_BRANCH :: "branch-3.53"
 SQLITE_SCM_TAGS :: "release version-3.53.2"
 SQLITE_SCM_DATETIME :: "2026-06-03T19:12:13.350Z"
-SQLITE_OK :: 0
-SQLITE_ERROR :: 1
-SQLITE_INTERNAL :: 2
-SQLITE_PERM :: 3
-SQLITE_ABORT :: 4
-SQLITE_BUSY :: 5
-SQLITE_LOCKED :: 6
-SQLITE_NOMEM :: 7
-SQLITE_READONLY :: 8
-SQLITE_INTERRUPT :: 9
-SQLITE_IOERR :: 10
-SQLITE_CORRUPT :: 11
-SQLITE_NOTFOUND :: 12
-SQLITE_FULL :: 13
-SQLITE_CANTOPEN :: 14
-SQLITE_PROTOCOL :: 15
-SQLITE_EMPTY :: 16
-SQLITE_SCHEMA :: 17
-SQLITE_TOOBIG :: 18
-SQLITE_CONSTRAINT :: 19
-SQLITE_MISMATCH :: 20
-SQLITE_MISUSE :: 21
-SQLITE_NOLFS :: 22
-SQLITE_AUTH :: 23
-SQLITE_FORMAT :: 24
-SQLITE_RANGE :: 25
-SQLITE_NOTADB :: 26
-SQLITE_NOTICE :: 27
-SQLITE_WARNING :: 28
-SQLITE_ROW :: 100
-SQLITE_DONE :: 101
 SQLITE_OPEN_READONLY :: 0x00000001
 SQLITE_OPEN_READWRITE :: 0x00000002
 SQLITE_OPEN_CREATE :: 0x00000004
@@ -192,43 +161,6 @@ SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE :: 1021
 SQLITE_DBCONFIG_ENABLE_COMMENTS :: 1022
 SQLITE_DBCONFIG_FP_DIGITS :: 1023
 SQLITE_DBCONFIG_MAX :: 1023
-SQLITE_SETLK_BLOCK_ON_CONNECT :: 0x01
-SQLITE_DENY :: 1
-SQLITE_IGNORE :: 2
-SQLITE_CREATE_INDEX :: 1
-SQLITE_CREATE_TABLE :: 2
-SQLITE_CREATE_TEMP_INDEX :: 3
-SQLITE_CREATE_TEMP_TABLE :: 4
-SQLITE_CREATE_TEMP_TRIGGER :: 5
-SQLITE_CREATE_TEMP_VIEW :: 6
-SQLITE_CREATE_TRIGGER :: 7
-SQLITE_CREATE_VIEW :: 8
-SQLITE_DELETE :: 9
-SQLITE_DROP_INDEX :: 10
-SQLITE_DROP_TABLE :: 11
-SQLITE_DROP_TEMP_INDEX :: 12
-SQLITE_DROP_TEMP_TABLE :: 13
-SQLITE_DROP_TEMP_TRIGGER :: 14
-SQLITE_DROP_TEMP_VIEW :: 15
-SQLITE_DROP_TRIGGER :: 16
-SQLITE_DROP_VIEW :: 17
-SQLITE_INSERT :: 18
-SQLITE_PRAGMA :: 19
-SQLITE_READ :: 20
-SQLITE_SELECT :: 21
-SQLITE_TRANSACTION :: 22
-SQLITE_UPDATE :: 23
-SQLITE_ATTACH :: 24
-SQLITE_DETACH :: 25
-SQLITE_ALTER_TABLE :: 26
-SQLITE_REINDEX :: 27
-SQLITE_ANALYZE :: 28
-SQLITE_CREATE_VTABLE :: 29
-SQLITE_DROP_VTABLE :: 30
-SQLITE_FUNCTION :: 31
-SQLITE_SAVEPOINT :: 32
-SQLITE_COPY :: 0
-SQLITE_RECURSIVE :: 33
 SQLITE_TRACE_STMT :: 0x01
 SQLITE_TRACE_PROFILE :: 0x02
 SQLITE_TRACE_ROW :: 0x04
@@ -251,19 +183,7 @@ SQLITE_PREPARE_NORMALIZE :: 0x02
 SQLITE_PREPARE_NO_VTAB :: 0x04
 SQLITE_PREPARE_DONT_LOG :: 0x10
 SQLITE_PREPARE_FROM_DDL :: 0x20
-SQLITE_INTEGER :: 1
-SQLITE_FLOAT :: 2
-SQLITE_BLOB :: 4
-SQLITE_NULL :: 5
-SQLITE_TEXT :: 3
 SQLITE3_TEXT :: 3
-SQLITE_UTF8 :: 1
-SQLITE_UTF16LE :: 2
-SQLITE_UTF16BE :: 3
-SQLITE_UTF16 :: 4
-SQLITE_ANY :: 5
-SQLITE_UTF16_ALIGNED :: 8
-SQLITE_UTF8_ZT :: 16
 SQLITE_DETERMINISTIC :: 0x000000800
 SQLITE_DIRECTONLY :: 0x000080000
 SQLITE_SUBTYPE :: 0x000100000
@@ -294,61 +214,6 @@ SQLITE_INDEX_CONSTRAINT_IS :: 72
 SQLITE_INDEX_CONSTRAINT_LIMIT :: 73
 SQLITE_INDEX_CONSTRAINT_OFFSET :: 74
 SQLITE_INDEX_CONSTRAINT_FUNCTION :: 150
-SQLITE_MUTEX_FAST :: 0
-SQLITE_MUTEX_RECURSIVE :: 1
-SQLITE_MUTEX_STATIC_MAIN :: 2
-SQLITE_MUTEX_STATIC_MEM :: 3
-SQLITE_MUTEX_STATIC_MEM2 :: 4
-SQLITE_MUTEX_STATIC_OPEN :: 4
-SQLITE_MUTEX_STATIC_PRNG :: 5
-SQLITE_MUTEX_STATIC_LRU :: 6
-SQLITE_MUTEX_STATIC_LRU2 :: 7
-SQLITE_MUTEX_STATIC_PMEM :: 7
-SQLITE_MUTEX_STATIC_APP1 :: 8
-SQLITE_MUTEX_STATIC_APP2 :: 9
-SQLITE_MUTEX_STATIC_APP3 :: 10
-SQLITE_MUTEX_STATIC_VFS1 :: 11
-SQLITE_MUTEX_STATIC_VFS2 :: 12
-SQLITE_MUTEX_STATIC_VFS3 :: 13
-SQLITE_MUTEX_STATIC_MASTER :: 2
-SQLITE_TESTCTRL_FIRST :: 5
-SQLITE_TESTCTRL_PRNG_SAVE :: 5
-SQLITE_TESTCTRL_PRNG_RESTORE :: 6
-SQLITE_TESTCTRL_PRNG_RESET :: 7
-SQLITE_TESTCTRL_FK_NO_ACTION :: 7
-SQLITE_TESTCTRL_BITVEC_TEST :: 8
-SQLITE_TESTCTRL_FAULT_INSTALL :: 9
-SQLITE_TESTCTRL_BENIGN_MALLOC_HOOKS :: 10
-SQLITE_TESTCTRL_PENDING_BYTE :: 11
-SQLITE_TESTCTRL_ASSERT :: 12
-SQLITE_TESTCTRL_ALWAYS :: 13
-SQLITE_TESTCTRL_RESERVE :: 14
-SQLITE_TESTCTRL_JSON_SELFCHECK :: 14
-SQLITE_TESTCTRL_OPTIMIZATIONS :: 15
-SQLITE_TESTCTRL_ISKEYWORD :: 16
-SQLITE_TESTCTRL_GETOPT :: 16
-SQLITE_TESTCTRL_SCRATCHMALLOC :: 17
-SQLITE_TESTCTRL_INTERNAL_FUNCTIONS :: 17
-SQLITE_TESTCTRL_LOCALTIME_FAULT :: 18
-SQLITE_TESTCTRL_EXPLAIN_STMT :: 19
-SQLITE_TESTCTRL_ONCE_RESET_THRESHOLD :: 19
-SQLITE_TESTCTRL_NEVER_CORRUPT :: 20
-SQLITE_TESTCTRL_VDBE_COVERAGE :: 21
-SQLITE_TESTCTRL_BYTEORDER :: 22
-SQLITE_TESTCTRL_ISINIT :: 23
-SQLITE_TESTCTRL_SORTER_MMAP :: 24
-SQLITE_TESTCTRL_IMPOSTER :: 25
-SQLITE_TESTCTRL_PARSER_COVERAGE :: 26
-SQLITE_TESTCTRL_RESULT_INTREAL :: 27
-SQLITE_TESTCTRL_PRNG_SEED :: 28
-SQLITE_TESTCTRL_EXTRA_SCHEMA_CHECKS :: 29
-SQLITE_TESTCTRL_SEEK_COUNT :: 30
-SQLITE_TESTCTRL_TRACEFLAGS :: 31
-SQLITE_TESTCTRL_TUNE :: 32
-SQLITE_TESTCTRL_LOGEST :: 33
-SQLITE_TESTCTRL_USELONGDOUBLE :: 34
-SQLITE_TESTCTRL_ATOF :: 34
-SQLITE_TESTCTRL_LAST :: 34
 SQLITE_STATUS_MEMORY_USED :: 0
 SQLITE_STATUS_PAGECACHE_USED :: 1
 SQLITE_STATUS_PAGECACHE_OVERFLOW :: 2
@@ -391,9 +256,6 @@ SQLITE_VTAB_CONSTRAINT_SUPPORT :: 1
 SQLITE_VTAB_INNOCUOUS :: 2
 SQLITE_VTAB_DIRECTONLY :: 3
 SQLITE_VTAB_USES_ALL_SCHEMAS :: 4
-SQLITE_ROLLBACK :: 1
-SQLITE_FAIL :: 3
-SQLITE_REPLACE :: 5
 SQLITE_SCANSTAT_NLOOP :: 0
 SQLITE_SCANSTAT_NVISIT :: 1
 SQLITE_SCANSTAT_EST :: 2
@@ -407,11 +269,6 @@ SQLITE_SERIALIZE_NOCOPY :: 0x001
 SQLITE_DESERIALIZE_FREEONCLOSE :: 1
 SQLITE_DESERIALIZE_RESIZEABLE :: 2
 SQLITE_DESERIALIZE_READONLY :: 4
-SQLITE_CARRAY_INT32 :: 0
-SQLITE_CARRAY_INT64 :: 1
-SQLITE_CARRAY_DOUBLE :: 2
-SQLITE_CARRAY_TEXT :: 3
-SQLITE_CARRAY_BLOB :: 4
 CARRAY_INT32 :: 0
 CARRAY_INT64 :: 1
 CARRAY_DOUBLE :: 2
@@ -431,9 +288,9 @@ sqlite_int64 :: i64
 
 sqlite_uint64 :: u64
 
-sqlite3_int64 :: sqlite_int64
+sqlite3_int64 :: i64
 
-sqlite3_uint64 :: sqlite_uint64
+sqlite3_uint64 :: u64
 
 /*
 ** The type for a callback function.
@@ -450,11 +307,11 @@ sqlite3_file :: struct {
 sqlite3_io_methods :: struct {
 	iVersion: i32,
 	xClose: proc "c" (_: ^sqlite3_file) -> i32,
-	xRead: proc "c" (_: ^sqlite3_file, _: rawptr, _: i32, _: sqlite3_int64) -> i32,
-	xWrite: proc "c" (_: ^sqlite3_file, _: rawptr, _: i32, _: sqlite3_int64) -> i32,
-	xTruncate: proc "c" (_: ^sqlite3_file, _: sqlite3_int64) -> i32,
+	xRead: proc "c" (_: ^sqlite3_file, _: rawptr, _: i32, _: i64) -> i32,
+	xWrite: proc "c" (_: ^sqlite3_file, _: rawptr, _: i32, _: i64) -> i32,
+	xTruncate: proc "c" (_: ^sqlite3_file, _: i64) -> i32,
 	xSync: proc "c" (_: ^sqlite3_file, _: i32) -> i32,
-	xFileSize: proc "c" (_: ^sqlite3_file, _: ^sqlite3_int64) -> i32,
+	xFileSize: proc "c" (_: ^sqlite3_file, _: ^i64) -> i32,
 	xLock: proc "c" (_: ^sqlite3_file, _: i32) -> i32,
 	xUnlock: proc "c" (_: ^sqlite3_file, _: i32) -> i32,
 	xCheckReservedLock: proc "c" (_: ^sqlite3_file, _: ^i32) -> i32,
@@ -467,8 +324,8 @@ sqlite3_io_methods :: struct {
 	xShmBarrier: proc "c" (_: ^sqlite3_file),
 	xShmUnmap: proc "c" (_: ^sqlite3_file, _: i32) -> i32,
 	/* Methods above are valid for version 2 */
-	xFetch: proc "c" (_: ^sqlite3_file, _: sqlite3_int64, _: i32, _: ^rawptr) -> i32,
-	xUnfetch: proc "c" (_: ^sqlite3_file, _: sqlite3_int64, _: rawptr) -> i32,
+	xFetch: proc "c" (_: ^sqlite3_file, _: i64, _: i32, _: ^rawptr) -> i32,
+	xUnfetch: proc "c" (_: ^sqlite3_file, _: i64, _: rawptr) -> i32,
 }
 
 sqlite3_mutex :: struct {}
@@ -524,7 +381,7 @@ sqlite3_vfs :: struct {
 	  ** The methods above are in version 1 of the sqlite_vfs object
 	  ** definition.  Those that follow are added in version 2 or later
 	  */
-	xCurrentTimeInt64: proc "c" (_: ^sqlite3_vfs, _: ^sqlite3_int64) -> i32,
+	xCurrentTimeInt64: proc "c" (_: ^sqlite3_vfs, _: ^i64) -> i32,
 	/*
 	  ** The methods above are in versions 1 and 2 of the sqlite_vfs object.
 	  ** Those below are for version 3 and greater.
@@ -736,11 +593,11 @@ sqlite3_index_info :: struct {
 	/* Estimated cost of using this index */
 	estimatedCost: f64,
 	/* Estimated number of rows returned */
-	estimatedRows: sqlite3_int64,
+	estimatedRows: i64,
 	/* Mask of SQLITE_INDEX_SCAN_* flags */
 	idxFlags: i32,
 	/* Input: Mask of columns used by statement */
-	colUsed: sqlite3_uint64,
+	colUsed: u64,
 }
 
 /*
@@ -794,8 +651,8 @@ sqlite3_module :: struct {
 	xNext: proc "c" (_: ^sqlite3_vtab_cursor) -> i32,
 	xEof: proc "c" (_: ^sqlite3_vtab_cursor) -> i32,
 	xColumn: proc "c" (_: ^sqlite3_vtab_cursor, _: ^sqlite3_context, _: i32) -> i32,
-	xRowid: proc "c" (_: ^sqlite3_vtab_cursor, _: ^sqlite3_int64) -> i32,
-	xUpdate: proc "c" (_: ^sqlite3_vtab, _: i32, _: ^^sqlite3_value, _: ^sqlite3_int64) -> i32,
+	xRowid: proc "c" (_: ^sqlite3_vtab_cursor, _: ^i64) -> i32,
+	xUpdate: proc "c" (_: ^sqlite3_vtab, _: i32, _: ^^sqlite3_value, _: ^i64) -> i32,
 	xBegin: proc "c" (_: ^sqlite3_vtab) -> i32,
 	xSync: proc "c" (_: ^sqlite3_vtab) -> i32,
 	xCommit: proc "c" (_: ^sqlite3_vtab) -> i32,
@@ -970,7 +827,7 @@ sqlite3_rtree_query_info :: struct {
 	/* The largest iLevel value in the tree */
 	mxLevel: i32,
 	/* Rowid for current entry */
-	iRowid: sqlite3_int64,
+	iRowid: i64,
 	/* Score of parent node */
 	rParentScore: sqlite3_rtree_dbl,
 	/* Visibility of parent node */
@@ -1286,14 +1143,14 @@ Fts5ExtensionApi :: struct {
 	iVersion: i32,
 	xUserData: proc "c" (_: ^Fts5Context) -> rawptr,
 	xColumnCount: proc "c" (_: ^Fts5Context) -> i32,
-	xRowCount: proc "c" (_: ^Fts5Context, _: ^sqlite3_int64) -> i32,
-	xColumnTotalSize: proc "c" (_: ^Fts5Context, _: i32, _: ^sqlite3_int64) -> i32,
+	xRowCount: proc "c" (_: ^Fts5Context, _: ^i64) -> i32,
+	xColumnTotalSize: proc "c" (_: ^Fts5Context, _: i32, _: ^i64) -> i32,
 	xTokenize: proc "c" (_: ^Fts5Context, _: cstring, _: i32, _: rawptr, _: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32) -> i32,
 	xPhraseCount: proc "c" (_: ^Fts5Context) -> i32,
 	xPhraseSize: proc "c" (_: ^Fts5Context, _: i32) -> i32,
 	xInstCount: proc "c" (_: ^Fts5Context, _: ^i32) -> i32,
 	xInst: proc "c" (_: ^Fts5Context, _: i32, _: ^i32, _: ^i32, _: ^i32) -> i32,
-	xRowid: proc "c" (_: ^Fts5Context) -> sqlite3_int64,
+	xRowid: proc "c" (_: ^Fts5Context) -> i64,
 	xColumnText: proc "c" (_: ^Fts5Context, _: i32, _: ^cstring, _: ^i32) -> i32,
 	xColumnSize: proc "c" (_: ^Fts5Context, _: i32, _: ^i32) -> i32,
 	xQueryPhrase: proc "c" (_: ^Fts5Context, _: i32, _: rawptr, _: proc "c" (_: ^Fts5ExtensionApi, _: ^Fts5Context, _: rawptr) -> i32) -> i32,
@@ -1351,6 +1208,153 @@ fts5_api :: struct {
 	xFindTokenizer_v2: proc "c" (_: ^fts5_api, _: cstring, _: ^rawptr, _: ^^fts5_tokenizer_v2) -> i32,
 }
 
+Result_Code :: enum i32 {
+	OK = 0,
+	ERROR = 1,
+	INTERNAL = 2,
+	PERM = 3,
+	ABORT = 4,
+	BUSY = 5,
+	LOCKED = 6,
+	NOMEM = 7,
+	READONLY = 8,
+	INTERRUPT = 9,
+	IOERR = 10,
+	CORRUPT = 11,
+	NOTFOUND = 12,
+	FULL = 13,
+	CANTOPEN = 14,
+	PROTOCOL = 15,
+	EMPTY = 16,
+	SCHEMA = 17,
+	TOOBIG = 18,
+	CONSTRAINT = 19,
+	MISMATCH = 20,
+	MISUSE = 21,
+	NOLFS = 22,
+	AUTH = 23,
+	FORMAT = 24,
+	RANGE = 25,
+	NOTADB = 26,
+	NOTICE = 27,
+	WARNING = 28,
+	ROW = 100,
+	DONE = 101,
+	SETLK_BLOCK_ON_CONNECT = 1,
+	DENY = 1,
+	IGNORE = 2,
+	CREATE_INDEX = 1,
+	CREATE_TABLE = 2,
+	CREATE_TEMP_INDEX = 3,
+	CREATE_TEMP_TABLE = 4,
+	CREATE_TEMP_TRIGGER = 5,
+	CREATE_TEMP_VIEW = 6,
+	CREATE_TRIGGER = 7,
+	CREATE_VIEW = 8,
+	DELETE = 9,
+	DROP_INDEX = 10,
+	DROP_TABLE = 11,
+	DROP_TEMP_INDEX = 12,
+	DROP_TEMP_TABLE = 13,
+	DROP_TEMP_TRIGGER = 14,
+	DROP_TEMP_VIEW = 15,
+	DROP_TRIGGER = 16,
+	DROP_VIEW = 17,
+	INSERT = 18,
+	PRAGMA = 19,
+	READ = 20,
+	SELECT = 21,
+	TRANSACTION = 22,
+	UPDATE = 23,
+	ATTACH = 24,
+	DETACH = 25,
+	ALTER_TABLE = 26,
+	REINDEX = 27,
+	ANALYZE = 28,
+	CREATE_VTABLE = 29,
+	DROP_VTABLE = 30,
+	FUNCTION = 31,
+	SAVEPOINT = 32,
+	COPY = 0,
+	RECURSIVE = 33,
+	INTEGER = 1,
+	FLOAT = 2,
+	BLOB = 4,
+	NULL = 5,
+	TEXT = 3,
+	UTF8 = 1,
+	UTF16LE = 2,
+	UTF16BE = 3,
+	UTF16 = 4,
+	ANY = 5,
+	UTF16_ALIGNED = 8,
+	UTF8_ZT = 16,
+	MUTEX_FAST = 0,
+	MUTEX_RECURSIVE = 1,
+	MUTEX_STATIC_MAIN = 2,
+	MUTEX_STATIC_MEM = 3,
+	MUTEX_STATIC_MEM2 = 4,
+	MUTEX_STATIC_OPEN = 4,
+	MUTEX_STATIC_PRNG = 5,
+	MUTEX_STATIC_LRU = 6,
+	MUTEX_STATIC_LRU2 = 7,
+	MUTEX_STATIC_PMEM = 7,
+	MUTEX_STATIC_APP1 = 8,
+	MUTEX_STATIC_APP2 = 9,
+	MUTEX_STATIC_APP3 = 10,
+	MUTEX_STATIC_VFS1 = 11,
+	MUTEX_STATIC_VFS2 = 12,
+	MUTEX_STATIC_VFS3 = 13,
+	MUTEX_STATIC_MASTER = 2,
+	TESTCTRL_FIRST = 5,
+	TESTCTRL_PRNG_SAVE = 5,
+	TESTCTRL_PRNG_RESTORE = 6,
+	TESTCTRL_PRNG_RESET = 7,
+	TESTCTRL_FK_NO_ACTION = 7,
+	TESTCTRL_BITVEC_TEST = 8,
+	TESTCTRL_FAULT_INSTALL = 9,
+	TESTCTRL_BENIGN_MALLOC_HOOKS = 10,
+	TESTCTRL_PENDING_BYTE = 11,
+	TESTCTRL_ASSERT = 12,
+	TESTCTRL_ALWAYS = 13,
+	TESTCTRL_RESERVE = 14,
+	TESTCTRL_JSON_SELFCHECK = 14,
+	TESTCTRL_OPTIMIZATIONS = 15,
+	TESTCTRL_ISKEYWORD = 16,
+	TESTCTRL_GETOPT = 16,
+	TESTCTRL_SCRATCHMALLOC = 17,
+	TESTCTRL_INTERNAL_FUNCTIONS = 17,
+	TESTCTRL_LOCALTIME_FAULT = 18,
+	TESTCTRL_EXPLAIN_STMT = 19,
+	TESTCTRL_ONCE_RESET_THRESHOLD = 19,
+	TESTCTRL_NEVER_CORRUPT = 20,
+	TESTCTRL_VDBE_COVERAGE = 21,
+	TESTCTRL_BYTEORDER = 22,
+	TESTCTRL_ISINIT = 23,
+	TESTCTRL_SORTER_MMAP = 24,
+	TESTCTRL_IMPOSTER = 25,
+	TESTCTRL_PARSER_COVERAGE = 26,
+	TESTCTRL_RESULT_INTREAL = 27,
+	TESTCTRL_PRNG_SEED = 28,
+	TESTCTRL_EXTRA_SCHEMA_CHECKS = 29,
+	TESTCTRL_SEEK_COUNT = 30,
+	TESTCTRL_TRACEFLAGS = 31,
+	TESTCTRL_TUNE = 32,
+	TESTCTRL_LOGEST = 33,
+	TESTCTRL_USELONGDOUBLE = 34,
+	TESTCTRL_ATOF = 34,
+	TESTCTRL_LAST = 34,
+	ROLLBACK = 1,
+	FAIL = 3,
+	REPLACE = 5,
+	CARRAY_INT32 = 0,
+	CARRAY_INT64 = 1,
+	CARRAY_DOUBLE = 2,
+	CARRAY_TEXT = 3,
+	CARRAY_BLOB = 4,
+}
+
+@(link_prefix = "sqlite3_")
 foreign lib {
 	/*
 	** CAPI3REF: Run-Time Library Version Numbers
@@ -1385,15 +1389,10 @@ foreign lib {
 	** See also: [sqlite_version()] and [sqlite_source_id()].
 	*/
 	sqlite3_version: [0]u8
-	@(link_name = "sqlite3_libversion")
 	libversion :: proc() -> cstring ---
-	@(link_name = "sqlite3_sourceid")
 	sourceid :: proc() -> cstring ---
-	@(link_name = "sqlite3_libversion_number")
 	libversion_number :: proc() -> i32 ---
-	@(link_name = "sqlite3_compileoption_used")
 	compileoption_used :: proc(zOptName: cstring) -> i32 ---
-	@(link_name = "sqlite3_compileoption_get")
 	compileoption_get :: proc(N: i32) -> cstring ---
 	/*
 	** CAPI3REF: Test To See If The Library Is Threadsafe
@@ -1431,7 +1430,6 @@ foreign lib {
 	**
 	** See the [threading mode] documentation for additional information.
 	*/
-	@(link_name = "sqlite3_threadsafe")
 	threadsafe :: proc() -> i32 ---
 	/*
 	** CAPI3REF: Closing A Database Connection
@@ -1471,9 +1469,7 @@ foreign lib {
 	** ^Calling sqlite3_close() or sqlite3_close_v2() with a NULL pointer
 	** argument is a harmless no-op.
 	*/
-	@(link_name = "sqlite3_close")
 	close :: proc(_: ^sqlite3) -> i32 ---
-	@(link_name = "sqlite3_close_v2")
 	close_v2 :: proc(_: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: One-Step Query Execution Interface
@@ -1539,7 +1535,6 @@ foreign lib {
 	**       passed as the 3rd and 4th callback parameters after it returns.
 	** </ul>
 	*/
-	@(link_name = "sqlite3_exec")
 	exec :: proc(_: ^sqlite3, sql: cstring, callback: proc "c" (_: rawptr, _: i32, _: ^^u8, _: ^^u8) -> i32, _: rawptr, errmsg: ^^u8) -> i32 ---
 	/*
 	** CAPI3REF: Initialize The SQLite Library
@@ -1616,13 +1611,9 @@ foreign lib {
 	** must return [SQLITE_OK] on success and some other [error code] upon
 	** failure.
 	*/
-	@(link_name = "sqlite3_initialize")
 	initialize :: proc() -> i32 ---
-	@(link_name = "sqlite3_shutdown")
 	shutdown :: proc() -> i32 ---
-	@(link_name = "sqlite3_os_init")
 	os_init :: proc() -> i32 ---
-	@(link_name = "sqlite3_os_end")
 	os_end :: proc() -> i32 ---
 	/*
 	** CAPI3REF: Configuring The SQLite Library
@@ -1659,7 +1650,6 @@ foreign lib {
 	** ^If the option is unknown or SQLite is unable to set the option
 	** then this routine returns a non-zero [error code].
 	*/
-	@(link_name = "sqlite3_config")
 	config :: proc(_: i32, #c_vararg _: ..any) -> i32 ---
 	/*
 	** CAPI3REF: Configure database connections
@@ -1678,7 +1668,6 @@ foreign lib {
 	** ^Calls to sqlite3_db_config() return SQLITE_OK if and only if
 	** the call is considered successful.
 	*/
-	@(link_name = "sqlite3_db_config")
 	db_config :: proc(_: ^sqlite3, op: i32, #c_vararg _: ..any) -> i32 ---
 	/*
 	** CAPI3REF: Enable Or Disable Extended Result Codes
@@ -1688,7 +1677,6 @@ foreign lib {
 	** [extended result codes] feature of SQLite. ^The extended result
 	** codes are disabled by default for historical compatibility.
 	*/
-	@(link_name = "sqlite3_extended_result_codes")
 	extended_result_codes :: proc(_: ^sqlite3, onoff: i32) -> i32 ---
 	/*
 	** CAPI3REF: Last Insert Rowid
@@ -1750,8 +1738,7 @@ foreign lib {
 	** unpredictable and might not equal either the old or the new
 	** last insert [rowid].
 	*/
-	@(link_name = "sqlite3_last_insert_rowid")
-	last_insert_rowid :: proc(_: ^sqlite3) -> sqlite3_int64 ---
+	last_insert_rowid :: proc(_: ^sqlite3) -> i64 ---
 	/*
 	** CAPI3REF: Set the Last Insert Rowid value.
 	** METHOD: sqlite3
@@ -1760,8 +1747,7 @@ foreign lib {
 	** set the value returned by calling sqlite3_last_insert_rowid(D) to R
 	** without inserting a row into the database.
 	*/
-	@(link_name = "sqlite3_set_last_insert_rowid")
-	set_last_insert_rowid :: proc(_: ^sqlite3, _: sqlite3_int64) ---
+	set_last_insert_rowid :: proc(_: ^sqlite3, _: i64) ---
 	/*
 	** CAPI3REF: Count The Number Of Rows Modified
 	** METHOD: sqlite3
@@ -1825,10 +1811,8 @@ foreign lib {
 	** <li> the [data_version pragma]
 	** </ul>
 	*/
-	@(link_name = "sqlite3_changes")
 	changes :: proc(_: ^sqlite3) -> i32 ---
-	@(link_name = "sqlite3_changes64")
-	changes64 :: proc(_: ^sqlite3) -> sqlite3_int64 ---
+	changes64 :: proc(_: ^sqlite3) -> i64 ---
 	/*
 	** CAPI3REF: Total Number Of Rows Modified
 	** METHOD: sqlite3
@@ -1868,10 +1852,8 @@ foreign lib {
 	** <li> the [SQLITE_FCNTL_DATA_VERSION] [file control]
 	** </ul>
 	*/
-	@(link_name = "sqlite3_total_changes")
 	total_changes :: proc(_: ^sqlite3) -> i32 ---
-	@(link_name = "sqlite3_total_changes64")
-	total_changes64 :: proc(_: ^sqlite3) -> sqlite3_int64 ---
+	total_changes64 :: proc(_: ^sqlite3) -> i64 ---
 	/*
 	** CAPI3REF: Interrupt A Long-Running Query
 	** METHOD: sqlite3
@@ -1911,9 +1893,7 @@ foreign lib {
 	** or not an interrupt is currently in effect for [database connection] D.
 	** It returns 1 if an interrupt is currently in effect, or 0 otherwise.
 	*/
-	@(link_name = "sqlite3_interrupt")
 	interrupt :: proc(_: ^sqlite3) ---
-	@(link_name = "sqlite3_is_interrupted")
 	is_interrupted :: proc(_: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: Determine If An SQL Statement Is Complete
@@ -1948,9 +1928,7 @@ foreign lib {
 	** The input to [sqlite3_complete16()] must be a zero-terminated
 	** UTF-16 string in native byte order.
 	*/
-	@(link_name = "sqlite3_complete")
 	complete :: proc(sql: cstring) -> i32 ---
-	@(link_name = "sqlite3_complete16")
 	complete16 :: proc(sql: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Register A Callback To Handle SQLITE_BUSY Errors
@@ -2011,7 +1989,6 @@ foreign lib {
 	** A busy handler must not close the database connection
 	** or [prepared statement] that invoked the busy handler.
 	*/
-	@(link_name = "sqlite3_busy_handler")
 	busy_handler :: proc(_: ^sqlite3, _: proc "c" (_: rawptr, _: i32) -> i32, _: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Set A Busy Timeout
@@ -2034,7 +2011,6 @@ foreign lib {
 	**
 	** See also:  [PRAGMA busy_timeout]
 	*/
-	@(link_name = "sqlite3_busy_timeout")
 	busy_timeout :: proc(_: ^sqlite3, ms: i32) -> i32 ---
 	/*
 	** CAPI3REF: Set the Setlk Timeout
@@ -2067,7 +2043,6 @@ foreign lib {
 	** passed to this API, the new connection blocks until the exclusive lock
 	** has been released.
 	*/
-	@(link_name = "sqlite3_setlk_timeout")
 	setlk_timeout :: proc(_: ^sqlite3, ms: i32, flags: i32) -> i32 ---
 	/*
 	** CAPI3REF: Convenience Routines For Running Queries
@@ -2142,9 +2117,7 @@ foreign lib {
 	** reflected in subsequent calls to [sqlite3_errcode()] or
 	** [sqlite3_errmsg()].
 	*/
-	@(link_name = "sqlite3_get_table")
 	get_table :: proc(db: ^sqlite3, zSql: cstring, pazResult: ^^^u8, pnRow: ^i32, pnColumn: ^i32, pzErrmsg: ^^u8) -> i32 ---
-	@(link_name = "sqlite3_free_table")
 	free_table :: proc(result: ^^u8) ---
 	/*
 	** CAPI3REF: Formatted String Printing Functions
@@ -2186,13 +2159,9 @@ foreign lib {
 	**
 	** See also:  [built-in printf()], [printf() SQL function]
 	*/
-	@(link_name = "sqlite3_mprintf")
 	mprintf :: proc(_: cstring, #c_vararg _: ..any) -> ^u8 ---
-	@(link_name = "sqlite3_vmprintf")
 	vmprintf :: proc(_: cstring, _: ^__va_list_tag) -> ^u8 ---
-	@(link_name = "sqlite3_snprintf")
 	snprintf :: proc(_: i32, _: ^u8, _: cstring, #c_vararg _: ..any) -> ^u8 ---
-	@(link_name = "sqlite3_vsnprintf")
 	vsnprintf :: proc(_: i32, _: ^u8, _: cstring, _: ^__va_list_tag) -> ^u8 ---
 	/*
 	** CAPI3REF: Memory Allocation Subsystem
@@ -2269,18 +2238,12 @@ foreign lib {
 	** a block of memory after it has been released using
 	** [sqlite3_free()] or [sqlite3_realloc()].
 	*/
-	@(link_name = "sqlite3_malloc")
 	malloc :: proc(_: i32) -> rawptr ---
-	@(link_name = "sqlite3_malloc64")
-	malloc64 :: proc(_: sqlite3_uint64) -> rawptr ---
-	@(link_name = "sqlite3_realloc")
+	malloc64 :: proc(_: u64) -> rawptr ---
 	realloc :: proc(_: rawptr, _: i32) -> rawptr ---
-	@(link_name = "sqlite3_realloc64")
-	realloc64 :: proc(_: rawptr, _: sqlite3_uint64) -> rawptr ---
-	@(link_name = "sqlite3_free")
+	realloc64 :: proc(_: rawptr, _: u64) -> rawptr ---
 	free :: proc(_: rawptr) ---
-	@(link_name = "sqlite3_msize")
-	msize :: proc(_: rawptr) -> sqlite3_uint64 ---
+	msize :: proc(_: rawptr) -> u64 ---
 	/*
 	** CAPI3REF: Memory Allocator Statistics
 	**
@@ -2304,10 +2267,8 @@ foreign lib {
 	** by [sqlite3_memory_highwater(1)] is the high-water mark
 	** prior to the reset.
 	*/
-	@(link_name = "sqlite3_memory_used")
-	memory_used :: proc() -> sqlite3_int64 ---
-	@(link_name = "sqlite3_memory_highwater")
-	memory_highwater :: proc(resetFlag: i32) -> sqlite3_int64 ---
+	memory_used :: proc() -> i64 ---
+	memory_highwater :: proc(resetFlag: i32) -> i64 ---
 	/*
 	** CAPI3REF: Pseudo-Random Number Generator
 	**
@@ -2329,7 +2290,6 @@ foreign lib {
 	** internally and without recourse to the [sqlite3_vfs] xRandomness
 	** method.
 	*/
-	@(link_name = "sqlite3_randomness")
 	randomness :: proc(N: i32, P: rawptr) ---
 	/*
 	** CAPI3REF: Compile-Time Authorization Callbacks
@@ -2420,7 +2380,6 @@ foreign lib {
 	** as stated in the previous paragraph, sqlite3_step() invokes
 	** sqlite3_prepare_v2() to reprepare a statement after a schema change.
 	*/
-	@(link_name = "sqlite3_set_authorizer")
 	set_authorizer :: proc(_: ^sqlite3, xAuth: proc "c" (_: rawptr, _: i32, _: cstring, _: cstring, _: cstring, _: cstring) -> i32, pUserData: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Deprecated Tracing And Profiling Functions
@@ -2454,10 +2413,8 @@ foreign lib {
 	** either [sqlite3_trace()] or [sqlite3_trace_v2()] will cancel the
 	** profile callback.
 	*/
-	@(link_name = "sqlite3_trace")
 	trace :: proc(_: ^sqlite3, xTrace: proc "c" (_: rawptr, _: cstring), _: rawptr) -> rawptr ---
-	@(link_name = "sqlite3_profile")
-	profile :: proc(_: ^sqlite3, xProfile: proc "c" (_: rawptr, _: cstring, _: sqlite3_uint64), _: rawptr) -> rawptr ---
+	profile :: proc(_: ^sqlite3, xProfile: proc "c" (_: rawptr, _: cstring, _: u64), _: rawptr) -> rawptr ---
 	/*
 	** CAPI3REF: SQL Trace Hook
 	** METHOD: sqlite3
@@ -2489,7 +2446,6 @@ foreign lib {
 	** interfaces [sqlite3_trace()] and [sqlite3_profile()], both of which
 	** are deprecated.
 	*/
-	@(link_name = "sqlite3_trace_v2")
 	trace_v2 :: proc(_: ^sqlite3, uMask: u32, xCallback: proc "c" (_: u32, _: rawptr, _: rawptr, _: rawptr) -> i32, pCtx: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Query Progress Callbacks
@@ -2530,7 +2486,6 @@ foreign lib {
 	** invoked directly from [sqlite3_prepare()] while analyzing and generating
 	** code for complex queries.
 	*/
-	@(link_name = "sqlite3_progress_handler")
 	progress_handler :: proc(_: ^sqlite3, _: i32, _: proc "c" (_: rawptr) -> i32, _: rawptr) ---
 	/*
 	** CAPI3REF: Opening A New Database Connection
@@ -2810,11 +2765,8 @@ foreign lib {
 	**
 	** See also: [sqlite3_temp_directory]
 	*/
-	@(link_name = "sqlite3_open")
 	open :: proc(filename: cstring, ppDb: ^^sqlite3) -> i32 ---
-	@(link_name = "sqlite3_open16")
 	open16 :: proc(filename: rawptr, ppDb: ^^sqlite3) -> i32 ---
-	@(link_name = "sqlite3_open_v2")
 	open_v2 :: proc(filename: cstring, ppDb: ^^sqlite3, flags: i32, zVfs: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Obtain Values For URI Parameters
@@ -2882,13 +2834,9 @@ foreign lib {
 	**
 	** See the [URI filename] documentation for additional information.
 	*/
-	@(link_name = "sqlite3_uri_parameter")
 	uri_parameter :: proc(z: sqlite3_filename, zParam: cstring) -> cstring ---
-	@(link_name = "sqlite3_uri_boolean")
 	uri_boolean :: proc(z: sqlite3_filename, zParam: cstring, bDefault: i32) -> i32 ---
-	@(link_name = "sqlite3_uri_int64")
-	uri_int64 :: proc(_: sqlite3_filename, _: cstring, _: sqlite3_int64) -> sqlite3_int64 ---
-	@(link_name = "sqlite3_uri_key")
+	uri_int64 :: proc(_: sqlite3_filename, _: cstring, _: i64) -> i64 ---
 	uri_key :: proc(z: sqlite3_filename, N: i32) -> cstring ---
 	/*
 	** CAPI3REF:  Translate filenames
@@ -2917,11 +2865,8 @@ foreign lib {
 	** return value from [sqlite3_db_filename()], then the result is
 	** undefined and is likely a memory access violation.
 	*/
-	@(link_name = "sqlite3_filename_database")
 	filename_database :: proc(_: sqlite3_filename) -> cstring ---
-	@(link_name = "sqlite3_filename_journal")
 	filename_journal :: proc(_: sqlite3_filename) -> cstring ---
-	@(link_name = "sqlite3_filename_wal")
 	filename_wal :: proc(_: sqlite3_filename) -> cstring ---
 	/*
 	** CAPI3REF:  Database File Corresponding To A Journal
@@ -2940,7 +2885,6 @@ foreign lib {
 	** of this routine results in undefined and probably undesirable
 	** behavior.
 	*/
-	@(link_name = "sqlite3_database_file_object")
 	database_file_object :: proc(_: cstring) -> ^sqlite3_file ---
 	/*
 	** CAPI3REF: Create and Destroy VFS Filenames
@@ -2987,9 +2931,7 @@ foreign lib {
 	** then the corresponding [sqlite3_module.xClose() method should also be
 	** invoked prior to calling sqlite3_free_filename(Y).
 	*/
-	@(link_name = "sqlite3_create_filename")
 	create_filename :: proc(zDatabase: cstring, zJournal: cstring, zWal: cstring, nParam: i32, azParam: ^cstring) -> sqlite3_filename ---
-	@(link_name = "sqlite3_free_filename")
 	free_filename :: proc(_: sqlite3_filename) ---
 	/*
 	** CAPI3REF: Error Codes And Messages
@@ -3055,17 +2997,11 @@ foreign lib {
 	** was invoked incorrectly by the application.  In that case, the
 	** error code and message may or may not be set.
 	*/
-	@(link_name = "sqlite3_errcode")
 	errcode :: proc(db: ^sqlite3) -> i32 ---
-	@(link_name = "sqlite3_extended_errcode")
 	extended_errcode :: proc(db: ^sqlite3) -> i32 ---
-	@(link_name = "sqlite3_errmsg")
 	errmsg :: proc(_: ^sqlite3) -> cstring ---
-	@(link_name = "sqlite3_errmsg16")
 	errmsg16 :: proc(_: ^sqlite3) -> rawptr ---
-	@(link_name = "sqlite3_errstr")
 	errstr :: proc(_: i32) -> cstring ---
-	@(link_name = "sqlite3_error_offset")
 	error_offset :: proc(db: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: Set Error Code And Message
@@ -3093,7 +3029,6 @@ foreign lib {
 	** messages and error codes and thus behave more like a core SQLite
 	** feature from the point of view of an application.
 	*/
-	@(link_name = "sqlite3_set_errmsg")
 	set_errmsg :: proc(db: ^sqlite3, errcode: i32, zErrMsg: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Run-time Limits
@@ -3135,7 +3070,6 @@ foreign lib {
 	**
 	** New run-time limit categories may be added in future releases.
 	*/
-	@(link_name = "sqlite3_limit")
 	limit :: proc(_: ^sqlite3, id: i32, newVal: i32) -> i32 ---
 	/*
 	** CAPI3REF: Compiling An SQL Statement
@@ -3242,17 +3176,11 @@ foreign lib {
 	** sqlite3_prepare_v2() interface works exactly the same as
 	** sqlite3_prepare_v3() with a zero prepFlags parameter.
 	*/
-	@(link_name = "sqlite3_prepare")
 	prepare :: proc(db: ^sqlite3, zSql: cstring, nByte: i32, ppStmt: ^^sqlite3_stmt, pzTail: ^cstring) -> i32 ---
-	@(link_name = "sqlite3_prepare_v2")
 	prepare_v2 :: proc(db: ^sqlite3, zSql: cstring, nByte: i32, ppStmt: ^^sqlite3_stmt, pzTail: ^cstring) -> i32 ---
-	@(link_name = "sqlite3_prepare_v3")
 	prepare_v3 :: proc(db: ^sqlite3, zSql: cstring, nByte: i32, prepFlags: u32, ppStmt: ^^sqlite3_stmt, pzTail: ^cstring) -> i32 ---
-	@(link_name = "sqlite3_prepare16")
 	prepare16 :: proc(db: ^sqlite3, zSql: rawptr, nByte: i32, ppStmt: ^^sqlite3_stmt, pzTail: ^rawptr) -> i32 ---
-	@(link_name = "sqlite3_prepare16_v2")
 	prepare16_v2 :: proc(db: ^sqlite3, zSql: rawptr, nByte: i32, ppStmt: ^^sqlite3_stmt, pzTail: ^rawptr) -> i32 ---
-	@(link_name = "sqlite3_prepare16_v3")
 	prepare16_v3 :: proc(db: ^sqlite3, zSql: rawptr, nByte: i32, prepFlags: u32, ppStmt: ^^sqlite3_stmt, pzTail: ^rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Retrieving Statement SQL
@@ -3295,9 +3223,7 @@ foreign lib {
 	** ^The sqlite3_normalized_sql() interface is only available if
 	** the [SQLITE_ENABLE_NORMALIZE] compile-time option is defined.
 	*/
-	@(link_name = "sqlite3_sql")
 	sql :: proc(pStmt: ^sqlite3_stmt) -> cstring ---
-	@(link_name = "sqlite3_expanded_sql")
 	expanded_sql :: proc(pStmt: ^sqlite3_stmt) -> ^u8 ---
 	/*
 	** CAPI3REF: Determine If An SQL Statement Writes The Database
@@ -3346,7 +3272,6 @@ foreign lib {
 	** statement, then sqlite3_stmt_readonly(X) returns the same value as
 	** if the EXPLAIN or EXPLAIN QUERY PLAN prefix were omitted.
 	*/
-	@(link_name = "sqlite3_stmt_readonly")
 	stmt_readonly :: proc(pStmt: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Query The EXPLAIN Setting For A Prepared Statement
@@ -3358,7 +3283,6 @@ foreign lib {
 	** ^The sqlite3_stmt_isexplain(S) interface returns 0 if S is
 	** an ordinary statement or a NULL pointer.
 	*/
-	@(link_name = "sqlite3_stmt_isexplain")
 	stmt_isexplain :: proc(pStmt: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Change The EXPLAIN Setting For A Prepared Statement
@@ -3393,7 +3317,6 @@ foreign lib {
 	** Hence, it is good practice to call [sqlite3_reset(S)]
 	** immediately prior to calling sqlite3_stmt_explain(S,E).
 	*/
-	@(link_name = "sqlite3_stmt_explain")
 	stmt_explain :: proc(pStmt: ^sqlite3_stmt, eMode: i32) -> i32 ---
 	/*
 	** CAPI3REF: Determine If A Prepared Statement Has Been Reset
@@ -3414,7 +3337,6 @@ foreign lib {
 	** for example, in diagnostic routines to search for prepared
 	** statements that are holding a transaction open.
 	*/
-	@(link_name = "sqlite3_stmt_busy")
 	stmt_busy :: proc(_: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Binding Values To Prepared Statements
@@ -3563,32 +3485,19 @@ foreign lib {
 	** See also: [sqlite3_bind_parameter_count()],
 	** [sqlite3_bind_parameter_name()], and [sqlite3_bind_parameter_index()].
 	*/
-	@(link_name = "sqlite3_bind_blob")
 	bind_blob :: proc(_: ^sqlite3_stmt, _: i32, _: rawptr, n: i32, _: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_bind_blob64")
-	bind_blob64 :: proc(_: ^sqlite3_stmt, _: i32, _: rawptr, _: sqlite3_uint64, _: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_bind_double")
+	bind_blob64 :: proc(_: ^sqlite3_stmt, _: i32, _: rawptr, _: u64, _: proc "c" (_: rawptr)) -> i32 ---
 	bind_double :: proc(_: ^sqlite3_stmt, _: i32, _: f64) -> i32 ---
-	@(link_name = "sqlite3_bind_int")
 	bind_int :: proc(_: ^sqlite3_stmt, _: i32, _: i32) -> i32 ---
-	@(link_name = "sqlite3_bind_int64")
-	bind_int64 :: proc(_: ^sqlite3_stmt, _: i32, _: sqlite3_int64) -> i32 ---
-	@(link_name = "sqlite3_bind_null")
+	bind_int64 :: proc(_: ^sqlite3_stmt, _: i32, _: i64) -> i32 ---
 	bind_null :: proc(_: ^sqlite3_stmt, _: i32) -> i32 ---
-	@(link_name = "sqlite3_bind_text")
 	bind_text :: proc(_: ^sqlite3_stmt, _: i32, _: cstring, _: i32, _: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_bind_text16")
 	bind_text16 :: proc(_: ^sqlite3_stmt, _: i32, _: rawptr, _: i32, _: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_bind_text64")
-	bind_text64 :: proc(_: ^sqlite3_stmt, _: i32, _: cstring, _: sqlite3_uint64, _: proc "c" (_: rawptr), encoding: u8) -> i32 ---
-	@(link_name = "sqlite3_bind_value")
+	bind_text64 :: proc(_: ^sqlite3_stmt, _: i32, _: cstring, _: u64, _: proc "c" (_: rawptr), encoding: u8) -> i32 ---
 	bind_value :: proc(_: ^sqlite3_stmt, _: i32, _: ^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_bind_pointer")
 	bind_pointer :: proc(_: ^sqlite3_stmt, _: i32, _: rawptr, _: cstring, _: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_bind_zeroblob")
 	bind_zeroblob :: proc(_: ^sqlite3_stmt, _: i32, n: i32) -> i32 ---
-	@(link_name = "sqlite3_bind_zeroblob64")
-	bind_zeroblob64 :: proc(_: ^sqlite3_stmt, _: i32, _: sqlite3_uint64) -> i32 ---
+	bind_zeroblob64 :: proc(_: ^sqlite3_stmt, _: i32, _: u64) -> i32 ---
 	/*
 	** CAPI3REF: Number Of SQL Parameters
 	** METHOD: sqlite3_stmt
@@ -3608,7 +3517,6 @@ foreign lib {
 	** [sqlite3_bind_parameter_name()], and
 	** [sqlite3_bind_parameter_index()].
 	*/
-	@(link_name = "sqlite3_bind_parameter_count")
 	bind_parameter_count :: proc(_: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Name Of A Host Parameter
@@ -3636,7 +3544,6 @@ foreign lib {
 	** [sqlite3_bind_parameter_count()], and
 	** [sqlite3_bind_parameter_index()].
 	*/
-	@(link_name = "sqlite3_bind_parameter_name")
 	bind_parameter_name :: proc(_: ^sqlite3_stmt, _: i32) -> cstring ---
 	/*
 	** CAPI3REF: Index Of A Parameter With A Given Name
@@ -3654,7 +3561,6 @@ foreign lib {
 	** [sqlite3_bind_parameter_count()], and
 	** [sqlite3_bind_parameter_name()].
 	*/
-	@(link_name = "sqlite3_bind_parameter_index")
 	bind_parameter_index :: proc(_: ^sqlite3_stmt, zName: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Reset All Bindings On A Prepared Statement
@@ -3664,7 +3570,6 @@ foreign lib {
 	** the [sqlite3_bind_blob | bindings] on a [prepared statement].
 	** ^Use this routine to reset all host parameters to NULL.
 	*/
-	@(link_name = "sqlite3_clear_bindings")
 	clear_bindings :: proc(_: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Number Of Columns In A Result Set
@@ -3680,7 +3585,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_data_count()]
 	*/
-	@(link_name = "sqlite3_column_count")
 	column_count :: proc(pStmt: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Column Names In A Result Set
@@ -3709,9 +3613,7 @@ foreign lib {
 	** then the name of the column is unspecified and may change from
 	** one release of SQLite to the next.
 	*/
-	@(link_name = "sqlite3_column_name")
 	column_name :: proc(_: ^sqlite3_stmt, N: i32) -> cstring ---
-	@(link_name = "sqlite3_column_name16")
 	column_name16 :: proc(_: ^sqlite3_stmt, N: i32) -> rawptr ---
 	/*
 	** CAPI3REF: Source Of Data In A Query Result
@@ -3755,17 +3657,11 @@ foreign lib {
 	** for the same [prepared statement] and result column
 	** at the same time then the results are undefined.
 	*/
-	@(link_name = "sqlite3_column_database_name")
 	column_database_name :: proc(_: ^sqlite3_stmt, _: i32) -> cstring ---
-	@(link_name = "sqlite3_column_database_name16")
 	column_database_name16 :: proc(_: ^sqlite3_stmt, _: i32) -> rawptr ---
-	@(link_name = "sqlite3_column_table_name")
 	column_table_name :: proc(_: ^sqlite3_stmt, _: i32) -> cstring ---
-	@(link_name = "sqlite3_column_table_name16")
 	column_table_name16 :: proc(_: ^sqlite3_stmt, _: i32) -> rawptr ---
-	@(link_name = "sqlite3_column_origin_name")
 	column_origin_name :: proc(_: ^sqlite3_stmt, _: i32) -> cstring ---
-	@(link_name = "sqlite3_column_origin_name16")
 	column_origin_name16 :: proc(_: ^sqlite3_stmt, _: i32) -> rawptr ---
 	/*
 	** CAPI3REF: Declared Datatype Of A Query Result
@@ -3797,9 +3693,7 @@ foreign lib {
 	** is associated with individual values, not with the containers
 	** used to hold those values.
 	*/
-	@(link_name = "sqlite3_column_decltype")
 	column_decltype :: proc(_: ^sqlite3_stmt, _: i32) -> cstring ---
-	@(link_name = "sqlite3_column_decltype16")
 	column_decltype16 :: proc(_: ^sqlite3_stmt, _: i32) -> rawptr ---
 	/*
 	** CAPI3REF: Evaluate An SQL Statement
@@ -3883,7 +3777,6 @@ foreign lib {
 	** then the more specific [error codes] are returned directly
 	** by sqlite3_step().  The use of the "vX" interfaces is recommended.
 	*/
-	@(link_name = "sqlite3_step")
 	step :: proc(_: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Number of columns in a result set
@@ -3904,7 +3797,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_column_count()]
 	*/
-	@(link_name = "sqlite3_data_count")
 	data_count :: proc(pStmt: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Result Values From A Query
@@ -4119,25 +4011,15 @@ foreign lib {
 	** return value is obtained and before any
 	** other SQLite interface is called on the same [database connection].
 	*/
-	@(link_name = "sqlite3_column_blob")
 	column_blob :: proc(_: ^sqlite3_stmt, iCol: i32) -> rawptr ---
-	@(link_name = "sqlite3_column_double")
 	column_double :: proc(_: ^sqlite3_stmt, iCol: i32) -> f64 ---
-	@(link_name = "sqlite3_column_int")
 	column_int :: proc(_: ^sqlite3_stmt, iCol: i32) -> i32 ---
-	@(link_name = "sqlite3_column_int64")
-	column_int64 :: proc(_: ^sqlite3_stmt, iCol: i32) -> sqlite3_int64 ---
-	@(link_name = "sqlite3_column_text")
+	column_int64 :: proc(_: ^sqlite3_stmt, iCol: i32) -> i64 ---
 	column_text :: proc(_: ^sqlite3_stmt, iCol: i32) -> ^u8 ---
-	@(link_name = "sqlite3_column_text16")
 	column_text16 :: proc(_: ^sqlite3_stmt, iCol: i32) -> rawptr ---
-	@(link_name = "sqlite3_column_value")
 	column_value :: proc(_: ^sqlite3_stmt, iCol: i32) -> ^sqlite3_value ---
-	@(link_name = "sqlite3_column_bytes")
 	column_bytes :: proc(_: ^sqlite3_stmt, iCol: i32) -> i32 ---
-	@(link_name = "sqlite3_column_bytes16")
 	column_bytes16 :: proc(_: ^sqlite3_stmt, iCol: i32) -> i32 ---
-	@(link_name = "sqlite3_column_type")
 	column_type :: proc(_: ^sqlite3_stmt, iCol: i32) -> i32 ---
 	/*
 	** CAPI3REF: Destroy A Prepared Statement Object
@@ -4165,7 +4047,6 @@ foreign lib {
 	** statement after it has been finalized can result in undefined and
 	** undesirable behavior such as segfaults and heap corruption.
 	*/
-	@(link_name = "sqlite3_finalize")
 	finalize :: proc(pStmt: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Reset A Prepared Statement Object
@@ -4204,7 +4085,6 @@ foreign lib {
 	** ^The [sqlite3_reset(S)] interface does not change the values
 	** of any [sqlite3_bind_blob|bindings] on the [prepared statement] S.
 	*/
-	@(link_name = "sqlite3_reset")
 	reset :: proc(pStmt: ^sqlite3_stmt) -> i32 ---
 	/*
 	** CAPI3REF: Create Or Redefine SQL Functions
@@ -4329,26 +4209,16 @@ foreign lib {
 	** close the database connection nor finalize or reset the prepared
 	** statement in which the function is running.
 	*/
-	@(link_name = "sqlite3_create_function")
 	create_function :: proc(db: ^sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xStep: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xFinal: proc "c" (_: ^sqlite3_context)) -> i32 ---
-	@(link_name = "sqlite3_create_function16")
 	create_function16 :: proc(db: ^sqlite3, zFunctionName: rawptr, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xStep: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xFinal: proc "c" (_: ^sqlite3_context)) -> i32 ---
-	@(link_name = "sqlite3_create_function_v2")
 	create_function_v2 :: proc(db: ^sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xStep: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xFinal: proc "c" (_: ^sqlite3_context), xDestroy: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_create_window_function")
 	create_window_function :: proc(db: ^sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xStep: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xFinal: proc "c" (_: ^sqlite3_context), xValue: proc "c" (_: ^sqlite3_context), xInverse: proc "c" (_: ^sqlite3_context, _: i32, _: ^^sqlite3_value), xDestroy: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_aggregate_count")
 	aggregate_count :: proc(_: ^sqlite3_context) -> i32 ---
-	@(link_name = "sqlite3_expired")
 	expired :: proc(_: ^sqlite3_stmt) -> i32 ---
-	@(link_name = "sqlite3_transfer_bindings")
 	transfer_bindings :: proc(_: ^sqlite3_stmt, _: ^sqlite3_stmt) -> i32 ---
-	@(link_name = "sqlite3_global_recover")
 	global_recover :: proc() -> i32 ---
-	@(link_name = "sqlite3_thread_cleanup")
 	thread_cleanup :: proc() ---
-	@(link_name = "sqlite3_memory_alarm")
-	memory_alarm :: proc(_: proc "c" (_: rawptr, _: sqlite3_int64, _: i32), _: rawptr, _: sqlite3_int64) -> i32 ---
+	memory_alarm :: proc(_: proc "c" (_: rawptr, _: i64, _: i32), _: rawptr, _: i64) -> i32 ---
 	/*
 	** CAPI3REF: Obtaining SQL Values
 	** METHOD: sqlite3_value
@@ -4473,35 +4343,20 @@ foreign lib {
 	** condition from a true SQL NULL is to invoke sqlite3_value_type() on the
 	** input to see if it is NULL prior to trying to extract the value.
 	*/
-	@(link_name = "sqlite3_value_blob")
 	value_blob :: proc(_: ^sqlite3_value) -> rawptr ---
-	@(link_name = "sqlite3_value_double")
 	value_double :: proc(_: ^sqlite3_value) -> f64 ---
-	@(link_name = "sqlite3_value_int")
 	value_int :: proc(_: ^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_value_int64")
-	value_int64 :: proc(_: ^sqlite3_value) -> sqlite3_int64 ---
-	@(link_name = "sqlite3_value_pointer")
+	value_int64 :: proc(_: ^sqlite3_value) -> i64 ---
 	value_pointer :: proc(_: ^sqlite3_value, _: cstring) -> rawptr ---
-	@(link_name = "sqlite3_value_text")
 	value_text :: proc(_: ^sqlite3_value) -> ^u8 ---
-	@(link_name = "sqlite3_value_text16")
 	value_text16 :: proc(_: ^sqlite3_value) -> rawptr ---
-	@(link_name = "sqlite3_value_text16le")
 	value_text16le :: proc(_: ^sqlite3_value) -> rawptr ---
-	@(link_name = "sqlite3_value_text16be")
 	value_text16be :: proc(_: ^sqlite3_value) -> rawptr ---
-	@(link_name = "sqlite3_value_bytes")
 	value_bytes :: proc(_: ^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_value_bytes16")
 	value_bytes16 :: proc(_: ^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_value_type")
 	value_type :: proc(_: ^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_value_numeric_type")
 	value_numeric_type :: proc(_: ^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_value_nochange")
 	value_nochange :: proc(_: ^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_value_frombind")
 	value_frombind :: proc(_: ^sqlite3_value) -> i32 ---
 	/*
 	** CAPI3REF: Report the internal text encoding state of an sqlite3_value object
@@ -4524,7 +4379,6 @@ foreign lib {
 	** not need to know what the internal state of an sqlite3_value object is and
 	** hence should not need to use this interface.
 	*/
-	@(link_name = "sqlite3_value_encoding")
 	value_encoding :: proc(_: ^sqlite3_value) -> i32 ---
 	/*
 	** CAPI3REF: Finding The Subtype Of SQL Values
@@ -4542,7 +4396,6 @@ foreign lib {
 	** If the [SQLITE_SUBTYPE] property is omitted, then sqlite3_value_subtype()
 	** might return zero instead of the upstream subtype in some corner cases.
 	*/
-	@(link_name = "sqlite3_value_subtype")
 	value_subtype :: proc(_: ^sqlite3_value) -> u32 ---
 	/*
 	** CAPI3REF: Copy And Free SQL Values
@@ -4559,9 +4412,7 @@ foreign lib {
 	** previously obtained from [sqlite3_value_dup()].  ^If V is a NULL pointer
 	** then sqlite3_value_free(V) is a harmless no-op.
 	*/
-	@(link_name = "sqlite3_value_dup")
 	value_dup :: proc(_: ^sqlite3_value) -> ^sqlite3_value ---
-	@(link_name = "sqlite3_value_free")
 	value_free :: proc(_: ^sqlite3_value) ---
 	/*
 	** CAPI3REF: Obtain Aggregate Function Context
@@ -4606,7 +4457,6 @@ foreign lib {
 	** This routine must be called from the same thread in which
 	** the aggregate SQL function is running.
 	*/
-	@(link_name = "sqlite3_aggregate_context")
 	aggregate_context :: proc(_: ^sqlite3_context, nBytes: i32) -> rawptr ---
 	/*
 	** CAPI3REF: User Data For Functions
@@ -4621,7 +4471,6 @@ foreign lib {
 	** This routine must be called from the same thread in which
 	** the application-defined function is running.
 	*/
-	@(link_name = "sqlite3_user_data")
 	user_data :: proc(_: ^sqlite3_context) -> rawptr ---
 	/*
 	** CAPI3REF: Database Connection For Functions
@@ -4633,7 +4482,6 @@ foreign lib {
 	** and [sqlite3_create_function16()] routines that originally
 	** registered the application defined function.
 	*/
-	@(link_name = "sqlite3_context_db_handle")
 	context_db_handle :: proc(_: ^sqlite3_context) -> ^sqlite3 ---
 	/*
 	** CAPI3REF: Function Auxiliary Data
@@ -4702,9 +4550,7 @@ foreign lib {
 	**
 	** See also: [sqlite3_get_clientdata()] and [sqlite3_set_clientdata()].
 	*/
-	@(link_name = "sqlite3_get_auxdata")
 	get_auxdata :: proc(_: ^sqlite3_context, N: i32) -> rawptr ---
-	@(link_name = "sqlite3_set_auxdata")
 	set_auxdata :: proc(_: ^sqlite3_context, N: i32, _: rawptr, _: proc "c" (_: rawptr)) ---
 	/*
 	** CAPI3REF: Database Connection Client Data
@@ -4764,9 +4610,7 @@ foreign lib {
 	**
 	** See also: [sqlite3_set_auxdata()] and [sqlite3_get_auxdata()].
 	*/
-	@(link_name = "sqlite3_get_clientdata")
 	get_clientdata :: proc(_: ^sqlite3, _: cstring) -> rawptr ---
-	@(link_name = "sqlite3_set_clientdata")
 	set_clientdata :: proc(_: ^sqlite3, _: cstring, _: rawptr, _: proc "c" (_: rawptr)) -> i32 ---
 	/*
 	** CAPI3REF: Setting The Result Of An SQL Function
@@ -4919,46 +4763,26 @@ foreign lib {
 	** than the one containing the application-defined function that received
 	** the [sqlite3_context] pointer, the results are undefined.
 	*/
-	@(link_name = "sqlite3_result_blob")
 	result_blob :: proc(_: ^sqlite3_context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	@(link_name = "sqlite3_result_blob64")
-	result_blob64 :: proc(_: ^sqlite3_context, _: rawptr, _: sqlite3_uint64, _: proc "c" (_: rawptr)) ---
-	@(link_name = "sqlite3_result_double")
+	result_blob64 :: proc(_: ^sqlite3_context, _: rawptr, _: u64, _: proc "c" (_: rawptr)) ---
 	result_double :: proc(_: ^sqlite3_context, _: f64) ---
-	@(link_name = "sqlite3_result_error")
 	result_error :: proc(_: ^sqlite3_context, _: cstring, _: i32) ---
-	@(link_name = "sqlite3_result_error16")
 	result_error16 :: proc(_: ^sqlite3_context, _: rawptr, _: i32) ---
-	@(link_name = "sqlite3_result_error_toobig")
 	result_error_toobig :: proc(_: ^sqlite3_context) ---
-	@(link_name = "sqlite3_result_error_nomem")
 	result_error_nomem :: proc(_: ^sqlite3_context) ---
-	@(link_name = "sqlite3_result_error_code")
 	result_error_code :: proc(_: ^sqlite3_context, _: i32) ---
-	@(link_name = "sqlite3_result_int")
 	result_int :: proc(_: ^sqlite3_context, _: i32) ---
-	@(link_name = "sqlite3_result_int64")
-	result_int64 :: proc(_: ^sqlite3_context, _: sqlite3_int64) ---
-	@(link_name = "sqlite3_result_null")
+	result_int64 :: proc(_: ^sqlite3_context, _: i64) ---
 	result_null :: proc(_: ^sqlite3_context) ---
-	@(link_name = "sqlite3_result_text")
 	result_text :: proc(_: ^sqlite3_context, _: cstring, _: i32, _: proc "c" (_: rawptr)) ---
-	@(link_name = "sqlite3_result_text64")
-	result_text64 :: proc(_: ^sqlite3_context, z: cstring, n: sqlite3_uint64, _: proc "c" (_: rawptr), encoding: u8) ---
-	@(link_name = "sqlite3_result_text16")
+	result_text64 :: proc(_: ^sqlite3_context, z: cstring, n: u64, _: proc "c" (_: rawptr), encoding: u8) ---
 	result_text16 :: proc(_: ^sqlite3_context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	@(link_name = "sqlite3_result_text16le")
 	result_text16le :: proc(_: ^sqlite3_context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	@(link_name = "sqlite3_result_text16be")
 	result_text16be :: proc(_: ^sqlite3_context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	@(link_name = "sqlite3_result_value")
 	result_value :: proc(_: ^sqlite3_context, _: ^sqlite3_value) ---
-	@(link_name = "sqlite3_result_pointer")
 	result_pointer :: proc(_: ^sqlite3_context, _: rawptr, _: cstring, _: proc "c" (_: rawptr)) ---
-	@(link_name = "sqlite3_result_zeroblob")
 	result_zeroblob :: proc(_: ^sqlite3_context, n: i32) ---
-	@(link_name = "sqlite3_result_zeroblob64")
-	result_zeroblob64 :: proc(_: ^sqlite3_context, n: sqlite3_uint64) -> i32 ---
+	result_zeroblob64 :: proc(_: ^sqlite3_context, n: u64) -> i32 ---
 	/*
 	** CAPI3REF: Setting The Subtype Of An SQL Function
 	** METHOD: sqlite3_context
@@ -4985,7 +4809,6 @@ foreign lib {
 	** an error.  Future versions of SQLite might enable -DSQLITE_STRICT_SUBTYPE=1
 	** by default.
 	*/
-	@(link_name = "sqlite3_result_subtype")
 	result_subtype :: proc(_: ^sqlite3_context, _: u32) ---
 	/*
 	** CAPI3REF: Define New Collating Sequences
@@ -5068,11 +4891,8 @@ foreign lib {
 	**
 	** See also:  [sqlite3_collation_needed()] and [sqlite3_collation_needed16()].
 	*/
-	@(link_name = "sqlite3_create_collation")
 	create_collation :: proc(_: ^sqlite3, zName: cstring, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32) -> i32 ---
-	@(link_name = "sqlite3_create_collation_v2")
 	create_collation_v2 :: proc(_: ^sqlite3, zName: cstring, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32, xDestroy: proc "c" (_: rawptr)) -> i32 ---
-	@(link_name = "sqlite3_create_collation16")
 	create_collation16 :: proc(_: ^sqlite3, zName: rawptr, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32) -> i32 ---
 	/*
 	** CAPI3REF: Collation Needed Callbacks
@@ -5101,9 +4921,7 @@ foreign lib {
 	** [sqlite3_create_collation()], [sqlite3_create_collation16()], or
 	** [sqlite3_create_collation_v2()].
 	*/
-	@(link_name = "sqlite3_collation_needed")
 	collation_needed :: proc(_: ^sqlite3, _: rawptr, _: proc "c" (_: rawptr, _: ^sqlite3, _: i32, _: cstring)) -> i32 ---
-	@(link_name = "sqlite3_collation_needed16")
 	collation_needed16 :: proc(_: ^sqlite3, _: rawptr, _: proc "c" (_: rawptr, _: ^sqlite3, _: i32, _: rawptr)) -> i32 ---
 	/*
 	** CAPI3REF: Suspend Execution For A Short Time
@@ -5129,7 +4947,6 @@ foreign lib {
 	** argument passed into sqlite3_sleep() is changed to zero before it is relayed
 	** down into the xSleep method of the VFS.
 	*/
-	@(link_name = "sqlite3_sleep")
 	sleep :: proc(_: i32) -> i32 ---
 	/*
 	** CAPI3REF: Name Of The Folder Holding Temporary Files
@@ -5243,11 +5060,8 @@ foreign lib {
 	** sqlite3_win32_set_directory interface except the string parameter must be
 	** UTF-8 or UTF-16, respectively.
 	*/
-	@(link_name = "sqlite3_win32_set_directory")
 	win32_set_directory :: proc(type: u64, zValue: rawptr) -> i32 ---
-	@(link_name = "sqlite3_win32_set_directory8")
 	win32_set_directory8 :: proc(type: u64, zValue: cstring) -> i32 ---
-	@(link_name = "sqlite3_win32_set_directory16")
 	win32_set_directory16 :: proc(type: u64, zValue: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Test For Auto-Commit Mode
@@ -5271,7 +5085,6 @@ foreign lib {
 	** connection while this routine is running, then the return value
 	** is undefined.
 	*/
-	@(link_name = "sqlite3_get_autocommit")
 	get_autocommit :: proc(_: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: Find The Database Handle Of A Prepared Statement
@@ -5284,7 +5097,6 @@ foreign lib {
 	** to the [sqlite3_prepare_v2()] call (or its variants) that was used to
 	** create the statement in the first place.
 	*/
-	@(link_name = "sqlite3_db_handle")
 	db_handle :: proc(_: ^sqlite3_stmt) -> ^sqlite3 ---
 	/*
 	** CAPI3REF: Return The Schema Name For A Database Connection
@@ -5306,7 +5118,6 @@ foreign lib {
 	** threads should mutex-protect calls to this API and should make their own
 	** private copy of the result prior to releasing the mutex.
 	*/
-	@(link_name = "sqlite3_db_name")
 	db_name :: proc(db: ^sqlite3, N: i32) -> cstring ---
 	/*
 	** CAPI3REF: Return The Filename For A Database Connection
@@ -5338,7 +5149,6 @@ foreign lib {
 	** <li> [sqlite3_filename_wal()]
 	** </ul>
 	*/
-	@(link_name = "sqlite3_db_filename")
 	db_filename :: proc(db: ^sqlite3, zDbName: cstring) -> sqlite3_filename ---
 	/*
 	** CAPI3REF: Determine if a database is read-only
@@ -5348,7 +5158,6 @@ foreign lib {
 	** of connection D is read-only, 0 if it is read/write, or -1 if N is not
 	** the name of a database on connection D.
 	*/
-	@(link_name = "sqlite3_db_readonly")
 	db_readonly :: proc(db: ^sqlite3, zDbName: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Determine the transaction state of a database
@@ -5366,7 +5175,6 @@ foreign lib {
 	** ^If the S argument to sqlite3_txn_state(D,S) is not the name of
 	** a valid schema, then -1 is returned.
 	*/
-	@(link_name = "sqlite3_txn_state")
 	txn_state :: proc(_: ^sqlite3, zSchema: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Find the next prepared statement
@@ -5382,7 +5190,6 @@ foreign lib {
 	** [sqlite3_next_stmt(D,S)] must refer to an open database
 	** connection and in particular must not be a NULL pointer.
 	*/
-	@(link_name = "sqlite3_next_stmt")
 	next_stmt :: proc(pDb: ^sqlite3, pStmt: ^sqlite3_stmt) -> ^sqlite3_stmt ---
 	/*
 	** CAPI3REF: Commit And Rollback Notification Callbacks
@@ -5431,9 +5238,7 @@ foreign lib {
 	**
 	** See also the [sqlite3_update_hook()] interface.
 	*/
-	@(link_name = "sqlite3_commit_hook")
 	commit_hook :: proc(_: ^sqlite3, _: proc "c" (_: rawptr) -> i32, _: rawptr) -> rawptr ---
-	@(link_name = "sqlite3_rollback_hook")
 	rollback_hook :: proc(_: ^sqlite3, _: proc "c" (_: rawptr), _: rawptr) -> rawptr ---
 	/*
 	** CAPI3REF: Autovacuum Compaction Amount Callback
@@ -5493,7 +5298,6 @@ foreign lib {
 	** &nbsp;   }
 	** </pre></blockquote>
 	*/
-	@(link_name = "sqlite3_autovacuum_pages")
 	autovacuum_pages :: proc(db: ^sqlite3, _: proc "c" (_: rawptr, _: cstring, _: u32, _: u32, _: u32) -> u32, _: rawptr, _: proc "c" (_: rawptr)) -> i32 ---
 	/*
 	** CAPI3REF: Data Change Notification Callbacks
@@ -5552,8 +5356,7 @@ foreign lib {
 	** See also the [sqlite3_commit_hook()], [sqlite3_rollback_hook()],
 	** and [sqlite3_preupdate_hook()] interfaces.
 	*/
-	@(link_name = "sqlite3_update_hook")
-	update_hook :: proc(_: ^sqlite3, _: proc "c" (_: rawptr, _: i32, _: cstring, _: cstring, _: sqlite3_int64), _: rawptr) -> rawptr ---
+	update_hook :: proc(_: ^sqlite3, _: proc "c" (_: rawptr, _: i32, _: cstring, _: cstring, _: i64), _: rawptr) -> rawptr ---
 	/*
 	** CAPI3REF: Enable Or Disable Shared Pager Cache
 	**
@@ -5598,7 +5401,6 @@ foreign lib {
 	**
 	** See Also:  [SQLite Shared-Cache Mode]
 	*/
-	@(link_name = "sqlite3_enable_shared_cache")
 	enable_shared_cache :: proc(_: i32) -> i32 ---
 	/*
 	** CAPI3REF: Attempt To Free Heap Memory
@@ -5614,7 +5416,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_db_release_memory()]
 	*/
-	@(link_name = "sqlite3_release_memory")
 	release_memory :: proc(_: i32) -> i32 ---
 	/*
 	** CAPI3REF: Free Memory Used By A Database Connection
@@ -5628,7 +5429,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_release_memory()]
 	*/
-	@(link_name = "sqlite3_db_release_memory")
 	db_release_memory :: proc(_: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: Impose A Limit On Heap Size
@@ -5694,10 +5494,8 @@ foreign lib {
 	** The circumstances under which SQLite will enforce the heap limits may
 	** change in future releases of SQLite.
 	*/
-	@(link_name = "sqlite3_soft_heap_limit64")
-	soft_heap_limit64 :: proc(N: sqlite3_int64) -> sqlite3_int64 ---
-	@(link_name = "sqlite3_hard_heap_limit64")
-	hard_heap_limit64 :: proc(N: sqlite3_int64) -> sqlite3_int64 ---
+	soft_heap_limit64 :: proc(N: i64) -> i64 ---
+	hard_heap_limit64 :: proc(N: i64) -> i64 ---
 	/*
 	** CAPI3REF: Deprecated Soft Heap Limit Interface
 	** DEPRECATED
@@ -5707,7 +5505,6 @@ foreign lib {
 	** only.  All new applications should use the
 	** [sqlite3_soft_heap_limit64()] interface rather than this one.
 	*/
-	@(link_name = "sqlite3_soft_heap_limit")
 	soft_heap_limit :: proc(N: i32) ---
 	/*
 	** CAPI3REF: Extract Metadata About A Column Of A Table
@@ -5778,7 +5575,6 @@ foreign lib {
 	** parsed, if that has not already been done, and returns an error if
 	** any errors are encountered while loading the schema.
 	*/
-	@(link_name = "sqlite3_table_column_metadata")
 	table_column_metadata :: proc(db: ^sqlite3, zDbName: cstring, zTableName: cstring, zColumnName: cstring, pzDataType: ^cstring, pzCollSeq: ^cstring, pNotNull: ^i32, pPrimaryKey: ^i32, pAutoinc: ^i32) -> i32 ---
 	/*
 	** CAPI3REF: Load An Extension
@@ -5824,7 +5620,6 @@ foreign lib {
 	**
 	** See also the [load_extension() SQL function].
 	*/
-	@(link_name = "sqlite3_load_extension")
 	load_extension :: proc(db: ^sqlite3, zFile: cstring, zProc: cstring, pzErrMsg: ^^u8) -> i32 ---
 	/*
 	** CAPI3REF: Enable Or Disable Extension Loading
@@ -5851,7 +5646,6 @@ foreign lib {
 	** remains disabled. This will prevent SQL injections from giving attackers
 	** access to extension loading capabilities.
 	*/
-	@(link_name = "sqlite3_enable_load_extension")
 	enable_load_extension :: proc(db: ^sqlite3, onoff: i32) -> i32 ---
 	/*
 	** CAPI3REF: Automatically Load Statically Linked Extensions
@@ -5889,7 +5683,6 @@ foreign lib {
 	** See also: [sqlite3_reset_auto_extension()]
 	** and [sqlite3_cancel_auto_extension()]
 	*/
-	@(link_name = "sqlite3_auto_extension")
 	auto_extension :: proc(xEntryPoint: proc "c" ()) -> i32 ---
 	/*
 	** CAPI3REF: Cancel Automatic Extension Loading
@@ -5901,7 +5694,6 @@ foreign lib {
 	** unregistered and it returns 0 if X was not on the list of initialization
 	** routines.
 	*/
-	@(link_name = "sqlite3_cancel_auto_extension")
 	cancel_auto_extension :: proc(xEntryPoint: proc "c" ()) -> i32 ---
 	/*
 	** CAPI3REF: Reset Automatic Extension Loading
@@ -5909,7 +5701,6 @@ foreign lib {
 	** ^This interface disables all automatic extensions previously
 	** registered using [sqlite3_auto_extension()].
 	*/
-	@(link_name = "sqlite3_reset_auto_extension")
 	reset_auto_extension :: proc() ---
 	/*
 	** CAPI3REF: Register A Virtual Table Implementation
@@ -5943,9 +5734,7 @@ foreign lib {
 	**
 	** See also: [sqlite3_drop_modules()]
 	*/
-	@(link_name = "sqlite3_create_module")
 	create_module :: proc(db: ^sqlite3, zName: cstring, p: ^sqlite3_module, pClientData: rawptr) -> i32 ---
-	@(link_name = "sqlite3_create_module_v2")
 	create_module_v2 :: proc(db: ^sqlite3, zName: cstring, p: ^sqlite3_module, pClientData: rawptr, xDestroy: proc "c" (_: rawptr)) -> i32 ---
 	/*
 	** CAPI3REF: Remove Unnecessary Virtual Table Implementations
@@ -5959,7 +5748,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_create_module()]
 	*/
-	@(link_name = "sqlite3_drop_modules")
 	drop_modules :: proc(db: ^sqlite3, azKeep: ^cstring) -> i32 ---
 	/*
 	** CAPI3REF: Declare The Schema Of A Virtual Table
@@ -5969,7 +5757,6 @@ foreign lib {
 	** to declare the format (the names and datatypes of the columns) of
 	** the virtual tables they implement.
 	*/
-	@(link_name = "sqlite3_declare_vtab")
 	declare_vtab :: proc(_: ^sqlite3, zSQL: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Overload A Function For A Virtual Table
@@ -5988,7 +5775,6 @@ foreign lib {
 	** purpose is to be a placeholder function that can be overloaded
 	** by a [virtual table].
 	*/
-	@(link_name = "sqlite3_overload_function")
 	overload_function :: proc(_: ^sqlite3, zFuncName: cstring, nArg: i32) -> i32 ---
 	/*
 	** CAPI3REF: Open A BLOB For Incremental I/O
@@ -6073,8 +5859,7 @@ foreign lib {
 	** [sqlite3_blob_reopen()], [sqlite3_blob_read()],
 	** [sqlite3_blob_bytes()], [sqlite3_blob_write()].
 	*/
-	@(link_name = "sqlite3_blob_open")
-	blob_open :: proc(_: ^sqlite3, zDb: cstring, zTable: cstring, zColumn: cstring, iRow: sqlite3_int64, flags: i32, ppBlob: ^^sqlite3_blob) -> i32 ---
+	blob_open :: proc(_: ^sqlite3, zDb: cstring, zTable: cstring, zColumn: cstring, iRow: i64, flags: i32, ppBlob: ^^sqlite3_blob) -> i32 ---
 	/*
 	** CAPI3REF: Move a BLOB Handle to a New Row
 	** METHOD: sqlite3_blob
@@ -6098,8 +5883,7 @@ foreign lib {
 	**
 	** ^This function sets the database handle error code and message.
 	*/
-	@(link_name = "sqlite3_blob_reopen")
-	blob_reopen :: proc(_: ^sqlite3_blob, _: sqlite3_int64) -> i32 ---
+	blob_reopen :: proc(_: ^sqlite3_blob, _: i64) -> i32 ---
 	/*
 	** CAPI3REF: Close A BLOB Handle
 	** DESTRUCTOR: sqlite3_blob
@@ -6121,7 +5905,6 @@ foreign lib {
 	** is passed a valid open blob handle, the values returned by the
 	** sqlite3_errcode() and sqlite3_errmsg() functions are set before returning.
 	*/
-	@(link_name = "sqlite3_blob_close")
 	blob_close :: proc(_: ^sqlite3_blob) -> i32 ---
 	/*
 	** CAPI3REF: Return The Size Of An Open BLOB
@@ -6137,7 +5920,6 @@ foreign lib {
 	** been closed by [sqlite3_blob_close()].  Passing any other pointer in
 	** to this routine results in undefined and probably undesirable behavior.
 	*/
-	@(link_name = "sqlite3_blob_bytes")
 	blob_bytes :: proc(_: ^sqlite3_blob) -> i32 ---
 	/*
 	** CAPI3REF: Read Data From A BLOB Incrementally
@@ -6166,7 +5948,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_blob_write()].
 	*/
-	@(link_name = "sqlite3_blob_read")
 	blob_read :: proc(_: ^sqlite3_blob, Z: rawptr, N: i32, iOffset: i32) -> i32 ---
 	/*
 	** CAPI3REF: Write Data Into A BLOB Incrementally
@@ -6208,7 +5989,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_blob_read()].
 	*/
-	@(link_name = "sqlite3_blob_write")
 	blob_write :: proc(_: ^sqlite3_blob, z: rawptr, n: i32, iOffset: i32) -> i32 ---
 	/*
 	** CAPI3REF: Virtual File System Objects
@@ -6239,11 +6019,8 @@ foreign lib {
 	** ^(If the default VFS is unregistered, another VFS is chosen as
 	** the default.  The choice for the new VFS is arbitrary.)^
 	*/
-	@(link_name = "sqlite3_vfs_find")
 	vfs_find :: proc(zVfsName: cstring) -> ^sqlite3_vfs ---
-	@(link_name = "sqlite3_vfs_register")
 	vfs_register :: proc(_: ^sqlite3_vfs, makeDflt: i32) -> i32 ---
-	@(link_name = "sqlite3_vfs_unregister")
 	vfs_unregister :: proc(_: ^sqlite3_vfs) -> i32 ---
 	/*
 	** CAPI3REF: Mutexes
@@ -6354,19 +6131,12 @@ foreign lib {
 	**
 	** See also: [sqlite3_mutex_held()] and [sqlite3_mutex_notheld()].
 	*/
-	@(link_name = "sqlite3_mutex_alloc")
 	mutex_alloc :: proc(_: i32) -> ^sqlite3_mutex ---
-	@(link_name = "sqlite3_mutex_free")
 	mutex_free :: proc(_: ^sqlite3_mutex) ---
-	@(link_name = "sqlite3_mutex_enter")
 	mutex_enter :: proc(_: ^sqlite3_mutex) ---
-	@(link_name = "sqlite3_mutex_try")
 	mutex_try :: proc(_: ^sqlite3_mutex) -> i32 ---
-	@(link_name = "sqlite3_mutex_leave")
 	mutex_leave :: proc(_: ^sqlite3_mutex) ---
-	@(link_name = "sqlite3_mutex_held")
 	mutex_held :: proc(_: ^sqlite3_mutex) -> i32 ---
-	@(link_name = "sqlite3_mutex_notheld")
 	mutex_notheld :: proc(_: ^sqlite3_mutex) -> i32 ---
 	/*
 	** CAPI3REF: Retrieve the mutex for a database connection
@@ -6378,7 +6148,6 @@ foreign lib {
 	** ^If the [threading mode] is Single-thread or Multi-thread then this
 	** routine returns a NULL pointer.
 	*/
-	@(link_name = "sqlite3_db_mutex")
 	db_mutex :: proc(_: ^sqlite3) -> ^sqlite3_mutex ---
 	/*
 	** CAPI3REF: Low-Level Control Of Database Files
@@ -6421,7 +6190,6 @@ foreign lib {
 	**
 	** See also: [file control opcodes]
 	*/
-	@(link_name = "sqlite3_file_control")
 	file_control :: proc(_: ^sqlite3, zDbName: cstring, op: i32, _: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Testing Interface
@@ -6440,7 +6208,6 @@ foreign lib {
 	** Unlike most of the SQLite API, this function is not guaranteed to
 	** operate consistently from one release to the next.
 	*/
-	@(link_name = "sqlite3_test_control")
 	test_control :: proc(op: i32, #c_vararg _: ..any) -> i32 ---
 	/*
 	** CAPI3REF: SQL Keyword Checking
@@ -6489,11 +6256,8 @@ foreign lib {
 	** SQLite is compiled with the [-DSQLITE_OMIT_VACUUM] option.  Also,
 	** new keywords may be added to future releases of SQLite.
 	*/
-	@(link_name = "sqlite3_keyword_count")
 	keyword_count :: proc() -> i32 ---
-	@(link_name = "sqlite3_keyword_name")
 	keyword_name :: proc(_: i32, _: ^cstring, _: ^i32) -> i32 ---
-	@(link_name = "sqlite3_keyword_check")
 	keyword_check :: proc(_: cstring, _: i32) -> i32 ---
 	/*
 	** CAPI3REF: Create A New Dynamic String Object
@@ -6520,7 +6284,6 @@ foreign lib {
 	** the value set for [sqlite3_limit](D,[SQLITE_LIMIT_LENGTH]) instead
 	** of [SQLITE_MAX_LENGTH].
 	*/
-	@(link_name = "sqlite3_str_new")
 	str_new :: proc(_: ^sqlite3) -> ^sqlite3_str ---
 	/*
 	** CAPI3REF: Finalize A Dynamic String
@@ -6539,9 +6302,7 @@ foreign lib {
 	** X and the string content it contains.  Calling sqlite3_str_free(X) is
 	** the equivalent of calling [sqlite3_free](sqlite3_str_finish(X)).
 	*/
-	@(link_name = "sqlite3_str_finish")
 	str_finish :: proc(_: ^sqlite3_str) -> ^u8 ---
-	@(link_name = "sqlite3_str_free")
 	str_free :: proc(_: ^sqlite3_str) ---
 	/*
 	** CAPI3REF: Add Content To A Dynamic String
@@ -6579,19 +6340,12 @@ foreign lib {
 	** is recorded in the [sqlite3_str] object and can be recovered by a
 	** subsequent call to [sqlite3_str_errcode(X)].
 	*/
-	@(link_name = "sqlite3_str_appendf")
 	str_appendf :: proc(_: ^sqlite3_str, zFormat: cstring, #c_vararg _: ..any) ---
-	@(link_name = "sqlite3_str_vappendf")
 	str_vappendf :: proc(_: ^sqlite3_str, zFormat: cstring, _: ^__va_list_tag) ---
-	@(link_name = "sqlite3_str_append")
 	str_append :: proc(_: ^sqlite3_str, zIn: cstring, N: i32) ---
-	@(link_name = "sqlite3_str_appendall")
 	str_appendall :: proc(_: ^sqlite3_str, zIn: cstring) ---
-	@(link_name = "sqlite3_str_appendchar")
 	str_appendchar :: proc(_: ^sqlite3_str, N: i32, C: u8) ---
-	@(link_name = "sqlite3_str_reset")
 	str_reset :: proc(_: ^sqlite3_str) ---
-	@(link_name = "sqlite3_str_truncate")
 	str_truncate :: proc(_: ^sqlite3_str, N: i32) ---
 	/*
 	** CAPI3REF: Status Of A Dynamic String
@@ -6622,11 +6376,8 @@ foreign lib {
 	** outside the range of 0 to [sqlite3_str_length(X)] and do not read or
 	** write any byte after any subsequent sqlite3_str method call.
 	*/
-	@(link_name = "sqlite3_str_errcode")
 	str_errcode :: proc(_: ^sqlite3_str) -> i32 ---
-	@(link_name = "sqlite3_str_length")
 	str_length :: proc(_: ^sqlite3_str) -> i32 ---
-	@(link_name = "sqlite3_str_value")
 	str_value :: proc(_: ^sqlite3_str) -> ^u8 ---
 	/*
 	** CAPI3REF: SQLite Runtime Status
@@ -6654,10 +6405,8 @@ foreign lib {
 	**
 	** See also: [sqlite3_db_status()]
 	*/
-	@(link_name = "sqlite3_status")
 	status :: proc(op: i32, pCurrent: ^i32, pHighwater: ^i32, resetFlag: i32) -> i32 ---
-	@(link_name = "sqlite3_status64")
-	status64 :: proc(op: i32, pCurrent: ^sqlite3_int64, pHighwater: ^sqlite3_int64, resetFlag: i32) -> i32 ---
+	status64 :: proc(op: i32, pCurrent: ^i64, pHighwater: ^i64, resetFlag: i32) -> i32 ---
 	/*
 	** CAPI3REF: Database Connection Status
 	** METHOD: sqlite3
@@ -6689,10 +6438,8 @@ foreign lib {
 	**
 	** See also: [sqlite3_status()] and [sqlite3_stmt_status()].
 	*/
-	@(link_name = "sqlite3_db_status")
 	db_status :: proc(_: ^sqlite3, op: i32, pCur: ^i32, pHiwtr: ^i32, resetFlg: i32) -> i32 ---
-	@(link_name = "sqlite3_db_status64")
-	db_status64 :: proc(_: ^sqlite3, _: i32, _: ^sqlite3_int64, _: ^sqlite3_int64, _: i32) -> i32 ---
+	db_status64 :: proc(_: ^sqlite3, _: i32, _: ^i64, _: ^i64, _: i32) -> i32 ---
 	/*
 	** CAPI3REF: Prepared Statement Status
 	** METHOD: sqlite3_stmt
@@ -6717,7 +6464,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_status()] and [sqlite3_db_status()].
 	*/
-	@(link_name = "sqlite3_stmt_status")
 	stmt_status :: proc(_: ^sqlite3_stmt, op: i32, resetFlg: i32) -> i32 ---
 	/*
 	** CAPI3REF: Online Backup API.
@@ -6915,15 +6661,10 @@ foreign lib {
 	** <li> The [sqlite3_rsync] utility program.
 	** </ul>
 	*/
-	@(link_name = "sqlite3_backup_init")
 	backup_init :: proc(pDest: ^sqlite3, zDestName: cstring, pSource: ^sqlite3, zSourceName: cstring) -> ^sqlite3_backup ---
-	@(link_name = "sqlite3_backup_step")
 	backup_step :: proc(p: ^sqlite3_backup, nPage: i32) -> i32 ---
-	@(link_name = "sqlite3_backup_finish")
 	backup_finish :: proc(p: ^sqlite3_backup) -> i32 ---
-	@(link_name = "sqlite3_backup_remaining")
 	backup_remaining :: proc(p: ^sqlite3_backup) -> i32 ---
-	@(link_name = "sqlite3_backup_pagecount")
 	backup_pagecount :: proc(p: ^sqlite3_backup) -> i32 ---
 	/*
 	** CAPI3REF: Unlock Notification
@@ -7040,7 +6781,6 @@ foreign lib {
 	** the special "DROP TABLE/INDEX" case, the extended error code is just
 	** SQLITE_LOCKED.)^
 	*/
-	@(link_name = "sqlite3_unlock_notify")
 	unlock_notify :: proc(pBlocked: ^sqlite3, xNotify: proc "c" (_: ^rawptr, _: i32), pNotifyArg: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: String Comparison
@@ -7050,9 +6790,7 @@ foreign lib {
 	** strings in a case-independent fashion, using the same definition of "case
 	** independence" that SQLite uses internally when comparing identifiers.
 	*/
-	@(link_name = "sqlite3_stricmp")
 	stricmp :: proc(_: cstring, _: cstring) -> i32 ---
-	@(link_name = "sqlite3_strnicmp")
 	strnicmp :: proc(_: cstring, _: cstring, _: i32) -> i32 ---
 	/*
 	** CAPI3REF: String Globbing
@@ -7069,7 +6807,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_strlike()].
 	*/
-	@(link_name = "sqlite3_strglob")
 	strglob :: proc(zGlob: cstring, zStr: cstring) -> i32 ---
 	/*
 	** CAPI3REF: String LIKE Matching
@@ -7092,7 +6829,6 @@ foreign lib {
 	**
 	** See also: [sqlite3_strglob()].
 	*/
-	@(link_name = "sqlite3_strlike")
 	strlike :: proc(zGlob: cstring, zStr: cstring, cEsc: u32) -> i32 ---
 	/*
 	** CAPI3REF: Error Logging Interface
@@ -7115,7 +6851,6 @@ foreign lib {
 	** a few hundred characters, it will be truncated to the length of the
 	** buffer.
 	*/
-	@(link_name = "sqlite3_log")
 	log :: proc(iErrCode: i32, zFormat: cstring, #c_vararg _: ..any) ---
 	/*
 	** CAPI3REF: Write-Ahead Log Commit Hook
@@ -7165,7 +6900,6 @@ foreign lib {
 	** checkpointing entirely. To re-enable the default behavior, call
 	** sqlite3_wal_autocheckpoint(db,1000) or use [PRAGMA wal_checkpoint].
 	*/
-	@(link_name = "sqlite3_wal_hook")
 	wal_hook :: proc(_: ^sqlite3, _: proc "c" (_: rawptr, _: ^sqlite3, _: cstring, _: i32) -> i32, _: rawptr) -> rawptr ---
 	/*
 	** CAPI3REF: Configure an auto-checkpoint
@@ -7197,7 +6931,6 @@ foreign lib {
 	** ^The use of this interface is only necessary if the default setting
 	** is found to be suboptimal for a particular application.
 	*/
-	@(link_name = "sqlite3_wal_autocheckpoint")
 	wal_autocheckpoint :: proc(db: ^sqlite3, N: i32) -> i32 ---
 	/*
 	** CAPI3REF: Checkpoint a database
@@ -7219,7 +6952,6 @@ foreign lib {
 	** start a callback but which do not need the full power (and corresponding
 	** complication) of [sqlite3_wal_checkpoint_v2()].
 	*/
-	@(link_name = "sqlite3_wal_checkpoint")
 	wal_checkpoint :: proc(db: ^sqlite3, zDb: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Checkpoint a database
@@ -7318,7 +7050,6 @@ foreign lib {
 	** ^The [PRAGMA wal_checkpoint] command can be used to invoke this interface
 	** from SQL.
 	*/
-	@(link_name = "sqlite3_wal_checkpoint_v2")
 	wal_checkpoint_v2 :: proc(db: ^sqlite3, zDb: cstring, eMode: i32, pnLog: ^i32, pnCkpt: ^i32) -> i32 ---
 	/*
 	** CAPI3REF: Virtual Table Interface Configuration
@@ -7338,7 +7069,6 @@ foreign lib {
 	** of parameters after C depend on which [virtual table configuration option]
 	** is used.
 	*/
-	@(link_name = "sqlite3_vtab_config")
 	vtab_config :: proc(_: ^sqlite3, op: i32, #c_vararg _: ..any) -> i32 ---
 	/*
 	** CAPI3REF: Determine The Virtual Table Conflict Policy
@@ -7350,7 +7080,6 @@ foreign lib {
 	** of the SQL statement that triggered the call to the [xUpdate] method of the
 	** [virtual table].
 	*/
-	@(link_name = "sqlite3_vtab_on_conflict")
 	vtab_on_conflict :: proc(_: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: Determine If Virtual Table Column Access Is For UPDATE
@@ -7376,7 +7105,6 @@ foreign lib {
 	** current implementation, the sqlite3_vtab_nochange() interface does always
 	** returns false for the enhanced [UPDATE FROM] statement.
 	*/
-	@(link_name = "sqlite3_vtab_nochange")
 	vtab_nochange :: proc(_: ^sqlite3_context) -> i32 ---
 	/*
 	** CAPI3REF: Determine The Collation For a Virtual Table Constraint
@@ -7411,7 +7139,6 @@ foreign lib {
 	** <li><p> Otherwise, "BINARY" is returned.
 	** </ol>
 	*/
-	@(link_name = "sqlite3_vtab_collation")
 	vtab_collation :: proc(_: ^sqlite3_index_info, _: i32) -> cstring ---
 	/*
 	** CAPI3REF: Determine if a virtual table query is DISTINCT
@@ -7506,7 +7233,6 @@ foreign lib {
 	** valid to do so, on the other hand, might cause SQLite to return incorrect
 	** results.
 	*/
-	@(link_name = "sqlite3_vtab_distinct")
 	vtab_distinct :: proc(_: ^sqlite3_index_info) -> i32 ---
 	/*
 	** CAPI3REF: Identify and handle IN constraints in xBestIndex
@@ -7579,7 +7305,6 @@ foreign lib {
 	** [sqlite3_vtab_in_next()] to find all values on the right-hand side
 	** of the IN constraint.
 	*/
-	@(link_name = "sqlite3_vtab_in")
 	vtab_in :: proc(_: ^sqlite3_index_info, iCons: i32, bHandle: i32) -> i32 ---
 	/*
 	** CAPI3REF: Find all elements on the right-hand side of an IN constraint.
@@ -7626,9 +7351,7 @@ foreign lib {
 	** implementation needs to retain the *ppOut values for longer, it must make
 	** copies.  The *ppOut values are [protected sqlite3_value|protected].
 	*/
-	@(link_name = "sqlite3_vtab_in_first")
 	vtab_in_first :: proc(pVal: ^sqlite3_value, ppOut: ^^sqlite3_value) -> i32 ---
-	@(link_name = "sqlite3_vtab_in_next")
 	vtab_in_next :: proc(pVal: ^sqlite3_value, ppOut: ^^sqlite3_value) -> i32 ---
 	/*
 	** CAPI3REF: Constraint values in xBestIndex()
@@ -7670,7 +7393,6 @@ foreign lib {
 	** The "_rhs_" in the name of this routine is an abbreviation for
 	** "Right-Hand Side".
 	*/
-	@(link_name = "sqlite3_vtab_rhs_value")
 	vtab_rhs_value :: proc(_: ^sqlite3_index_info, _: i32, ppVal: ^^sqlite3_value) -> i32 ---
 	/*
 	** CAPI3REF: Prepared Statement Scan Status
@@ -7710,9 +7432,7 @@ foreign lib {
 	** See also: [sqlite3_stmt_scanstatus_reset()] and the
 	** [nexec and ncycle] columns of the [bytecode virtual table].
 	*/
-	@(link_name = "sqlite3_stmt_scanstatus")
 	stmt_scanstatus :: proc(pStmt: ^sqlite3_stmt, idx: i32, iScanStatusOp: i32, pOut: rawptr) -> i32 ---
-	@(link_name = "sqlite3_stmt_scanstatus_v2")
 	stmt_scanstatus_v2 :: proc(pStmt: ^sqlite3_stmt, idx: i32, iScanStatusOp: i32, flags: i32, pOut: rawptr) -> i32 ---
 	/*
 	** CAPI3REF: Zero Scan-Status Counters
@@ -7723,7 +7443,6 @@ foreign lib {
 	** This API is only available if the library is built with pre-processor
 	** symbol [SQLITE_ENABLE_STMT_SCANSTATUS] defined.
 	*/
-	@(link_name = "sqlite3_stmt_scanstatus_reset")
 	stmt_scanstatus_reset :: proc(_: ^sqlite3_stmt) ---
 	/*
 	** CAPI3REF: Flush caches to disk mid-transaction
@@ -7756,7 +7475,6 @@ foreign lib {
 	** ^This function does not set the database handle error code or message
 	** returned by the [sqlite3_errcode()] and [sqlite3_errmsg()] functions.
 	*/
-	@(link_name = "sqlite3_db_cacheflush")
 	db_cacheflush :: proc(_: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: Low-level system error code
@@ -7769,7 +7487,6 @@ foreign lib {
 	** called to get back the underlying "errno" that caused the problem, such
 	** as ENOSPC, EAUTH, EISDIR, and so forth.
 	*/
-	@(link_name = "sqlite3_system_errno")
 	system_errno :: proc(_: ^sqlite3) -> i32 ---
 	/*
 	** CAPI3REF: Record A Database Snapshot
@@ -7822,7 +7539,6 @@ foreign lib {
 	** The [sqlite3_snapshot_get()] interface is only available when the
 	** [SQLITE_ENABLE_SNAPSHOT] compile-time option is used.
 	*/
-	@(link_name = "sqlite3_snapshot_get")
 	snapshot_get :: proc(db: ^sqlite3, zSchema: cstring, ppSnapshot: ^^sqlite3_snapshot) -> i32 ---
 	/*
 	** CAPI3REF: Start a read transaction on an historical snapshot
@@ -7867,7 +7583,6 @@ foreign lib {
 	** The [sqlite3_snapshot_open()] interface is only available when the
 	** [SQLITE_ENABLE_SNAPSHOT] compile-time option is used.
 	*/
-	@(link_name = "sqlite3_snapshot_open")
 	snapshot_open :: proc(db: ^sqlite3, zSchema: cstring, pSnapshot: ^sqlite3_snapshot) -> i32 ---
 	/*
 	** CAPI3REF: Destroy a snapshot
@@ -7880,7 +7595,6 @@ foreign lib {
 	** The [sqlite3_snapshot_free()] interface is only available when the
 	** [SQLITE_ENABLE_SNAPSHOT] compile-time option is used.
 	*/
-	@(link_name = "sqlite3_snapshot_free")
 	snapshot_free :: proc(_: ^sqlite3_snapshot) ---
 	/*
 	** CAPI3REF: Compare the ages of two snapshot handles.
@@ -7907,7 +7621,6 @@ foreign lib {
 	** This interface is only available if SQLite is compiled with the
 	** [SQLITE_ENABLE_SNAPSHOT] option.
 	*/
-	@(link_name = "sqlite3_snapshot_cmp")
 	snapshot_cmp :: proc(p1: ^sqlite3_snapshot, p2: ^sqlite3_snapshot) -> i32 ---
 	/*
 	** CAPI3REF: Recover snapshots from a wal file
@@ -7932,7 +7645,6 @@ foreign lib {
 	** This interface is only available if SQLite is compiled with the
 	** [SQLITE_ENABLE_SNAPSHOT] option.
 	*/
-	@(link_name = "sqlite3_snapshot_recover")
 	snapshot_recover :: proc(db: ^sqlite3, zDb: cstring) -> i32 ---
 	/*
 	** CAPI3REF: Serialize a database
@@ -7978,8 +7690,7 @@ foreign lib {
 	** This interface is omitted if SQLite is compiled with the
 	** [SQLITE_OMIT_DESERIALIZE] option.
 	*/
-	@(link_name = "sqlite3_serialize")
-	serialize :: proc(db: ^sqlite3, zSchema: cstring, piSize: ^sqlite3_int64, mFlags: u32) -> ^u8 ---
+	serialize :: proc(db: ^sqlite3, zSchema: cstring, piSize: ^i64, mFlags: u32) -> ^u8 ---
 	/*
 	** CAPI3REF: Deserialize a database
 	**
@@ -8024,8 +7735,7 @@ foreign lib {
 	** This interface is omitted if SQLite is compiled with the
 	** [SQLITE_OMIT_DESERIALIZE] option.
 	*/
-	@(link_name = "sqlite3_deserialize")
-	deserialize :: proc(db: ^sqlite3, zSchema: cstring, pData: ^u8, szDb: sqlite3_int64, szBuf: sqlite3_int64, mFlags: u32) -> i32 ---
+	deserialize :: proc(db: ^sqlite3, zSchema: cstring, pData: ^u8, szDb: i64, szBuf: i64, mFlags: u32) -> i32 ---
 	/*
 	** CAPI3REF: Bind array values to the CARRAY table-valued function
 	**
@@ -8056,9 +7766,7 @@ foreign lib {
 	** sqlite3_carray_bind(S,I,P,N,F,X) is same as
 	** sqlite3_carray_bind_v2(S,I,P,N,F,X,P).
 	*/
-	@(link_name = "sqlite3_carray_bind_v2")
 	carray_bind_v2 :: proc(pStmt: ^sqlite3_stmt, i: i32, aData: rawptr, nData: i32, mFlags: i32, xDel: proc "c" (_: rawptr), pDel: rawptr) -> i32 ---
-	@(link_name = "sqlite3_carray_bind")
 	carray_bind :: proc(pStmt: ^sqlite3_stmt, i: i32, aData: rawptr, nData: i32, mFlags: i32, xDel: proc "c" (_: rawptr)) -> i32 ---
 	/*
 	** Register a geometry callback named zGeom that can be used as part of an
@@ -8066,7 +7774,6 @@ foreign lib {
 	**
 	**   SELECT ... FROM <rtree> WHERE <rtree col> MATCH $zGeom(... params ...)
 	*/
-	@(link_name = "sqlite3_rtree_geometry_callback")
 	rtree_geometry_callback :: proc(db: ^sqlite3, zGeom: cstring, xGeom: proc "c" (_: ^sqlite3_rtree_geometry, _: i32, _: ^sqlite3_rtree_dbl, _: ^i32) -> i32, pContext: rawptr) -> i32 ---
 	/*
 	** Register a 2nd-generation geometry callback named zScore that can be
@@ -8074,6 +7781,5 @@ foreign lib {
 	**
 	**   SELECT ... FROM <rtree> WHERE <rtree col> MATCH $zQueryFunc(... params ...)
 	*/
-	@(link_name = "sqlite3_rtree_query_callback")
 	rtree_query_callback :: proc(db: ^sqlite3, zQueryFunc: cstring, xQueryFunc: proc "c" (_: ^sqlite3_rtree_query_info) -> i32, pContext: rawptr, xDestructor: proc "c" (_: rawptr)) -> i32 ---
 }

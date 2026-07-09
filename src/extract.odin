@@ -26,37 +26,63 @@ Extract_State :: struct {
 	decl_map: map[string]Decl_Ref,
 }
 
-extract :: proc(header_path: string, ir: ^IR) -> bool {
+// Preprocess knobs passed into libclang as -I / -D. Paths and define values
+// are already resolved by the caller (config-dir relative paths expanded).
+Extract_Preprocess :: struct {
+	include_paths: []string,
+	defines:       map[string]string, // NAME → value; empty value → -DNAME
+}
+
+// Extract every header into one IR. Shared decl_map dedupes by USR across
+// translation units so multi-header inputs do not re-declare the same type.
+extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess = {}) -> bool {
+	if len(header_paths) == 0 {
+		fmt.eprintln("h2odin: no input headers")
+		return false
+	}
 	index := clang.createIndex(0, 0) // diagnostics are printed by check_parse_diagnostics
 	defer clang.disposeIndex(index)
-
-	path := strings.clone_to_cstring(header_path, context.temp_allocator)
-	// -fparse-all-comments: attach any comment adjacent to a declaration as
-	// its documentation, not only doc-style ones (/** */, ///) — headers like
-	// sqlite3.h document everything in plain /* */ blocks.
-	args := make([dynamic]cstring, context.temp_allocator)
-	append(&args, "-fparse-all-comments")
-	if resource_arg, found := clang_resource_dir_arg(); found {
-		append(&args, resource_arg)
-	}
-	tu := clang.parseTranslationUnit(index, path, raw_data(args[:]), c.int(len(args)), nil, 0, {.DetailedPreprocessingRecord})
-	if tu == nil {
-		fmt.eprintfln("h2odin: failed to parse %q", header_path)
-		return false
-	}
-	defer clang.disposeTranslationUnit(tu)
-
-	if !check_parse_diagnostics(tu, header_path) {
-		return false
-	}
 
 	state := Extract_State {
 		ctx      = context,
 		ir       = ir,
-		tu       = tu,
 		decl_map = make(map[string]Decl_Ref),
 	}
-	clang.visitChildren(clang.getTranslationUnitCursor(tu), visit_top_level, &state)
+
+	// Build the shared clang args once: comments, resource dir, -I, -D.
+	base_args := make([dynamic]cstring, context.temp_allocator)
+	append(&base_args, "-fparse-all-comments")
+	if resource_arg, found := clang_resource_dir_arg(); found {
+		append(&base_args, resource_arg)
+	}
+	for path in preprocess.include_paths {
+		append(&base_args, strings.clone_to_cstring(fmt.tprintf("-I%s", path), context.temp_allocator))
+	}
+	if preprocess.defines != nil {
+		for name, value in preprocess.defines {
+			if value == "" {
+				append(&base_args, strings.clone_to_cstring(fmt.tprintf("-D%s", name), context.temp_allocator))
+			} else {
+				append(&base_args, strings.clone_to_cstring(fmt.tprintf("-D%s=%s", name, value), context.temp_allocator))
+			}
+		}
+	}
+
+	for header_path in header_paths {
+		path := strings.clone_to_cstring(header_path, context.temp_allocator)
+		tu := clang.parseTranslationUnit(index, path, raw_data(base_args[:]), c.int(len(base_args)), nil, 0, {.DetailedPreprocessingRecord})
+		if tu == nil {
+			fmt.eprintfln("h2odin: failed to parse %q", header_path)
+			return false
+		}
+		if !check_parse_diagnostics(tu, header_path) {
+			clang.disposeTranslationUnit(tu)
+			return false
+		}
+		state.tu = tu
+		clang.visitChildren(clang.getTranslationUnitCursor(tu), visit_top_level, &state)
+		clang.disposeTranslationUnit(tu)
+	}
 	return true
 }
 

@@ -95,13 +95,16 @@ return config
 | Path | Role |
 |------|------|
 | `package` / `type_mode` | package name; ABI vs idiomatic leaves |
-| `foreign.import_lib` | `foreign import` system library |
+| `inputs` / `preprocess.*` | multi-header inputs; `-I` / `-D` |
+| `foreign.import_lib` / `link_prefix` | system library; C symbol prefix |
 | `naming.strip_prefixes` | drop a C prefix by kind (`proc` / `type` / `const`) |
 | `naming.override` | rename callback |
 | `types.map` / `types.overrides` | type spellings (refs only vs also drop the decl) |
+| `structs.*` / `procs.*` | field tags/align; param/result spellings and defaults |
+| `output.*` / `output_folder` | layout, imports file, footers |
 | `symbols.remove.where` | **true drops** a top-level declaration |
 
-Unknown keys and not-yet-supported sections fail the run with a clear error. Pre-M8 flat keys (`keep`, `rename`, `type_map`, …) are rejected with migration messages.
+Unknown keys and not-yet-supported sections (`diagnostics`) fail the run with a clear error. Pre-M8 flat keys (`keep`, `rename`, `type_map`, …) are rejected with migration messages.
 
 More detail: [`docs/configuration.md`](docs/configuration.md). Full north-star: [`docs/config-spec.md`](docs/config-spec.md).
 

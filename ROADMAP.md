@@ -116,12 +116,12 @@ boundary.
 
 ## Milestone 10 — Structs, procs, inputs, output
 
-- [ ] `types.overrides` (replace a declaration) as distinct from `types.map` (rewrite references).
-- [ ] `structs.fields` / `structs.field` (`type`, `tag`), `structs.align`.
-- [ ] `procs.params` / `procs.param`, `procs.results` / `procs.result` — signature spellings and defaults only, no wrappers.
-- [ ] `config.inputs` (multi-header) and `preprocess.include_paths` / `.defines`.
-- [ ] `output_folder`, `output.procedures_at_end`, `output.imports_file`, `output.footer_per_header`.
-- [ ] `foreign.link_prefix` — the external C symbol, not the Odin name.
+- [x] `types.overrides` (replace a declaration) as distinct from `types.map` (rewrite references).
+- [x] `structs.fields` / `structs.field` (`type`, `tag`), `structs.align`.
+- [x] `procs.params` / `procs.param`, `procs.results` / `procs.result` — signature spellings and defaults only, no wrappers.
+- [x] `config.inputs` (multi-header) and `preprocess.include_paths` / `.defines`.
+- [x] `output_folder`, `output.procedures_at_end`, `output.imports_file`, `output.footer_per_header`.
+- [x] `foreign.link_prefix` — the external C symbol, not the Odin name.
 
 ## Milestone 11 — Diagnostics as a system
 
@@ -141,6 +141,6 @@ boundary.
 
 ### Start here
 
-Milestones 0–5 and 7–9 are complete. The next work is **Milestone 10** — structs,
-procs, multi-header inputs, and output knobs — on top of the sectioned `h2o`
-shape. **Milestone 6 (wrappers)** remains deferred and is independent of 10–11.
+Milestones 0–5 and 7–10 are complete. The next work is **Milestone 11** —
+diagnostics as a system (named categories and per-category severity).
+**Milestone 6 (wrappers)** remains deferred and is independent of 11.

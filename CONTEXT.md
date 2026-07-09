@@ -170,10 +170,12 @@ rather than bend it silently.
   only names the conversion. Conflating the two claims is a recurring confusion.
 
 - **The config surface is the sectioned `h2o` model** in
-  [`docs/config-spec.md`](docs/config-spec.md). Milestone 8 landed the shape;
-  later milestones fill sections (naming algorithms, macros, enums, …).
-  `docs/configuration.md` describes what is wired today and the migration from
-  the old flat keys (including the `keep` → `symbols.remove.where` polarity flip).
+  [`docs/config-spec.md`](docs/config-spec.md). Milestones 8–10 landed the
+  shape plus naming, macros, enums, structs, procs, multi-header inputs, and
+  output knobs. `docs/configuration.md` describes what is wired today and the
+  migration from the old flat keys (including the `keep` →
+  `symbols.remove.where` polarity flip). Diagnostics severity is still open
+  (Milestone 11).
 
 ---
 

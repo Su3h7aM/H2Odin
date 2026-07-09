@@ -14,12 +14,27 @@ write_test_config :: proc(t: ^testing.T, name: string, contents: string) -> (pat
 // Free strings/maps allocated by policy_load when tests do not use the
 // generation arena. Lua state is closed by policy_destroy.
 delete_policy_test_data :: proc(policy: ^Policy) {
+	if policy.config_dir != "" {
+		delete(policy.config_dir)
+	}
 	if policy.package_name != "" {
 		delete(policy.package_name)
 	}
 	if policy.foreign_lib != "" {
 		delete(policy.foreign_lib)
 	}
+	if policy.foreign_link_prefix != "" {
+		delete(policy.foreign_link_prefix)
+	}
+	if policy.output_folder != "" {
+		delete(policy.output_folder)
+	}
+	if policy.imports_file != "" {
+		delete(policy.imports_file)
+	}
+	delete_string_slice(policy.inputs)
+	delete_string_slice(policy.include_paths)
+	delete_string_map(&policy.defines)
 	delete_string_slice(policy.strip_prefix_proc)
 	delete_string_slice(policy.strip_prefix_type)
 	delete_string_slice(policy.strip_prefix_const)
@@ -54,6 +69,35 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 		delete(r.mode)
 	}
 	delete(policy.enum_bit_sets)
+	delete_member_action_map(&policy.struct_fields)
+	delete_int_map(&policy.struct_align)
+	delete_member_action_map(&policy.proc_params)
+	delete_member_action_map(&policy.proc_results)
+}
+
+delete_member_action_map :: proc(m: ^map[string]Member_Action) {
+	if m^ == nil {
+		return
+	}
+	for key, action in m^ {
+		delete(key)
+		delete(action.type)
+		delete(action.tag)
+		delete(action.default)
+	}
+	delete(m^)
+	m^ = nil
+}
+
+delete_int_map :: proc(m: ^map[string]int) {
+	if m^ == nil {
+		return
+	}
+	for key in m^ {
+		delete(key)
+	}
+	delete(m^)
+	m^ = nil
 }
 
 delete_string_slice :: proc(list: []string) {
@@ -104,6 +148,52 @@ test_policy_load_declarative_fields :: proc(t: ^testing.T) {
 	testing.expect(t, len(policy.strip_prefix_type) == 1 && policy.strip_prefix_type[0] == "GL")
 	testing.expect(t, len(policy.strip_prefix_const) == 1 && policy.strip_prefix_const[0] == "GL_")
 	testing.expect_value(t, policy.type_overrides["Vector2"], "[2]f32")
+}
+
+@(test)
+test_policy_load_m10_sections :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"m10-sections",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h", "b.h" }
+config.output_folder = "out"
+config.preprocess.include_paths = { "include" }
+config.preprocess.defines = { FEAT = "1" }
+config.foreign.link_prefix = "lib_"
+config.structs.fields = { ["Bone.name"] = { tag = 'fmt:"s,0"' } }
+config.structs.align = { Mesh = 16 }
+config.procs.params = { ["foo.x"] = { type = "i32", default = "0" } }
+config.procs.results = { foo = { type = "c.int" } }
+config.output.procedures_at_end = false
+config.output.imports_file = "imports.odin"
+config.output.footer_per_header = true
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, ok)
+	testing.expect(t, len(policy.inputs) == 2 && policy.inputs[0] == "a.h")
+	testing.expect_value(t, policy.output_folder, "out")
+	testing.expect(t, len(policy.include_paths) == 1 && policy.include_paths[0] == "include")
+	testing.expect_value(t, policy.defines["FEAT"], "1")
+	testing.expect_value(t, policy.foreign_link_prefix, "lib_")
+	testing.expect_value(t, policy.struct_fields["Bone.name"].tag, `fmt:"s,0"`)
+	testing.expect_value(t, policy.struct_align["Mesh"], 16)
+	testing.expect_value(t, policy.proc_params["foo.x"].type, "i32")
+	testing.expect_value(t, policy.proc_params["foo.x"].default, "0")
+	testing.expect_value(t, policy.proc_results["foo"].type, "c.int")
+	testing.expect(t, !policy.procedures_at_end)
+	testing.expect_value(t, policy.imports_file, "imports.odin")
+	testing.expect(t, policy.footer_per_header)
 }
 
 @(test)

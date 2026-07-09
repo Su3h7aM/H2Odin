@@ -321,3 +321,113 @@ test_parse_error_fails_without_output :: proc(t: ^testing.T) {
 	testing.expect_value(t, len(stdout), 0)
 	expect_contains(t, stderr, "did not parse cleanly")
 }
+
+@(test)
+test_m10_structs_procs_and_link_prefix :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_structs.lua", "tests/fixtures/m10_structs.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, `@(link_prefix = "rl_")`)
+	// structs.fields: tag + type spelling
+	expect_contains(t, stdout, "name: [32]c.char `fmt:\"s,0\"`")
+	expect_contains(t, stdout, "parent: i32")
+	// structs.align
+	expect_contains(t, stdout, "Mesh :: struct #align(16)")
+	// structs.field callback
+	expect_contains(t, stdout, "vertexCount: c.int")
+	// procs.params / results / param callback
+	expect_contains(t, stdout, "SetConfigFlags :: proc(flags: ConfigFlags)")
+	expect_contains(t, stdout, "GetKeyPressed :: proc() -> c.int")
+	expect_contains(t, stdout, "DrawTexturePro :: proc(tint: Color = WHITE)")
+}
+
+@(test)
+test_m10_multi_header_inputs :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_inputs.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "package m10i")
+	expect_contains(t, stdout, "m10_from_a :: proc")
+	expect_contains(t, stdout, "m10_from_b :: proc")
+}
+
+@(test)
+test_m10_preprocess_include_and_define :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_preprocess.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	// -D M10_ENABLE makes this declaration visible; -I finds the include.
+	expect_contains(t, stdout, "m10_enabled :: proc")
+}
+
+@(test)
+test_m10_output_footer_and_interleave :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_output.lua", "tests/fixtures/add.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "package m10o")
+	expect_contains(t, stdout, "add :: proc")
+	// footer_per_header appends configs/add_footer.odin (next to the config).
+	expect_contains(t, stdout, "FOOTER_MARKER")
+}
+
+@(test)
+test_m10_output_folder_writes_file :: proc(t: ^testing.T) {
+	out_dir := "/tmp/h2odin-m10-out"
+	_ = os.remove_all(out_dir)
+
+	cfg_path := "/tmp/h2odin-m10-out-config.lua"
+	cfg := `local h2o = require "h2odin"
+local config = h2o.config()
+config.package = "m10f"
+config.foreign.import_lib = "m10f"
+config.output_folder = "/tmp/h2odin-m10-out"
+config.output.imports_file = "imports.odin"
+return config
+`
+	testing.expect_value(t, os.write_entire_file(cfg_path, cfg), nil)
+
+	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-m10-out-config.lua", "tests/fixtures/add.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	// Main goes to disk; stdout should be empty.
+	testing.expect_value(t, len(stdout), 0)
+
+	main_data, main_err := os.read_entire_file("/tmp/h2odin-m10-out/add.odin", context.allocator)
+	defer delete(main_data)
+	testing.expect(t, main_err == nil)
+	expect_contains(t, main_data, "package m10f")
+	expect_contains(t, main_data, "add :: proc")
+	// imports_file holds the foreign import; main omits it.
+	expect_not_contains(t, main_data, "foreign import")
+
+	imports_data, imports_err := os.read_entire_file("/tmp/h2odin-m10-out/imports.odin", context.allocator)
+	defer delete(imports_data)
+	testing.expect(t, imports_err == nil)
+	expect_contains(t, imports_data, "foreign import lib")
+	expect_contains(t, imports_data, "package m10f")
+}

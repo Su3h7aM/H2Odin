@@ -213,27 +213,37 @@ Param_Facts :: struct {
 }
 
 Param :: struct {
-	name:  string, // "" when the parameter is unnamed in the header
-	type:  Type_Handle,
-	facts: Param_Facts,
+	name:          string, // "" when the parameter is unnamed in the header
+	type:          Type_Handle,
+	// Non-empty: emit this spelling instead of following `type` (procs.param).
+	type_spelling: string,
+	// Non-empty: emit as a default argument expression (procs.param).
+	default:       string,
+	facts:         Param_Facts,
 }
 
 Func_Decl :: struct {
-	name:        string,
+	name:                 string,
 
 	// The C symbol when a rename changed the Odin-visible name; "" means
 	// name still is the symbol and no @(link_name) is needed.
-	link_name:   string,
-	return_type: Type_Handle,
-	params:      []Param,
-	is_variadic: bool,
-	doc:         string,
+	link_name:            string,
+	return_type:          Type_Handle,
+	// Non-empty: emit this spelling for the return type (procs.result).
+	return_type_spelling: string,
+	params:               []Param,
+	is_variadic:          bool,
+	doc:                  string,
 }
 
 Field :: struct {
-	name: string, // "" for C11 anonymous struct/union members
-	type: Type_Handle,
-	doc:  string,
+	name:          string, // "" for C11 anonymous struct/union members
+	type:          Type_Handle,
+	// Non-empty: emit this spelling instead of following `type` (structs.field).
+	type_spelling: string,
+	// Non-empty: field tag text inside backticks, e.g. fmt:"s,0".
+	tag:           string,
+	doc:           string,
 }
 
 // A C struct or union.
@@ -242,6 +252,8 @@ Record_Decl :: struct {
 	fields:                     []Field,
 	is_union:                   bool,
 	is_packed:                  bool,
+	// Positive → emit #align(N). Zero means no alignment attribute.
+	align:                      int,
 	is_complete:                bool, // false → opaque (forward-declared only)
 
 	// The header defines a layout the IR cannot represent yet (bit-fields,

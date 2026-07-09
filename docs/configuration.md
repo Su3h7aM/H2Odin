@@ -43,13 +43,18 @@ return config
 
 The config file must **return** the config table. Prefer building it with `h2o.config()` so every section exists up front.
 
-### Supported surface (through Milestone 9)
+### Supported surface (through Milestone 10)
 
 | Path | Type | Role |
 |------|------|------|
-| `package` | string | Odin package name (default: header stem) |
+| `package` | string | Odin package name (default: first header stem) |
 | `type_mode` | `"abi"` \| `"idiomatic"` | leaf type spelling family |
-| `foreign.import_lib` | string | `foreign import` system library name (default: header stem) |
+| `inputs` | list of strings | multi-header inputs (paths relative to the config dir) |
+| `output_folder` | string | write `.odin` files here instead of stdout |
+| `preprocess.include_paths` | list of strings | `-I` paths (relative to the config dir) |
+| `preprocess.defines` | string → string | `-DNAME=value` (empty value → `-DNAME`) |
+| `foreign.import_lib` | string | `foreign import` system library name (default: first header stem) |
+| `foreign.link_prefix` | string | `@(link_prefix=…)` on the foreign block (C symbol prefix) |
 | `naming.strip_prefixes` | `{ proc?, type?, const?, enum_value? }` | string or list of strings |
 | `naming.strip_suffixes` | same shape | string or list of strings |
 | `naming.known_tokens` | string → string | tokenizer vocabulary (surface → lower form) |
@@ -64,10 +69,20 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `enums.anonymous` | list of `h2o.enum.anonymous{...}` | name anonymous enums by first member |
 | `enums.member` | `function(member) → nil\|{remove=true}` | drop enum members |
 | `enums.bit_sets` | list of `h2o.enum.bit_set{...}` | flag enum → `bit_set` (`mode = "log2"`) |
+| `structs.fields` | `"Struct.field"` → `{ type?, tag? }` | field type spelling and/or tag |
+| `structs.field` | `function(field) → nil\|{type?,tag?}` | same, as a callback |
+| `structs.align` | string → positive int | `#align(N)` on a named struct |
+| `procs.params` | `"Proc.param"` → `{ type?, default? }` | param type spelling and/or default |
+| `procs.param` | `function(param) → nil\|{type?,default?}` | same, as a callback |
+| `procs.results` | `"Proc"` → `{ type? }` | return type spelling |
+| `procs.result` | `function(result) → nil\|{type?}` | same, as a callback |
+| `output.procedures_at_end` | bool | default `true`: types then foreign block; `false`: source order |
+| `output.imports_file` | string | put package / `import` / `foreign import` in this file |
+| `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output |
 
 `h2o.naming.odin { ... }`, `h2o.macro_group.enum { ... }`, `h2o.enum.anonymous { ... }`, and `h2o.enum.bit_set { ... }` are constructor sugar: they type-check the table and return it. Field validation still runs on the Odin side at load.
 
-Empty sections that are not yet wired (`structs`, `procs`, `preprocess`, `output`, `diagnostics`, `inputs`, `output_folder`) may appear; giving them real content fails with "not yet supported."
+Empty sections that are not yet wired (`diagnostics`) may appear; giving them real content fails with "not yet supported."
 
 Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migration message:
 
@@ -75,7 +90,7 @@ Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migratio
 
 Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dirs`, `defines`, `comments`, `wrappers`.
 
-The header path is a CLI argument today; write stdout where you want the file.
+**Inputs.** Pass a header on the CLI, or set `config.inputs` (or both — `inputs` wins when non-empty). Relative `inputs` and `preprocess.include_paths` resolve against the config file's directory. Without `output_folder`, generated code goes to stdout.
 
 ## Naming convention (foreign porting)
 
@@ -107,11 +122,18 @@ Macro `include` callbacks receive a macro view: `m.name`, `m.value` (number or n
 
 Enum `member` callbacks receive: `member.enum_name`, `member.name`, `member.value`.
 
+Struct `field` callbacks receive: `field.struct_name`, `field.name`, `field.type` (best-effort name).
+
+Proc `param` callbacks receive: `param.proc_name`, `param.name`, `param.type`.
+
+Proc `result` callbacks receive: `result.proc_name`, `result.type`.
+
 ### Predicate vs action
 
 - **`symbols.remove.where`** is a *predicate*: `true` acts (drops), `nil`/`false` keep.
 - **`naming.override`** is an *action*: return a string to rename, or `nil` for "use the default."
 - **`enums.member`** is an *action*: return `{ remove = true }` or `nil`.
+- **`structs.field` / `procs.param` / `procs.result`** are *actions*: return `{ type?, tag?, default? }` or `nil`.
 
 ### Removal order
 
@@ -119,7 +141,7 @@ Enum `member` callbacks receive: `member.enum_name`, `member.name`, `member.valu
 
 ### Plural is data; singular is a callback
 
-`naming.overrides` / `types.overrides` are tables; `naming.override` / `types.override` would be functions. Validation rejects a table where a function belongs and vice versa for wired keys.
+`naming.overrides` / `types.overrides` / `structs.fields` / `procs.params` / `procs.results` are tables; the singular forms are functions. Validation rejects a table where a function belongs and vice versa for wired keys.
 
 ## Helpers
 
@@ -171,6 +193,55 @@ config.enums.bit_sets = {
 
 `mode = "log2"` rewrites flag masks to bit positions. Non-power-of-two members emit a `bit_set_non_power_of_two` diagnostic and skip the transform.
 
+## Structs and procedures
+
+```lua
+config.structs.fields = {
+  ["BoneInfo.name"] = { tag = 'fmt:"s,0"' },
+  ["BoneInfo.parent"] = { type = "i32" },
+}
+config.structs.align = { Mesh = 16 }
+config.structs.field = function(field)
+  if field.struct_name == "Mesh" and field.name == "vertexCount" then
+    return { type = "c.int" }
+  end
+  return nil
+end
+
+config.procs.params = {
+  ["SetConfigFlags.flags"] = { type = "ConfigFlags" },
+  ["DrawTexturePro.tint"] = { default = "WHITE" },
+}
+config.procs.results = { GetKeyPressed = { type = "c.int" } }
+```
+
+Keys use C names (`Struct.field`, `Proc.param`) and are applied **before** naming, so strip/rename does not break the maps. These adjust *spellings and defaults only* — no wrappers (see ROADMAP Milestone 6).
+
+## Foreign link prefix
+
+```lua
+config.foreign.link_prefix = "sqlite3_"
+config.naming = h2o.naming.odin {
+  strip_prefixes = { proc = "sqlite3_" },
+}
+```
+
+Emits `@(link_prefix = "sqlite3_")` on the foreign block. When a rename leaves `C name == prefix + Odin name`, per-decl `@(link_name)` is omitted; otherwise the original C symbol is still attached via `link_name`.
+
+## Inputs, preprocess, output
+
+```lua
+config.inputs = { "include/sqlite3.h" }
+config.preprocess.include_paths = { "include" }
+config.preprocess.defines = { SQLITE_ENABLE_FTS5 = "1" }
+config.output_folder = "generated"
+config.output.procedures_at_end = true
+config.output.imports_file = "imports.odin"
+config.output.footer_per_header = true
+```
+
+`footer_per_header` looks for `{stem}_footer.odin` next to the output folder, then next to the config file, then in the process CWD, and appends it unchanged — the sanctioned place for hand-written Odin on top of raw bindings.
+
 ## Sandbox
 
 The Lua state is sandboxed:
@@ -210,4 +281,4 @@ Pass order inside Transformation (config-spec): macro grouping → enum policies
 
 ## What we deliberately keep out for now
 
-Struct field tags and alignment, procedure signature spelling/defaults, multi-header inputs and preprocess knobs (Milestone 10), diagnostics severity (Milestone 11), and generated wrapper procs (Milestone 6). Each can land without disturbing the sectioned shape.
+Diagnostics severity (Milestone 11) and generated wrapper procs (Milestone 6). Each can land without disturbing the sectioned shape.

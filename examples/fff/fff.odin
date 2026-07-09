@@ -412,6 +412,7 @@ FffMixedSearchResult :: struct {
 	location: FffLocation,
 }
 
+@(link_prefix = "fff_")
 foreign lib {
 	/**
 	 * Create a new file finder instance (legacy 8-arg positional signature).
@@ -425,7 +426,6 @@ foreign lib {
 	 * ## Safety
 	 * See `fff_create_instance_with`.
 	 */
-	@(link_name = "fff_create_instance")
 	create_instance :: proc(base_path: cstring, frecency_db_path: cstring, history_db_path: cstring, _use_unsafe_no_lock: bool, enable_mmap_cache: bool, enable_content_indexing: bool, watch: bool, ai_mode: bool) -> ^FffResult ---
 	/**
 	 * Create a new file finder instance (legacy 13-arg positional signature).
@@ -438,7 +438,6 @@ foreign lib {
 	 * ## Safety
 	 * See `fff_create_instance_with`.
 	 */
-	@(link_name = "fff_create_instance2")
 	create_instance2 :: proc(base_path: cstring, frecency_db_path: cstring, history_db_path: cstring, _use_unsafe_no_lock: bool, enable_mmap_cache: bool, enable_content_indexing: bool, watch: bool, ai_mode: bool, log_file_path: cstring, log_level: cstring, cache_budget_max_files: u64, cache_budget_max_bytes: u64, cache_budget_max_file_size: u64) -> ^FffResult ---
 	/**
 	 * Create a new file finder instance from an [`FffCreateOptions`] struct.
@@ -464,7 +463,6 @@ foreign lib {
 	 * * All string pointers inside `opts` must be valid null-terminated UTF-8
 	 *   or NULL.
 	 */
-	@(link_name = "fff_create_instance_with")
 	create_instance_with :: proc(opts: ^FffCreateOptions) -> ^FffResult ---
 	/**
 	 * Calling-convention adapter for [`fff_create_instance_with`].
@@ -482,7 +480,6 @@ foreign lib {
 	 * All `*const c_char` fields inside `opts` must be valid null-terminated
 	 * UTF-8 or NULL. The struct itself is consumed by value.
 	 */
-	@(link_name = "fff_create_instance_with_value")
 	create_instance_with_value :: proc(opts: FffCreateOptions) -> ^FffResult ---
 	/**
 	 * Destroy a file finder instance and free all its resources.
@@ -490,7 +487,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid pointer returned by `fff_create_instance`, or null (no-op).
 	 */
-	@(link_name = "fff_destroy")
 	destroy :: proc(fff_handle: rawptr) ---
 	/**
 	 * Perform fuzzy search on indexed files.
@@ -510,7 +506,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	@(link_name = "fff_search")
 	search :: proc(fff_handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32, combo_boost_multiplier: i32, min_combo_count: u32) -> ^FffResult ---
 	/**
 	 * Glob-only search: filter indexed files by a single glob pattern, rank by
@@ -534,7 +529,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `pattern` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	@(link_name = "fff_glob")
 	glob :: proc(fff_handle: rawptr, pattern: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32) -> ^FffResult ---
 	/**
 	 * Perform fuzzy search on indexed directories.
@@ -552,7 +546,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	@(link_name = "fff_search_directories")
 	search_directories :: proc(fff_handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32) -> ^FffResult ---
 	/**
 	 * Perform a mixed fuzzy search across both files and directories.
@@ -576,7 +569,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	@(link_name = "fff_search_mixed")
 	search_mixed :: proc(fff_handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32, combo_boost_multiplier: i32, min_combo_count: u32) -> ^FffResult ---
 	/**
 	 * Perform content search (grep) across indexed files.
@@ -600,7 +592,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` must be a valid null-terminated UTF-8 string.
 	 */
-	@(link_name = "fff_live_grep")
 	live_grep :: proc(fff_handle: rawptr, query: cstring, mode: u8, max_file_size: u64, max_matches_per_file: u32, smart_case: bool, file_offset: u32, page_limit: u32, time_budget_ms: u64, before_context: u32, after_context: u32, classify_definitions: bool) -> ^FffResult ---
 	/**
 	 * Perform multi-pattern OR search (Aho-Corasick) across indexed files.
@@ -627,7 +618,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `patterns_joined` and `constraints` must be valid null-terminated UTF-8 or NULL.
 	 */
-	@(link_name = "fff_multi_grep")
 	multi_grep :: proc(fff_handle: rawptr, patterns_joined: cstring, constraints: cstring, max_file_size: u64, max_matches_per_file: u32, smart_case: bool, file_offset: u32, page_limit: u32, time_budget_ms: u64, before_context: u32, after_context: u32, classify_definitions: bool) -> ^FffResult ---
 	/**
 	 * Trigger a rescan of the file index.
@@ -635,7 +625,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_scan_files")
 	scan_files :: proc(fff_handle: rawptr) -> ^FffResult ---
 	/**
 	 * Check if a scan is currently in progress.
@@ -643,7 +632,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_is_scanning")
 	is_scanning :: proc(fff_handle: rawptr) -> bool ---
 	/**
 	 * Get the base path of the file picker.
@@ -654,7 +642,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_get_base_path")
 	get_base_path :: proc(fff_handle: rawptr) -> ^FffResult ---
 	/**
 	 * Get scan progress information.
@@ -662,7 +649,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_get_scan_progress")
 	get_scan_progress :: proc(fff_handle: rawptr) -> ^FffResult ---
 	/**
 	 * Wait for initial scan to complete.
@@ -670,7 +656,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_wait_for_scan")
 	wait_for_scan :: proc(fff_handle: rawptr, timeout_ms: u64) -> ^FffResult ---
 	/**
 	 * Wait for the background file watcher to be ready.
@@ -678,7 +663,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_wait_for_watcher")
 	wait_for_watcher :: proc(fff_handle: rawptr, timeout_ms: u64) -> ^FffResult ---
 	/**
 	 * Restart indexing in a new directory.
@@ -687,7 +671,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `new_path` must be a valid null-terminated UTF-8 string.
 	 */
-	@(link_name = "fff_restart_index")
 	restart_index :: proc(fff_handle: rawptr, new_path: cstring) -> ^FffResult ---
 	/**
 	 * Refresh git status cache.
@@ -695,7 +678,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_refresh_git_status")
 	refresh_git_status :: proc(fff_handle: rawptr) -> ^FffResult ---
 	/**
 	 * Track query completion for smart suggestions.
@@ -704,7 +686,6 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `file_path` must be valid null-terminated UTF-8 strings.
 	 */
-	@(link_name = "fff_track_query")
 	track_query :: proc(fff_handle: rawptr, query: cstring, file_path: cstring) -> ^FffResult ---
 	/**
 	 * Get historical query by offset (0 = most recent).
@@ -712,7 +693,6 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	@(link_name = "fff_get_historical_query")
 	get_historical_query :: proc(fff_handle: rawptr, offset: u64) -> ^FffResult ---
 	/**
 	 * Get health check information.
@@ -722,7 +702,6 @@ foreign lib {
 	 *   a limited health check (version + git only).
 	 * * `test_path` can be null or a valid null-terminated UTF-8 string.
 	 */
-	@(link_name = "fff_health_check")
 	health_check :: proc(fff_handle: rawptr, test_path: cstring) -> ^FffResult ---
 	/**
 	 * Free a search result returned by `fff_search`.
@@ -734,7 +713,6 @@ foreign lib {
 	 * `result` must be a valid pointer previously returned via `FffResult.handle`
 	 * from `fff_search`, or null (no-op).
 	 */
-	@(link_name = "fff_free_search_result")
 	free_search_result :: proc(result: ^FffSearchResult) ---
 	/**
 	 * Get a pointer to the `index`-th `FffFileItem` in a search result.
@@ -745,7 +723,6 @@ foreign lib {
 	 * ## Safety
 	 * `result` must be a valid `FffSearchResult` pointer from `fff_search`.
 	 */
-	@(link_name = "fff_search_result_get_item")
 	search_result_get_item :: proc(result: ^FffSearchResult, index: u32) -> ^FffFileItem ---
 	/**
 	 * Get a pointer to the `index`-th `FffScore` in a search result.
@@ -756,7 +733,6 @@ foreign lib {
 	 * ## Safety
 	 * `result` must be a valid `FffSearchResult` pointer from `fff_search`.
 	 */
-	@(link_name = "fff_search_result_get_score")
 	search_result_get_score :: proc(result: ^FffSearchResult, index: u32) -> ^FffScore ---
 	/**
 	 * Free a grep result returned by `fff_live_grep` or `fff_multi_grep`.
@@ -768,7 +744,6 @@ foreign lib {
 	 * `result` must be a valid pointer previously returned via `FffResult.handle`
 	 * from `fff_live_grep` or `fff_multi_grep`, or null (no-op).
 	 */
-	@(link_name = "fff_free_grep_result")
 	free_grep_result :: proc(result: ^FffGrepResult) ---
 	/**
 	 * Get a pointer to the `index`-th `FffGrepMatch` in a grep result.
@@ -779,7 +754,6 @@ foreign lib {
 	 * ## Safety
 	 * `result` must be a valid `FffGrepResult` pointer from `fff_live_grep` or `fff_multi_grep`.
 	 */
-	@(link_name = "fff_grep_result_get_match")
 	grep_result_get_match :: proc(result: ^FffGrepResult, index: u32) -> ^FffGrepMatch ---
 	/**
 	 * Free a scan progress result returned by `fff_get_scan_progress`.
@@ -788,7 +762,6 @@ foreign lib {
 	 * `result` must be a valid pointer previously returned via `FffResult.handle`
 	 * from `fff_get_scan_progress`, or null (no-op).
 	 */
-	@(link_name = "fff_free_scan_progress")
 	free_scan_progress :: proc(result: ^FffScanProgress) ---
 	/**
 	 * Offset a pointer by `byte_offset` bytes.
@@ -799,7 +772,6 @@ foreign lib {
 	 * ## Safety
 	 * The resulting pointer must be within the bounds of the original allocation.
 	 */
-	@(link_name = "fff_ptr_offset")
 	ptr_offset :: proc(base: rawptr, byte_offset: uintptr) -> rawptr ---
 	/**
 	 * Free a result returned by any `fff_*` function.
@@ -813,7 +785,6 @@ foreign lib {
 	 * ## Safety
 	 * `result_ptr` must be a valid pointer returned by a `fff_*` function.
 	 */
-	@(link_name = "fff_free_result")
 	free_result :: proc(result_ptr: ^FffResult) ---
 	/**
 	 * Free a string returned by `fff_*` functions.
@@ -821,7 +792,6 @@ foreign lib {
 	 * ## Safety
 	 * `s` must be a valid C string allocated by this library.
 	 */
-	@(link_name = "fff_free_string")
 	free_string :: proc(s: ^u8) ---
 	/**
 	 * Free a directory search result returned by `fff_search_directories`.
@@ -830,7 +800,6 @@ foreign lib {
 	 * `result` must be a valid pointer previously returned via `FffResult.handle`
 	 * from `fff_search_directories`, or null (no-op).
 	 */
-	@(link_name = "fff_free_dir_search_result")
 	free_dir_search_result :: proc(result: ^FffDirSearchResult) ---
 	/**
 	 * Get a pointer to the `index`-th `FffDirItem` in a directory search result.
@@ -838,7 +807,6 @@ foreign lib {
 	 * ## Safety
 	 * `result` must be a valid `FffDirSearchResult` pointer from `fff_search_directories`.
 	 */
-	@(link_name = "fff_dir_search_result_get_item")
 	dir_search_result_get_item :: proc(result: ^FffDirSearchResult, index: u32) -> ^FffDirItem ---
 	/**
 	 * Get a pointer to the `index`-th `FffScore` in a directory search result.
@@ -846,7 +814,6 @@ foreign lib {
 	 * ## Safety
 	 * `result` must be a valid `FffDirSearchResult` pointer from `fff_search_directories`.
 	 */
-	@(link_name = "fff_dir_search_result_get_score")
 	dir_search_result_get_score :: proc(result: ^FffDirSearchResult, index: u32) -> ^FffScore ---
 	/**
 	 * Free a mixed search result returned by `fff_search_mixed`.
@@ -855,7 +822,6 @@ foreign lib {
 	 * `result` must be a valid pointer previously returned via `FffResult.handle`
 	 * from `fff_search_mixed`, or null (no-op).
 	 */
-	@(link_name = "fff_free_mixed_search_result")
 	free_mixed_search_result :: proc(result: ^FffMixedSearchResult) ---
 	/**
 	 * Get a pointer to the `index`-th `FffMixedItem` in a mixed search result.
@@ -863,7 +829,6 @@ foreign lib {
 	 * ## Safety
 	 * `result` must be a valid `FffMixedSearchResult` pointer from `fff_search_mixed`.
 	 */
-	@(link_name = "fff_mixed_search_result_get_item")
 	mixed_search_result_get_item :: proc(result: ^FffMixedSearchResult, index: u32) -> ^FffMixedItem ---
 	/**
 	 * Get a pointer to the `index`-th `FffScore` in a mixed search result.
@@ -871,7 +836,6 @@ foreign lib {
 	 * ## Safety
 	 * `result` must be a valid `FffMixedSearchResult` pointer from `fff_search_mixed`.
 	 */
-	@(link_name = "fff_mixed_search_result_get_score")
 	mixed_search_result_get_score :: proc(result: ^FffMixedSearchResult, index: u32) -> ^FffScore ---
 	/**
 	 * Returns the relative path of a file item (e.g. `"src/main.rs"`).
@@ -882,7 +846,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_relative_path")
 	file_item_get_relative_path :: proc(item: ^FffFileItem) -> cstring ---
 	/**
 	 * Returns the file-name component of a file item (e.g. `"main.rs"`).
@@ -892,7 +855,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_file_name")
 	file_item_get_file_name :: proc(item: ^FffFileItem) -> cstring ---
 	/**
 	 * Returns the git status string for a file item (e.g. `"M "`, `"??"`)
@@ -903,7 +865,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_git_status")
 	file_item_get_git_status :: proc(item: ^FffFileItem) -> cstring ---
 	/**
 	 * Returns the file size in bytes. Returns `0` if `item` is null.
@@ -911,7 +872,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_size")
 	file_item_get_size :: proc(item: ^FffFileItem) -> u64 ---
 	/**
 	 * Returns the last-modified time as seconds since the UNIX epoch.
@@ -920,7 +880,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_modified")
 	file_item_get_modified :: proc(item: ^FffFileItem) -> u64 ---
 	/**
 	 * Returns the combined frecency score. Returns `0` if `item` is null.
@@ -928,7 +887,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_total_frecency_score")
 	file_item_get_total_frecency_score :: proc(item: ^FffFileItem) -> i64 ---
 	/**
 	 * Returns the access-based frecency score. Returns `0` if `item` is null.
@@ -936,7 +894,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_access_frecency_score")
 	file_item_get_access_frecency_score :: proc(item: ^FffFileItem) -> i64 ---
 	/**
 	 * Returns the modification-based frecency score. Returns `0` if `item` is null.
@@ -944,7 +901,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_modification_frecency_score")
 	file_item_get_modification_frecency_score :: proc(item: ^FffFileItem) -> i64 ---
 	/**
 	 * Returns `true` if the file was detected as binary. Returns `false` if `item` is null.
@@ -952,7 +908,6 @@ foreign lib {
 	 * ## Safety
 	 * `item` must be a valid `FffFileItem` pointer or null.
 	 */
-	@(link_name = "fff_file_item_get_is_binary")
 	file_item_get_is_binary :: proc(item: ^FffFileItem) -> bool ---
 	/**
 	 * Returns the relative path of the file containing this grep match.
@@ -962,7 +917,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_relative_path")
 	grep_match_get_relative_path :: proc(m: ^FffGrepMatch) -> cstring ---
 	/**
 	 * Returns the file-name component of the file containing this grep match.
@@ -972,7 +926,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_file_name")
 	grep_match_get_file_name :: proc(m: ^FffGrepMatch) -> cstring ---
 	/**
 	 * Returns the git status string for the matched file (e.g. `"M "`, `"??"`)
@@ -983,7 +936,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_git_status")
 	grep_match_get_git_status :: proc(m: ^FffGrepMatch) -> cstring ---
 	/**
 	 * Returns the full text content of the matched line.
@@ -993,7 +945,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_line_content")
 	grep_match_get_line_content :: proc(m: ^FffGrepMatch) -> cstring ---
 	/**
 	 * Returns the 1-based line number of the match within its file.
@@ -1002,7 +953,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_line_number")
 	grep_match_get_line_number :: proc(m: ^FffGrepMatch) -> u64 ---
 	/**
 	 * Returns the 0-based column of the match start within its line.
@@ -1011,7 +961,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_col")
 	grep_match_get_col :: proc(m: ^FffGrepMatch) -> u32 ---
 	/**
 	 * Returns the byte offset of the match start from the beginning of the file.
@@ -1020,7 +969,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_byte_offset")
 	grep_match_get_byte_offset :: proc(m: ^FffGrepMatch) -> u64 ---
 	/**
 	 * Returns the file size in bytes for the matched file. Returns `0` if `m` is null.
@@ -1028,7 +976,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_size")
 	grep_match_get_size :: proc(m: ^FffGrepMatch) -> u64 ---
 	/**
 	 * Returns the combined frecency score for the matched file.
@@ -1037,7 +984,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_total_frecency_score")
 	grep_match_get_total_frecency_score :: proc(m: ^FffGrepMatch) -> i64 ---
 	/**
 	 * Returns the access-based frecency score for the matched file.
@@ -1046,7 +992,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_access_frecency_score")
 	grep_match_get_access_frecency_score :: proc(m: ^FffGrepMatch) -> i64 ---
 	/**
 	 * Returns the modification-based frecency score for the matched file.
@@ -1055,7 +1000,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_modification_frecency_score")
 	grep_match_get_modification_frecency_score :: proc(m: ^FffGrepMatch) -> i64 ---
 	/**
 	 * Returns the last-modified time as seconds since the UNIX epoch for the matched file.
@@ -1064,7 +1008,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_modified")
 	grep_match_get_modified :: proc(m: ^FffGrepMatch) -> u64 ---
 	/**
 	 * Returns the number of highlight ranges in this match. Returns `0` if `m` is null.
@@ -1074,7 +1017,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_match_ranges_count")
 	grep_match_get_match_ranges_count :: proc(m: ^FffGrepMatch) -> u32 ---
 	/**
 	 * Returns a pointer to the `index`-th [`FffMatchRange`] highlight span.
@@ -1086,7 +1028,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_match_range")
 	grep_match_get_match_range :: proc(m: ^FffGrepMatch, index: u32) -> ^FffMatchRange ---
 	/**
 	 * Returns the number of context lines captured before the match.
@@ -1097,7 +1038,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_context_before_count")
 	grep_match_get_context_before_count :: proc(m: ^FffGrepMatch) -> u32 ---
 	/**
 	 * Returns the `index`-th context line before the match.
@@ -1108,7 +1048,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_context_before")
 	grep_match_get_context_before :: proc(m: ^FffGrepMatch, index: u32) -> cstring ---
 	/**
 	 * Returns the number of context lines captured after the match.
@@ -1119,7 +1058,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_context_after_count")
 	grep_match_get_context_after_count :: proc(m: ^FffGrepMatch) -> u32 ---
 	/**
 	 * Returns the `index`-th context line after the match.
@@ -1130,7 +1068,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_context_after")
 	grep_match_get_context_after :: proc(m: ^FffGrepMatch, index: u32) -> cstring ---
 	/**
 	 * Returns the fuzzy match score. Returns `0` if `m` is null or no fuzzy
@@ -1142,7 +1079,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_fuzzy_score")
 	grep_match_get_fuzzy_score :: proc(m: ^FffGrepMatch) -> u16 ---
 	/**
 	 * Returns `true` if this match carries a valid fuzzy score.
@@ -1151,7 +1087,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_has_fuzzy_score")
 	grep_match_get_has_fuzzy_score :: proc(m: ^FffGrepMatch) -> bool ---
 	/**
 	 * Returns `true` if the match was identified as a symbol definition.
@@ -1160,7 +1095,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_is_definition")
 	grep_match_get_is_definition :: proc(m: ^FffGrepMatch) -> bool ---
 	/**
 	 * Returns `true` if the matched file was detected as binary.
@@ -1169,7 +1103,6 @@ foreign lib {
 	 * ## Safety
 	 * `m` must be a valid `FffGrepMatch` pointer or null.
 	 */
-	@(link_name = "fff_grep_match_get_is_binary")
 	grep_match_get_is_binary :: proc(m: ^FffGrepMatch) -> bool ---
 	/**
 	 * Returns the number of items in the result. Returns `0` if `r` is null.
@@ -1177,7 +1110,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffSearchResult` pointer or null.
 	 */
-	@(link_name = "fff_search_result_get_count")
 	search_result_get_count :: proc(r: ^FffSearchResult) -> u32 ---
 	/**
 	 * Returns the total number of files that matched before the result was
@@ -1186,7 +1118,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffSearchResult` pointer or null.
 	 */
-	@(link_name = "fff_search_result_get_total_matched")
 	search_result_get_total_matched :: proc(r: ^FffSearchResult) -> u32 ---
 	/**
 	 * Returns the total number of indexed files considered during search.
@@ -1195,7 +1126,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffSearchResult` pointer or null.
 	 */
-	@(link_name = "fff_search_result_get_total_files")
 	search_result_get_total_files :: proc(r: ^FffSearchResult) -> u32 ---
 	/**
 	 * Returns the number of matches in the result. Returns `0` if `r` is null.
@@ -1203,7 +1133,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffGrepResult` pointer or null.
 	 */
-	@(link_name = "fff_grep_result_get_count")
 	grep_result_get_count :: proc(r: ^FffGrepResult) -> u32 ---
 	/**
 	 * Returns the total number of matches found across all pages.
@@ -1212,7 +1141,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffGrepResult` pointer or null.
 	 */
-	@(link_name = "fff_grep_result_get_total_matched")
 	grep_result_get_total_matched :: proc(r: ^FffGrepResult) -> u32 ---
 	/**
 	 * Returns the number of files actually opened and searched in this call.
@@ -1221,7 +1149,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffGrepResult` pointer or null.
 	 */
-	@(link_name = "fff_grep_result_get_total_files_searched")
 	grep_result_get_total_files_searched :: proc(r: ^FffGrepResult) -> u32 ---
 	/**
 	 * Returns the total number of indexed files before any filtering.
@@ -1230,7 +1157,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffGrepResult` pointer or null.
 	 */
-	@(link_name = "fff_grep_result_get_total_files")
 	grep_result_get_total_files :: proc(r: ^FffGrepResult) -> u32 ---
 	/**
 	 * Returns the number of files eligible for search after path/type filtering.
@@ -1239,7 +1165,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffGrepResult` pointer or null.
 	 */
-	@(link_name = "fff_grep_result_get_filtered_file_count")
 	grep_result_get_filtered_file_count :: proc(r: ^FffGrepResult) -> u32 ---
 	/**
 	 * Returns the file offset for the next page, or `0` if all files have been
@@ -1249,7 +1174,6 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffGrepResult` pointer or null.
 	 */
-	@(link_name = "fff_grep_result_get_next_file_offset")
 	grep_result_get_next_file_offset :: proc(r: ^FffGrepResult) -> u32 ---
 	/**
 	 * Returns the regex compilation error string if the engine fell back to
@@ -1260,6 +1184,5 @@ foreign lib {
 	 * ## Safety
 	 * `r` must be a valid `FffGrepResult` pointer or null.
 	 */
-	@(link_name = "fff_grep_result_get_regex_fallback_error")
 	grep_result_get_regex_fallback_error :: proc(r: ^FffGrepResult) -> cstring ---
 }
