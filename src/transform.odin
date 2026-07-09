@@ -362,7 +362,7 @@ substitute_leaf_types :: proc(ir: ^IR) {
 		}
 
 		if spelling == "" {
-			report_unresolved_idiomatic_leaf(info, measured)
+			report_unresolved_idiomatic_leaf(ir, info, measured)
 			continue
 		}
 
@@ -412,8 +412,8 @@ derive_native_spelling :: proc(size: int, unsigned: bool) -> string {
 
 // Rung 3: the type could not be resolved to a native Odin spelling on this
 // target. Idiomatic mode keeps the ABI spelling for it, but this should be
-// rare, so it is surfaced rather than passed over silently.
-report_unresolved_idiomatic_leaf :: proc(info: Type_Info, measured: int) {
+// rare, so it is collected for the end-of-run diagnostics report.
+report_unresolved_idiomatic_leaf :: proc(ir: ^IR, info: Type_Info, measured: int) {
 	name: string
 	#partial switch variant in info.variant {
 	case Type_Builtin:
@@ -421,7 +421,7 @@ report_unresolved_idiomatic_leaf :: proc(info: Type_Info, measured: int) {
 	case Type_Std:
 		name = variant.name
 	}
-	fmt.eprintfln("h2odin: idiomatic mode: %s has no provable native spelling on this target (measured size %d); keeping ABI spelling", name, measured)
+	ir_diag(ir, "idiomatic mode: %s has no provable native spelling on this target (measured size %d); keeping ABI spelling", name, measured)
 }
 
 lower_type :: proc(ir: ^IR, handle: Type_Handle) {
@@ -505,7 +505,7 @@ report_type_guesses :: proc(ir: ^IR, handle: Type_Handle, site: string) {
 	#partial switch variant in ir_type(ir, handle).variant {
 	case Type_Lowered_Pointer:
 		if variant.confidence == .Guessed {
-			fmt.eprintfln("h2odin: guessed pointer lowering in %s: defaulted to ^T", site)
+			ir_diag(ir, "guessed pointer lowering in %s: defaulted to ^T", site)
 		}
 		report_type_guesses(ir, variant.pointee, site)
 	case Type_Array:

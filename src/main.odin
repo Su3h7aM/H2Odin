@@ -77,6 +77,7 @@ main :: proc() {
 	}
 	code := emit(&ir, opts)
 	fmt.print(code)
+	report_diagnostics(&ir)
 }
 
 usage :: proc() -> ! {

@@ -299,17 +299,22 @@ Macro_Decl :: struct {
 }
 
 IR :: struct {
-	types:    [dynamic]Type_Info,
-	funcs:    [dynamic]Func_Decl,
-	records:  [dynamic]Record_Decl,
-	enums:    [dynamic]Enum_Decl,
-	typedefs: [dynamic]Typedef_Decl,
-	vars:     [dynamic]Var_Decl,
-	macros:   [dynamic]Macro_Decl,
-	order:    [dynamic]Decl_Ref,
+	types:       [dynamic]Type_Info,
+	funcs:       [dynamic]Func_Decl,
+	records:     [dynamic]Record_Decl,
+	enums:       [dynamic]Enum_Decl,
+	typedefs:    [dynamic]Typedef_Decl,
+	vars:        [dynamic]Var_Decl,
+	macros:      [dynamic]Macro_Decl,
+	order:       [dynamic]Decl_Ref,
+
+	// Non-certain decisions and honesty notes collected during the run.
+	// Messages are arena-owned; main prints them as a single report after
+	// the pipeline so stdout stays pure generated code.
+	diagnostics: [dynamic]string,
 
 	// Interning table for the pre-seeded, unqualified builtin types.
-	builtins: [Builtin_Kind]Type_Handle,
+	builtins:    [Builtin_Kind]Type_Handle,
 }
 
 // -------------------------------------------------------------- Helpers

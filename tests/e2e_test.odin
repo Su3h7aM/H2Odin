@@ -161,6 +161,44 @@ test_keep_config_filters_top_level_decls :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_diagnostics_report_lists_guessed_pointer_lowerings :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "tests/fixtures/pointers.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	// Generated code stays on stdout; the report is a single stderr block.
+	expect_contains(t, stdout, "fill :: proc")
+	expect_contains(t, stderr, "non-certain")
+	expect_contains(t, stderr, `guessed pointer lowering in function "fill" parameter "out": defaulted to ^T`)
+	expect_contains(t, stderr, `guessed pointer lowering in function "make_row" return type: defaulted to ^T`)
+	// Proven lowerings (void*, const char*, function pointers) must not appear.
+	expect_not_contains(t, stderr, `function "on_event"`)
+	expect_not_contains(t, stderr, `function "log_fmt"`)
+}
+
+@(test)
+test_diagnostics_report_lists_unknown_size_extern_arrays :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "tests/fixtures/extern_arrays.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "version:")
+	expect_contains(t, stderr, "non-certain")
+	expect_contains(t, stderr, `extern array "version" has unknown size; emitted as [0]T`)
+	expect_contains(t, stderr, `extern array "values" has unknown size; emitted as [0]T`)
+	// Known bounds are certain — no note for them.
+	expect_not_contains(t, stderr, "known_values")
+}
+
+@(test)
 test_bad_config_fails_without_output :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/bad_type_map.lua", "tests/fixtures/add.h"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])

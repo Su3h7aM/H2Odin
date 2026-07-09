@@ -197,7 +197,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	// array type, so preserve the array object shape as [0]T: callers can
 	// take its address, but no bound is invented.
 	if array, is_array := ir_type(state.ir, type).variant.(Type_Array); is_array && array.is_incomplete {
-		fmt.eprintfln("h2odin: extern array %q has unknown size; emitted as [0]T", name)
+		ir_diag(state.ir, "extern array %q has unknown size; emitted as [0]T", name)
 	}
 
 	ir_add_var(state.ir, Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
@@ -385,12 +385,13 @@ fill_record :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cu
 	record.fields = fill.fields[:]
 	if fill.has_bitfields {
 		record.has_unrepresentable_fields = true
-		fmt.eprintfln("h2odin: %q uses bit-fields; emitted opaque — by-value use of it would be wrong", record_display_name(record))
+		ir_diag(state.ir, "%q uses bit-fields; emitted opaque — by-value use of it would be wrong", record_display_name(record))
 	}
 	if fill.failed_field != "" {
 		record.has_unrepresentable_fields = true
-		fmt.eprintfln(
-			"h2odin: %q field %q has an unsupported type; emitted opaque — by-value use of it would be wrong",
+		ir_diag(
+			state.ir,
+			"%q field %q has an unsupported type; emitted opaque — by-value use of it would be wrong",
 			record_display_name(record),
 			fill.failed_field,
 		)
