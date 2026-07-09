@@ -32,6 +32,7 @@ local sqlite_non_result_prefixes = {
 local config = h2o.config()
 config.package = "sqlite3"
 config.type_mode = "idiomatic"
+config.comments = false
 
 -- Paths are relative to this config file's directory.
 config.inputs = { "sqlite3.h" }

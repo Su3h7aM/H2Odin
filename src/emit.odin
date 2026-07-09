@@ -13,6 +13,7 @@ Emit_Options :: struct {
 	foreign_lib:       string,
 	link_prefix:       string, // foreign.link_prefix; "" = none
 	procedures_at_end: bool, // true: types then foreign; false: source order
+	emit_comments:     bool, // false: suppress doc-comment passthrough
 	// When non-empty, package/import/foreign-import go into a separate
 	// string (imports_text); the main body still has `package` so it is a
 	// valid file, but omits the foreign import / core:c when split.
@@ -82,19 +83,19 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> Emit_Result {
 			switch ref.kind {
 			case .Invalid:
 			case .Func:
-				emit_func(&foreign_body, ir, ir.funcs[ref.index], &uses_core_c)
+				emit_func(&foreign_body, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
 			case .Record:
-				emit_record(&types_body, ir, ir.records[ref.index], &uses_core_c)
+				emit_record(&types_body, ir, ir.records[ref.index], opts.emit_comments, &uses_core_c)
 			case .Enum:
-				emit_enum(&types_body, ir, ir.enums[ref.index], &uses_core_c)
+				emit_enum(&types_body, ir, ir.enums[ref.index], opts.emit_comments, &uses_core_c)
 			case .Typedef:
-				emit_typedef(&types_body, ir, ir.typedefs[ref.index], &uses_core_c)
+				emit_typedef(&types_body, ir, ir.typedefs[ref.index], opts.emit_comments, &uses_core_c)
 			case .Var:
-				emit_var(&foreign_body, ir, ir.vars[ref.index], &uses_core_c)
+				emit_var(&foreign_body, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
 			case .Macro:
-				emit_macro(&types_body, ir.macros[ref.index])
+				emit_macro(&types_body, ir.macros[ref.index], opts.emit_comments)
 			case .Bit_Set:
-				emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], &uses_core_c)
+				emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], opts.emit_comments, &uses_core_c)
 			}
 		}
 	} else {
@@ -103,25 +104,25 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> Emit_Result {
 			case .Invalid:
 			case .Func:
 				emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
-				emit_func(&interleaved, ir, ir.funcs[ref.index], &uses_core_c)
+				emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
 			case .Var:
 				emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
-				emit_var(&interleaved, ir, ir.vars[ref.index], &uses_core_c)
+				emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
 			case .Record:
 				emit_close_foreign(&interleaved, &in_foreign)
-				emit_record(&interleaved, ir, ir.records[ref.index], &uses_core_c)
+				emit_record(&interleaved, ir, ir.records[ref.index], opts.emit_comments, &uses_core_c)
 			case .Enum:
 				emit_close_foreign(&interleaved, &in_foreign)
-				emit_enum(&interleaved, ir, ir.enums[ref.index], &uses_core_c)
+				emit_enum(&interleaved, ir, ir.enums[ref.index], opts.emit_comments, &uses_core_c)
 			case .Typedef:
 				emit_close_foreign(&interleaved, &in_foreign)
-				emit_typedef(&interleaved, ir, ir.typedefs[ref.index], &uses_core_c)
+				emit_typedef(&interleaved, ir, ir.typedefs[ref.index], opts.emit_comments, &uses_core_c)
 			case .Macro:
 				emit_close_foreign(&interleaved, &in_foreign)
-				emit_macro(&interleaved, ir.macros[ref.index])
+				emit_macro(&interleaved, ir.macros[ref.index], opts.emit_comments)
 			case .Bit_Set:
 				emit_close_foreign(&interleaved, &in_foreign)
-				emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], &uses_core_c)
+				emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], opts.emit_comments, &uses_core_c)
 			}
 		}
 		emit_close_foreign(&interleaved, &in_foreign)
@@ -160,19 +161,19 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> Emit_Result {
 	return result
 }
 
-emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, uses_core_c: ^bool) {
+emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comments: bool, uses_core_c: ^bool) {
 	if record.name == "" {
 		// Anonymous records are spelled inline where they are used (a field,
 		// or the typedef that names them); they have no standalone form.
 		return
 	}
-	write_doc(b, record.doc, 0)
+	write_doc(b, record.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: ", record.name)
-	write_record_body(b, ir, record, 0, uses_core_c)
+	write_record_body(b, ir, record, 0, emit_comments, uses_core_c)
 	strings.write_string(b, "\n\n")
 }
 
-write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, uses_core_c: ^bool) {
+write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, emit_comments: bool, uses_core_c: ^bool) {
 	if !record.is_complete || record.has_unrepresentable_fields {
 		// No layout to preserve (forward-declared), or a layout the IR
 		// cannot represent yet — an opaque body is the honest fallback;
@@ -196,7 +197,7 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 	}
 	strings.write_string(b, " {\n")
 	for field in record.fields {
-		write_doc(b, field.doc, indent + 1)
+		write_doc(b, field.doc, indent + 1, emit_comments)
 		write_indent(b, indent + 1)
 		if field.name == "" {
 			// A C11 anonymous member: its fields read as the parent's.
@@ -207,7 +208,7 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 		if field.type_spelling != "" {
 			strings.write_string(b, field.type_spelling)
 		} else {
-			write_type(b, ir, field.type, indent + 1, uses_core_c)
+			write_type(b, ir, field.type, indent + 1, emit_comments, uses_core_c)
 		}
 		if field.tag != "" {
 			fmt.sbprintf(b, " `%s`", field.tag)
@@ -224,8 +225,8 @@ write_indent :: proc(b: ^strings.Builder, indent: int) {
 	}
 }
 
-write_doc :: proc(b: ^strings.Builder, doc: string, indent: int) {
-	if doc == "" {
+write_doc :: proc(b: ^strings.Builder, doc: string, indent: int, emit_comments: bool) {
+	if !emit_comments || doc == "" {
 		return
 	}
 	line_start := 0
@@ -245,7 +246,7 @@ write_doc :: proc(b: ^strings.Builder, doc: string, indent: int) {
 	}
 }
 
-emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, uses_core_c: ^bool) {
+emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: bool, uses_core_c: ^bool) {
 	if decl.members == nil {
 		// Never defined in this header (or its backing type was
 		// unsupported); nothing faithful to emit.
@@ -266,18 +267,18 @@ emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, uses_core_c: ^b
 		strings.write_string(b, "\n")
 		return
 	}
-	write_doc(b, decl.doc, 0)
+	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: ", decl.name)
-	write_enum_body(b, ir, decl, 0, uses_core_c)
+	write_enum_body(b, ir, decl, 0, emit_comments, uses_core_c)
 	strings.write_string(b, "\n\n")
 }
 
-write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: int, uses_core_c: ^bool) {
+write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: int, emit_comments: bool, uses_core_c: ^bool) {
 	strings.write_string(b, "enum ")
-	write_type(b, ir, decl.backing, indent, uses_core_c)
+	write_type(b, ir, decl.backing, indent, emit_comments, uses_core_c)
 	strings.write_string(b, " {\n")
 	for member in decl.members {
-		write_doc(b, member.doc, indent + 1)
+		write_doc(b, member.doc, indent + 1, emit_comments)
 		write_indent(b, indent + 1)
 		fmt.sbprintf(b, "%s = ", member.name)
 		write_enum_value(b, ir, decl.backing, member.value)
@@ -311,7 +312,7 @@ builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
 	return false
 }
 
-emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, uses_core_c: ^bool) {
+emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comments: bool, uses_core_c: ^bool) {
 	if decl.is_unresolvable {
 		// Reported during extraction; nothing faithful to emit.
 		return
@@ -329,23 +330,23 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, uses_core
 			return
 		}
 	}
-	write_doc(b, decl.doc, 0)
+	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: ", decl.name)
-	write_type(b, ir, decl.aliased, 0, uses_core_c)
+	write_type(b, ir, decl.aliased, 0, emit_comments, uses_core_c)
 	strings.write_string(b, "\n\n")
 }
 
-emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, uses_core_c: ^bool) {
-	write_doc(b, decl.doc, 1)
+emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, emit_comments: bool, uses_core_c: ^bool) {
+	write_doc(b, decl.doc, 1, emit_comments)
 	if decl.link_name != "" {
 		fmt.sbprintfln(b, "\t@(link_name = %q)", decl.link_name)
 	}
 	fmt.sbprintf(b, "\t%s: ", decl.name)
-	write_type(b, ir, decl.type, 1, uses_core_c)
+	write_type(b, ir, decl.type, 1, emit_comments, uses_core_c)
 	strings.write_string(b, "\n")
 }
 
-emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl) {
+emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl, emit_comments: bool) {
 	if decl.is_function_like || len(decl.tokens) != 1 {
 		return
 	}
@@ -355,14 +356,14 @@ emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl) {
 		return
 	}
 
-	write_doc(b, decl.doc, 0)
+	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
 }
 
-emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, uses_core_c: ^bool) {
-	write_doc(b, decl.doc, 0)
+emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, emit_comments: bool, uses_core_c: ^bool) {
+	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: bit_set[", decl.name)
-	write_type(b, ir, decl.elem, 0, uses_core_c)
+	write_type(b, ir, decl.elem, 0, emit_comments, uses_core_c)
 	strings.write_string(b, "]\n\n")
 }
 
@@ -383,25 +384,25 @@ macro_literal_can_emit :: proc(s: string) -> bool {
 	return true
 }
 
-emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, uses_core_c: ^bool) {
-	write_doc(b, func.doc, 1)
+emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: bool, uses_core_c: ^bool) {
+	write_doc(b, func.doc, 1, emit_comments)
 	if func.link_name != "" {
 		fmt.sbprintfln(b, "\t@(link_name = %q)", func.link_name)
 	}
 	fmt.sbprintf(b, "\t%s :: proc(", func.name)
-	write_params(b, ir, func.params, func.is_variadic, uses_core_c)
+	write_params(b, ir, func.params, func.is_variadic, emit_comments, uses_core_c)
 	strings.write_string(b, ")")
 	if func.return_type_spelling != "" {
 		strings.write_string(b, " -> ")
 		strings.write_string(b, func.return_type_spelling)
 	} else if !type_is_void(ir, func.return_type) {
 		strings.write_string(b, " -> ")
-		write_type(b, ir, func.return_type, 1, uses_core_c)
+		write_type(b, ir, func.return_type, 1, emit_comments, uses_core_c)
 	}
 	strings.write_string(b, " ---\n")
 }
 
-write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic: bool, uses_core_c: ^bool) {
+write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic: bool, emit_comments: bool, uses_core_c: ^bool) {
 	for param, i in params {
 		if i > 0 {
 			strings.write_string(b, ", ")
@@ -414,7 +415,7 @@ write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic:
 		if param.type_spelling != "" {
 			strings.write_string(b, param.type_spelling)
 		} else {
-			write_type(b, ir, param.type, 1, uses_core_c)
+			write_type(b, ir, param.type, 1, emit_comments, uses_core_c)
 		}
 		if param.default != "" {
 			fmt.sbprintf(b, " = %s", param.default)
@@ -435,7 +436,7 @@ type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 
 // Write the type spelling decided by Transformation. indent is where this type
 // sits, for the rare spellings that span lines (inline anonymous record bodies).
-write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: int, uses_core_c: ^bool) {
+write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: int, emit_comments: bool, uses_core_c: ^bool) {
 	info := ir_type(ir, handle)
 	if info.variant == nil {
 		// Extraction rejects types the IR cannot represent, so an invalid
@@ -480,12 +481,12 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 			strings.write_string(b, SPELLING_CSTRING)
 			return
 		case .Proc:
-			write_type(b, ir, variant.pointee, indent, uses_core_c)
+			write_type(b, ir, variant.pointee, indent, emit_comments, uses_core_c)
 			return
 		case .Single:
 		}
 		strings.write_string(b, "^")
-		write_type(b, ir, variant.pointee, indent, uses_core_c)
+		write_type(b, ir, variant.pointee, indent, emit_comments, uses_core_c)
 
 	case Type_Array:
 		if variant.is_incomplete {
@@ -495,15 +496,15 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		} else {
 			fmt.sbprintf(b, "[%d]", variant.count)
 		}
-		write_type(b, ir, variant.element, indent, uses_core_c)
+		write_type(b, ir, variant.element, indent, emit_comments, uses_core_c)
 
 	case Type_Proc:
 		strings.write_string(b, "proc \"c\" (")
-		write_params(b, ir, variant.params, variant.is_variadic, uses_core_c)
+		write_params(b, ir, variant.params, variant.is_variadic, emit_comments, uses_core_c)
 		strings.write_string(b, ")")
 		if !type_is_void(ir, variant.return_type) {
 			strings.write_string(b, " -> ")
-			write_type(b, ir, variant.return_type, indent, uses_core_c)
+			write_type(b, ir, variant.return_type, indent, emit_comments, uses_core_c)
 		}
 
 	case Type_Record_Ref:
@@ -512,7 +513,7 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 			strings.write_string(b, record.name)
 		} else {
 			// Anonymous record: its body is its only spelling.
-			write_record_body(b, ir, record, indent, uses_core_c)
+			write_record_body(b, ir, record, indent, emit_comments, uses_core_c)
 		}
 
 	case Type_Enum_Ref:
@@ -521,11 +522,11 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 			strings.write_string(b, decl.name)
 		} else if decl.members != nil {
 			// Anonymous enum: its body is its only spelling.
-			write_enum_body(b, ir, decl, indent, uses_core_c)
+			write_enum_body(b, ir, decl, indent, emit_comments, uses_core_c)
 		} else {
 			// Referenced but never defined — only its backing integer is
 			// known, and that is all C guarantees about it anyway.
-			write_type(b, ir, decl.backing, indent, uses_core_c)
+			write_type(b, ir, decl.backing, indent, emit_comments, uses_core_c)
 		}
 
 	case Type_Typedef_Ref:
@@ -535,7 +536,7 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 
 	case Type_Bit_Set:
 		strings.write_string(b, "bit_set[")
-		write_type(b, ir, variant.elem, indent, uses_core_c)
+		write_type(b, ir, variant.elem, indent, emit_comments, uses_core_c)
 		strings.write_string(b, "]")
 	}
 }

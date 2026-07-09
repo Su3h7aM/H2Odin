@@ -79,6 +79,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `output.procedures_at_end` | bool | default `true`: types then foreign block; `false`: source order |
 | `output.imports_file` | string | put package / `import` / `foreign import` in this file |
 | `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output |
+| `comments` | bool | default `true`: emit C doc comments; `false` suppresses them |
 
 `h2o.naming.odin { ... }`, `h2o.macro_group.enum { ... }`, `h2o.enum.anonymous { ... }`, and `h2o.enum.bit_set { ... }` are constructor sugar: they type-check the table and return it. Field validation still runs on the Odin side at load.
 
@@ -88,7 +89,7 @@ Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migratio
 
 `foreign_lib`, `strip_prefixes`, `type_map`, `rename`, `keep`
 
-Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dirs`, `defines`, `comments`, `wrappers`.
+Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dirs`, `defines`, `wrappers`.
 
 **Inputs.** Pass a header on the CLI, or set `config.inputs` (or both — `inputs` wins when non-empty). Relative `inputs` and `preprocess.include_paths` resolve against the config file's directory. Without `output_folder`, generated code goes to stdout.
 
@@ -238,9 +239,12 @@ config.output_folder = "generated"
 config.output.procedures_at_end = true
 config.output.imports_file = "imports.odin"
 config.output.footer_per_header = true
+config.comments = false
 ```
 
 `footer_per_header` looks for `{stem}_footer.odin` next to the output folder, then next to the config file, then in the process CWD, and appends it unchanged — the sanctioned place for hand-written Odin on top of raw bindings.
+
+`comments` (default `true`) controls doc-comment passthrough. Extraction still captures comments when they are present; `false` only skips writing them at emission.
 
 ## Sandbox
 

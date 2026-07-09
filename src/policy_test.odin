@@ -169,6 +169,7 @@ config.procs.results = { foo = { type = "c.int" } }
 config.output.procedures_at_end = false
 config.output.imports_file = "imports.odin"
 config.output.footer_per_header = true
+config.comments = false
 return config
 `,
 	)
@@ -194,6 +195,42 @@ return config
 	testing.expect(t, !policy.procedures_at_end)
 	testing.expect_value(t, policy.imports_file, "imports.odin")
 	testing.expect(t, policy.footer_per_header)
+	testing.expect(t, !policy.emit_comments)
+}
+
+@(test)
+test_policy_load_comments_default_true :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(t, "comments-default", `local h2o = require "h2odin"
+local config = h2o.config()
+return config
+`)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, ok)
+	testing.expect(t, policy.emit_comments)
+}
+
+@(test)
+test_policy_load_rejects_non_bool_comments :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(t, "comments-bad", `local h2o = require "h2odin"
+local config = h2o.config()
+config.comments = "no"
+return config
+`)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
 }
 
 @(test)

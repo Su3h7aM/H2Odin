@@ -82,6 +82,7 @@ main :: proc() {
 		foreign_lib       = policy.foreign_lib if policy.foreign_lib != "" else stem,
 		link_prefix       = policy.foreign_link_prefix,
 		procedures_at_end = policy.procedures_at_end,
+		emit_comments     = policy.emit_comments,
 		imports_file      = policy.imports_file,
 	}
 	result := emit(&ir, opts)

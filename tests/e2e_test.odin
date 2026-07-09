@@ -392,6 +392,40 @@ test_m10_output_footer_and_interleave :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_comments_default_emits_docs :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "tests/fixtures/docs.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "A documented record")
+	expect_contains(t, stdout, "Does documented work")
+	expect_contains(t, stdout, "Documented :: struct")
+	expect_contains(t, stdout, "documented :: proc")
+}
+
+@(test)
+test_comments_false_suppresses_docs :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/no_comments.lua", "tests/fixtures/docs.h"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_not_contains(t, stdout, "A documented record")
+	expect_not_contains(t, stdout, "Does documented work")
+	expect_not_contains(t, stdout, "Current API version")
+	expect_contains(t, stdout, "Documented :: struct")
+	expect_contains(t, stdout, "documented :: proc")
+	expect_contains(t, stdout, "API_VERSION :: 1")
+}
+
+@(test)
 test_m10_output_folder_writes_file :: proc(t: ^testing.T) {
 	out_dir := "/tmp/h2odin-m10-out"
 	_ = os.remove_all(out_dir)

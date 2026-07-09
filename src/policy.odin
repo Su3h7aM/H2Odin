@@ -46,6 +46,7 @@ CONFIG_KNOWN_KEYS := [?]cstring {
 	"procs",
 	"foreign",
 	"output",
+	"comments",
 	"diagnostics",
 }
 
@@ -54,7 +55,7 @@ CONFIG_KNOWN_KEYS := [?]cstring {
 CONFIG_LEGACY_KEYS := [?]cstring{"foreign_lib", "strip_prefixes", "type_map", "rename", "keep"}
 
 @(rodata)
-CONFIG_UNSUPPORTED_KEYS := [?]cstring{"headers", "include_dirs", "defines", "comments", "wrappers"}
+CONFIG_UNSUPPORTED_KEYS := [?]cstring{"headers", "include_dirs", "defines", "wrappers"}
 
 @(rodata)
 STRIP_KIND_KEYS := [?]cstring{"proc", "type", "const", "enum_value"}
@@ -79,6 +80,7 @@ function h2o.config()
 		type_mode = nil,
 		inputs = nil,
 		output_folder = nil,
+		comments = nil, -- nil → true (emit doc comments)
 		preprocess = section(),
 		naming = section(),
 		types = section(),
@@ -180,6 +182,7 @@ Policy :: struct {
 	procedures_at_end:   bool, // default true when output section absent
 	imports_file:        string,
 	footer_per_header:   bool,
+	emit_comments:       bool, // config.comments; default true
 
 	// naming.strip_prefixes / strip_suffixes — first match wins per kind.
 	// Backing memory lives in the generation arena (or the test allocator).
@@ -261,7 +264,8 @@ Symbol_Context :: struct {
 // callback queries. Failure leaves no live Lua state for the caller.
 policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	if path == "" {
-		return {}, true
+		// Same emission defaults as a config with empty sections.
+		return Policy{procedures_at_end = true, emit_comments = true}, true
 	}
 
 	L := lua.L_newstate()
@@ -650,6 +654,8 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 
 	// Default: procedures after types (current emit layout).
 	policy.procedures_at_end = true
+	// Default: pass through C doc comments into the generated Odin.
+	policy.emit_comments = true
 
 	package_name, package_ok := policy_optional_string_top(policy, "package")
 	if !package_ok {
@@ -677,6 +683,7 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 	return(
 		policy_read_inputs(policy) &&
 		policy_read_output_folder(policy) &&
+		policy_read_comments(policy) &&
 		policy_read_preprocess(policy) &&
 		policy_read_foreign(policy) &&
 		policy_read_naming(policy) &&
@@ -688,6 +695,29 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 		policy_read_procs(policy) &&
 		policy_read_output(policy) \
 	)
+}
+
+// config.comments: boolean. Absent/nil → true (emit docs). false suppresses
+// doc-comment passthrough at emission time; extraction still captures them.
+policy_read_comments :: proc(policy: ^Policy) -> bool {
+	L := policy.state
+	lua.getfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
+	defer lua.pop(L, 1)
+
+	field_type := lua.getfield(L, -1, "comments")
+	#partial switch lua.Type(field_type) {
+	case .NIL:
+		lua.pop(L, 1)
+		return true
+	case .BOOLEAN:
+		policy.emit_comments = bool(lua.toboolean(L, -1))
+		lua.pop(L, 1)
+		return true
+	case:
+		fmt.eprintln("h2odin: config: comments must be a boolean")
+		lua.pop(L, 1)
+		return false
+	}
 }
 
 // inputs / output_folder may be nil; a non-nil value means the user set
