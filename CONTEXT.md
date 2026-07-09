@@ -77,10 +77,12 @@ these, not by convenience.
    right answer, H2Odin picks a conservative default, makes the guess *visible*
    (a diagnostic), and lets config override it — it never silently guesses wrong.
 
-5. **Determinism.** Same headers + same config → byte-identical output. The Lua
-   config is sandboxed (no `io`/`os`/`package`, loaders withheld), so host side
+5. **Determinism.** Same headers + same config tree → byte-identical output. The Lua
+   config is sandboxed (no `io`/`os`/`debug`, raw loaders withheld), so host side
    effects are blocked structurally; pure non-determinism inside allowed libs is
-   still a config convention. Analysis, which consults no policy, is deterministic
+   still a config convention. Once `require` lands (see `docs/config-spec.md`) a
+   config may read Lua beneath its own directory and nothing beyond it — hence
+   "config *tree*". Analysis, which consults no policy, is deterministic
    unconditionally.
 
 ---
@@ -160,6 +162,18 @@ rather than bend it silently.
   like an Odin keyword (`matrix`, `map`, `proc`) gets a deterministic rename plus
   `@(link_name)` so the C symbol is preserved; config can override.
 
+- **Config selects; it never authors Odin.** This is about *who writes the source*,
+  and it is permanent. It is not the same claim as "the generator emits no wrapper
+  procedures," which is merely today's state (Milestone 6, deferred). If wrappers
+  ever land, the generator authors them from a closed conversion set and config
+  only names the conversion. Conflating the two claims is a recurring confusion.
+
+- **The config surface is growing toward a fixed target.** Today's flat table of
+  keys is a subset of the sectioned, `h2o`-namespaced model in
+  [`docs/config-spec.md`](docs/config-spec.md). New config work should land as a
+  step toward that model, not orthogonal to it; `docs/configuration.md` carries the
+  migration table, including the `keep` → `symbols.remove.where` polarity flip.
+
 ---
 
 ## How to work in this repo
@@ -191,6 +205,7 @@ rather than bend it silently.
 - [`docs/overview.md`](docs/overview.md) — the spirit of the project.
 - [`docs/architecture.md`](docs/architecture.md) — the stages and their boundaries.
 - [`docs/type-modes.md`](docs/type-modes.md) — ABI vs idiomatic in depth.
-- [`docs/configuration.md`](docs/configuration.md) — the Lua policy surface.
+- [`docs/configuration.md`](docs/configuration.md) — the Lua policy surface today.
+- [`docs/config-spec.md`](docs/config-spec.md) — the config model we are building toward.
 - [`ROADMAP.md`](ROADMAP.md) — milestone-by-milestone status and what's next.
 - [`AGENTS.md`](AGENTS.md) — how to act when changing the code.

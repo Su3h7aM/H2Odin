@@ -60,13 +60,16 @@ Reaching this means the architecture works. Everything after is widening a prove
 ## Milestone 6 — Conversions (idiomatic wrappers)
 
 > **Deferred.** Wrapper/conversion work has not started — the four boxes that were marked done described code that never existed. Slices (`pointer+length → []T`) and `cstring → string` both change arity or layout, so neither is a pure type swap: each needs a generated wrapper proc sitting in front of a faithful `foreign` decl, which is the bulk of this milestone. The plumbing is forward-looking: Analysis already records length-like-neighbour facts (`analyze.odin`) that a future pointer+length→slice decision will consume.
+>
+> The generator authors any wrapper it emits, from the closed conversion set below. Config *names* a conversion; it never supplies its text. That boundary is permanent and does not depend on this milestone landing.
 
 - [ ] Closed conversion set as a union carrying its own data; `nil` = no conversion.
 - [ ] Two-layer emission: faithful ABI foreign decl + generated wrapper.
 - [ ] `cstring` parameter→`string` wrapper parameter; return `cstring` stays ABI-shaped until ownership/lifetime policy exists.
 - [ ] pointer+length→slice (config-driven).
-- [ ] flag enum→`bit_set` (heuristic + config confirm).
 - [ ] `wrappers = false` falls back to ABI form per declaration.
+
+Flag enum→`bit_set` was once listed here. It needs no wrapper — it rewrites a declaration and its members' values (`value → log2(value)`), which is Transformation's ordinary work. It moves to Milestone 9.
 
 ## Milestone 7 — Robustness & polish
 
@@ -74,19 +77,70 @@ Reaching this means the architecture works. Everything after is widening a prove
 - [x] Check libclang parse diagnostics; fail loudly on bad `-I`/`-D` rather than emitting partial output. _(pulled forward)_
 - [x] Config validation with clear error messages.
 - [x] Real build/usage instructions in the README; fill the verification commands in `AGENTS.md`.
-- [x] Sandbox the Lua config (withhold `io`/`os`/`package`/loaders) to make determinism structural.
+- [x] Sandbox the Lua config (withhold `io`/`os`/`package`/loaders) to make determinism structural. _(Milestone 8 reopens `package` narrowly, for `require` — see below.)_
+
+---
+
+The milestones below build the configuration model specified in
+[`docs/config-spec.md`](docs/config-spec.md). Read that first: it fixes the shape
+each of these grows toward, and each milestone should land as a step into it
+rather than a parallel surface. `docs/configuration.md` holds the migration table
+from today's flat keys.
+
+## Milestone 8 — The `h2o` API and the sectioned config
+
+The shape change everything else depends on. Do this before adding any new option
+to the flat table, or the flat table grows a surface that must later be removed.
+
+- [ ] `require "h2odin"` resolves a preloaded prelude; searchers restricted to the prelude and `.lua` beneath the config's directory. `io`/`os`/`debug`/raw loaders stay withheld.
+- [ ] `h2o.config()` returns the config object; sections (`naming`, `types`, `symbols`, `macros`, `enums`, `structs`, `procs`, `foreign`, `output`, `diagnostics`).
+- [ ] Odin-registered helpers exposed to Lua: `h2o.str.has_prefix` / `strip_prefix` / `has_suffix`.
+- [ ] Validation rejects a table where a callback belongs (and vice versa), naming the key — plural is data, singular is a callback.
+- [ ] Migrate `foreign_lib`→`foreign.import_lib`, `strip_prefixes`→`naming.strip_prefixes`, `type_map`→`types.map`, `rename`→`naming.override`.
+- [ ] `keep` → `symbols.remove.where`. **Polarity inverts**; reject `keep` by name rather than accepting both.
+- [ ] Respell symbol kinds: `function`→`proc`, `variable`→`var`, `constant`→`const`, `enum_member`→`enum_value`.
+
+## Milestone 9 — Naming, macros, enums
+
+The three sections that carry real algorithms. Each needs a pure Odin module that
+`policy.odin` merely registers into the VM — never logic living behind the Lua
+boundary.
+
+- [ ] Identifier tokenizer + case conversion in a pure module; exposed as `h2o.naming.snake_case` / `ada_case` and reused by the generator's automatic naming.
+- [ ] `known_tokens` dictionary; ambiguous splits emit `naming_ambiguity` and are resolved per-symbol via `override`.
+- [ ] `naming.strip_suffixes`, `naming.overrides`.
+- [ ] `symbols.remove.names` / `.patterns` (declarative tiers gate before `where` runs).
+- [ ] `macros.groups` via `h2o.macro_group.enum{...}`: `prefix` → `exclude_prefixes` → value-kind → `include`, in that order. Synthesizes an ordinary explicit-valued IR enum.
+- [ ] Macro view with `m.name`, `m.value`, `m:is_integer()`. `m.expr` is deliberately not exposed.
+- [ ] `enums.member` callback; `enums.anonymous`; `enums.bit_sets` with explicit `mode = "log2"` and a `bit_set_non_power_of_two` diagnostic.
+
+## Milestone 10 — Structs, procs, inputs, output
+
+- [ ] `types.overrides` (replace a declaration) as distinct from `types.map` (rewrite references).
+- [ ] `structs.fields` / `structs.field` (`type`, `tag`), `structs.align`.
+- [ ] `procs.params` / `procs.param`, `procs.results` / `procs.result` — signature spellings and defaults only, no wrappers.
+- [ ] `config.inputs` (multi-header) and `preprocess.include_paths` / `.defines`.
+- [ ] `output_folder`, `output.procedures_at_end`, `output.imports_file`, `output.footer_per_header`.
+- [ ] `foreign.link_prefix` — the external C symbol, not the Odin name.
+
+## Milestone 11 — Diagnostics as a system
+
+- [ ] Every heuristic registers a named category rather than printing ad-hoc.
+- [ ] `config.diagnostics` sets per-category severity (`warn` | `error`); default posture is `warn`.
+- [ ] Local overrides on a feature constructor beat the global block.
+- [ ] Name the categories that already exist: `pointer_lowering_guess`, `unresolved_idiomatic_leaf`, `opaque_layout_fallback`.
 
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
 - [ ] Self-hosted libclang bindings — H2Odin generates the bindings it uses.
 - [ ] Multi-target runs (generate per target, merge).
-- [ ] Config-driven inputs (`headers`, `include_dirs`, `defines`) and `output` path.
 - [ ] A license.
 
 ---
 
 ### Start here
 
-Milestones 0–5 and 7 are complete. Next large feature when wanted: **Milestone 6
-(wrappers)**. Smaller follow-ups live under **Later**.
+Milestones 0–5 and 7 are complete. The next work is **Milestone 8** — the config
+reshape, which every later config feature depends on. **Milestone 6 (wrappers)**
+remains deferred and is independent of 8–11.

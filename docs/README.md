@@ -7,5 +7,6 @@ Start here:
 - [Overview](overview.md) — what H2Odin is and the principles behind it.
 - [Architecture](architecture.md) — the pipeline, the stages, and how foreign systems are kept at the edges.
 - [Type Modes](type-modes.md) — ABI vs Idiomatic, and how the two relate.
-- [Configuration](configuration.md) — the Lua policy layer and how it steers the generator.
+- [Configuration](configuration.md) — the Lua policy layer as it exists today, and how it steers the generator.
+- [Config Spec](config-spec.md) — the north-star configuration model everything grows toward.
 - [Memory](memory.md) — how the generator owns its memory.

@@ -7,11 +7,12 @@ The pipeline has four stages: **Extraction → Analysis → Transformation → E
 ## Invariants — do not break these
 
 - **libclang stays in Extraction.** No later stage holds a libclang handle; copy what you need into the IR.
-- **Lua stays behind the policy layer.** Only Transformation consults policy. Other stages must not know Lua exists.
+- **Lua stays behind the policy layer.** Only Transformation consults policy. Other stages must not know Lua exists. Algorithms exposed to Lua (case conversion, identifier tokenizing, prefix handling) live in pure Odin modules that `policy.odin` merely *registers* — never inside the policy layer itself.
+- **Lua sees views, never the IR.** Callbacks receive small, stable, read-only tables and return decisions. Handing Lua an IR handle or pointer would weld every user config to the current internals.
 - **Copy foreign strings (libclang/Lua) into the generation arena at the boundary.** Never store foreign-owned strings in the IR.
 - **IR references are handles, not pointers.** Pool growth invalidates pointers.
 - **The generation arena owns long-lived memory.** `context.allocator` is a convenience, not the owner. Scratch uses `context.temp_allocator` and never enters the IR.
-- **Configuration selects behavior; it never authors output.** The generator owns every byte of Odin emitted.
+- **Configuration selects behavior; it never authors output.** The generator owns every byte of Odin emitted. This constrains *who writes the Odin*; it is not the separate question of whether the generator may emit wrapper procedures (Milestone 6, deferred).
 - **Correctness over convenience.** Never swap in a type that could change behavior or break the ABI. When ambiguous, pick a conservative default, flag it, and let config override — never silently guess.
 
 If a task seems to require breaking one of these, stop and surface the conflict.

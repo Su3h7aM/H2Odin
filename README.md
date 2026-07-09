@@ -12,7 +12,7 @@ H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings
 
 - **Two type modes.** *ABI mode* preserves the C API faithfully using Odin's C-compatible types (`c.int`, `c.size_t`, …). *Idiomatic mode* generates native Odin types (`i32`, `f64`, …) where the substitution is proven ABI-safe on the target. Generated wrapper procedures (e.g. `cstring → string` params, `pointer+length → []T` slices) are planned, not yet implemented.
 - **Correctness first.** A type is never swapped for a nicer-looking one if it would break behavior or the ABI. When the header is ambiguous, H2Odin picks a safe default, flags it, and lets you override it — it never silently guesses wrong.
-- **Deterministic.** Same headers plus same configuration always produce identical output. The Lua config is sandboxed (no `io`/`os`/`package`) so side effects cannot sneak in by accident.
+- **Deterministic.** Same headers plus same configuration always produce identical output. The Lua config is sandboxed (no `io`/`os`/`debug`, no raw loaders) so side effects cannot sneak in by accident.
 - **Configurable in Lua.** Simple libraries need a few lines of data; tricky ones drop into Lua functions for the hard cases — same small API either way.
 - **Diagnostics report.** Every non-certain decision in a run (guessed pointer lowerings, unresolved idiomatic leaves, opaque layout fallbacks, …) is listed on stderr after generation.
 
@@ -80,7 +80,7 @@ Supported keys today:
 | `rename` | function(sym) → string\|nil | rename a symbol |
 | `keep` | function(sym) → bool\|nil | drop top-level declarations |
 
-Unknown keys and not-yet-supported keys (`headers`, `include_dirs`, `defines`, `output`, `comments`, `wrappers`) fail the run with a clear error.
+Unknown keys and not-yet-supported keys (`headers`, `include_dirs`, `defines`, `output`, `comments`, `wrappers`) fail the run with a clear error, rather than silently doing nothing.
 
 ```lua
 return {
@@ -102,7 +102,7 @@ return {
 }
 ```
 
-More detail: [`docs/configuration.md`](docs/configuration.md).
+More detail: [`docs/configuration.md`](docs/configuration.md). The config model this surface is growing toward — a namespaced `h2o` API with sections for naming, macros, enums, and diagnostics — is specified in [`docs/config-spec.md`](docs/config-spec.md).
 
 ---
 
