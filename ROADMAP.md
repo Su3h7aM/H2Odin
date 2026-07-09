@@ -92,13 +92,13 @@ from today's flat keys.
 The shape change everything else depends on. Do this before adding any new option
 to the flat table, or the flat table grows a surface that must later be removed.
 
-- [ ] `require "h2odin"` resolves a preloaded prelude; searchers restricted to the prelude and `.lua` beneath the config's directory. `io`/`os`/`debug`/raw loaders stay withheld.
-- [ ] `h2o.config()` returns the config object; sections (`naming`, `types`, `symbols`, `macros`, `enums`, `structs`, `procs`, `foreign`, `output`, `diagnostics`).
-- [ ] Odin-registered helpers exposed to Lua: `h2o.str.has_prefix` / `strip_prefix` / `has_suffix`.
-- [ ] Validation rejects a table where a callback belongs (and vice versa), naming the key — plural is data, singular is a callback.
-- [ ] Migrate `foreign_lib`→`foreign.import_lib`, `strip_prefixes`→`naming.strip_prefixes`, `type_map`→`types.map`, `rename`→`naming.override`.
-- [ ] `keep` → `symbols.remove.where`. **Polarity inverts**; reject `keep` by name rather than accepting both.
-- [ ] Respell symbol kinds: `function`→`proc`, `variable`→`var`, `constant`→`const`, `enum_member`→`enum_value`.
+- [x] `require "h2odin"` resolves a preloaded prelude; searchers restricted to the prelude and `.lua` beneath the config's directory. `io`/`os`/`debug`/raw loaders stay withheld.
+- [x] `h2o.config()` returns the config object; sections (`naming`, `types`, `symbols`, `macros`, `enums`, `structs`, `procs`, `foreign`, `output`, `diagnostics`).
+- [x] Odin-registered helpers exposed to Lua: `h2o.str.has_prefix` / `strip_prefix` / `has_suffix`.
+- [x] Validation rejects a table where a callback belongs (and vice versa), naming the key — plural is data, singular is a callback.
+- [x] Migrate `foreign_lib`→`foreign.import_lib`, `strip_prefixes`→`naming.strip_prefixes`, `type_map`→`types.map` / `types.overrides`, `rename`→`naming.override`.
+- [x] `keep` → `symbols.remove.where`. **Polarity inverts**; reject `keep` by name rather than accepting both.
+- [x] Respell symbol kinds: `function`→`proc`, `variable`→`var`, `constant`→`const`, `enum_member`→`enum_value`.
 
 ## Milestone 9 — Naming, macros, enums
 
@@ -141,6 +141,7 @@ boundary.
 
 ### Start here
 
-Milestones 0–5 and 7 are complete. The next work is **Milestone 8** — the config
-reshape, which every later config feature depends on. **Milestone 6 (wrappers)**
-remains deferred and is independent of 8–11.
+Milestones 0–5, 7, and 8 are complete. The next work is **Milestone 9** — naming
+tokenizer/case conversion, macro groups, and enum policies — on top of the
+sectioned `h2o` shape. **Milestone 6 (wrappers)** remains deferred and is
+independent of 9–11.

@@ -11,6 +11,8 @@ write_test_config :: proc(t: ^testing.T, name: string, contents: string) -> (pat
 	return path, err == nil
 }
 
+// Free strings/maps allocated by policy_load when tests do not use the
+// generation arena. Lua state is closed by policy_destroy.
 delete_policy_test_data :: proc(policy: ^Policy) {
 	if policy.package_name != "" {
 		delete(policy.package_name)
@@ -18,36 +20,48 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 	if policy.foreign_lib != "" {
 		delete(policy.foreign_lib)
 	}
-	if policy.strip_prefix_func != "" {
-		delete(policy.strip_prefix_func)
+	for p in policy.strip_prefix_proc {
+		delete(p)
 	}
-	if policy.strip_prefix_type != "" {
-		delete(policy.strip_prefix_type)
+	delete(policy.strip_prefix_proc)
+	for p in policy.strip_prefix_type {
+		delete(p)
 	}
-	if policy.strip_prefix_const != "" {
-		delete(policy.strip_prefix_const)
+	delete(policy.strip_prefix_type)
+	for p in policy.strip_prefix_const {
+		delete(p)
 	}
-	if policy.type_map != nil {
-		for key, value in policy.type_map {
-			delete(key)
-			delete(value)
-		}
-		delete(policy.type_map)
-	}
+	delete(policy.strip_prefix_const)
+	delete_string_map(&policy.type_map)
+	delete_string_map(&policy.type_overrides)
 }
+
+delete_string_map :: proc(m: ^map[string]string) {
+	if m^ == nil {
+		return
+	}
+	for key, value in m^ {
+		delete(key)
+		delete(value)
+	}
+	delete(m^)
+	m^ = nil
+}
+
+SECTIONED_DECLARATIVE :: `local h2o = require "h2odin"
+local config = h2o.config()
+config.package = "pkg"
+config.foreign.import_lib = "native"
+config.naming = h2o.naming.odin {
+  strip_prefixes = { proc = "gl_", type = "GL", const = "GL_" },
+}
+config.types.overrides = { Vector2 = "[2]f32" }
+return config
+`
 
 @(test)
 test_policy_load_declarative_fields :: proc(t: ^testing.T) {
-	path, path_ok := write_test_config(
-		t,
-		"declarative",
-		`return {
-  package = "pkg",
-  foreign_lib = "native",
-  strip_prefixes = { func = "gl_", type = "GL", const = "GL_" },
-  type_map = { Vector2 = "[2]f32" },
-}`,
-	)
+	path, path_ok := write_test_config(t, "declarative", SECTIONED_DECLARATIVE)
 	if !path_ok {
 		return
 	}
@@ -59,15 +73,23 @@ test_policy_load_declarative_fields :: proc(t: ^testing.T) {
 	testing.expect(t, ok)
 	testing.expect_value(t, policy.package_name, "pkg")
 	testing.expect_value(t, policy.foreign_lib, "native")
-	testing.expect_value(t, policy.strip_prefix_func, "gl_")
-	testing.expect_value(t, policy.strip_prefix_type, "GL")
-	testing.expect_value(t, policy.strip_prefix_const, "GL_")
-	testing.expect_value(t, policy.type_map["Vector2"], "[2]f32")
+	testing.expect(t, len(policy.strip_prefix_proc) == 1 && policy.strip_prefix_proc[0] == "gl_")
+	testing.expect(t, len(policy.strip_prefix_type) == 1 && policy.strip_prefix_type[0] == "GL")
+	testing.expect(t, len(policy.strip_prefix_const) == 1 && policy.strip_prefix_const[0] == "GL_")
+	testing.expect_value(t, policy.type_overrides["Vector2"], "[2]f32")
 }
 
 @(test)
 test_policy_load_rejects_bad_declarative_shapes :: proc(t: ^testing.T) {
-	bad_strip, bad_strip_ok := write_test_config(t, "bad-strip", `return { strip_prefixes = "bad" }`)
+	bad_strip, bad_strip_ok := write_test_config(
+		t,
+		"bad-strip",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.naming.strip_prefixes = "bad"
+return config
+`,
+	)
 	if !bad_strip_ok {
 		return
 	}
@@ -76,19 +98,32 @@ test_policy_load_rejects_bad_declarative_shapes :: proc(t: ^testing.T) {
 	defer delete_policy_test_data(&policy)
 	testing.expect(t, !ok)
 
-	bad_map, bad_map_ok := write_test_config(t, "bad-map", `return { type_map = { Foo = 42 } }`)
+	bad_map, bad_map_ok := write_test_config(
+		t,
+		"bad-map",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.types.overrides = { Foo = 42 }
+return config
+`,
+	)
 	if !bad_map_ok {
 		return
 	}
+	// Second load: destroy the first policy before reusing names.
+	policy_destroy(&policy)
+	delete_policy_test_data(&policy)
 	policy, ok = policy_load(bad_map)
-	defer policy_destroy(&policy)
-	defer delete_policy_test_data(&policy)
 	testing.expect(t, !ok)
 }
 
 @(test)
 test_policy_load_rejects_wrong_string_field_types :: proc(t: ^testing.T) {
-	path, path_ok := write_test_config(t, "bad-package-type", `return { package = 42 }`)
+	path, path_ok := write_test_config(t, "bad-package-type", `local h2o = require "h2odin"
+local config = h2o.config()
+config.package = 42
+return config
+`)
 	if !path_ok {
 		return
 	}
@@ -100,7 +135,15 @@ test_policy_load_rejects_wrong_string_field_types :: proc(t: ^testing.T) {
 
 @(test)
 test_policy_load_rejects_non_function_callbacks :: proc(t: ^testing.T) {
-	path, path_ok := write_test_config(t, "bad-rename-type", `return { rename = "nope" }`)
+	path, path_ok := write_test_config(
+		t,
+		"bad-rename-type",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.naming.override = "nope"
+return config
+`,
+	)
 	if !path_ok {
 		return
 	}
@@ -111,8 +154,16 @@ test_policy_load_rejects_non_function_callbacks :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_policy_load_rejects_unknown_and_unsupported_keys :: proc(t: ^testing.T) {
-	unknown, unknown_ok := write_test_config(t, "unknown-key", `return { typo_mode = "abi" }`)
+test_policy_load_rejects_unknown_and_legacy_keys :: proc(t: ^testing.T) {
+	unknown, unknown_ok := write_test_config(
+		t,
+		"unknown-key",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.typo_mode = "abi"
+return config
+`,
+	)
 	if !unknown_ok {
 		return
 	}
@@ -121,35 +172,61 @@ test_policy_load_rejects_unknown_and_unsupported_keys :: proc(t: ^testing.T) {
 	defer delete_policy_test_data(&policy)
 	testing.expect(t, !ok)
 
-	unsupported, unsupported_ok := write_test_config(t, "unsupported-key", `return { wrappers = true }`)
+	legacy, legacy_ok := write_test_config(t, "legacy-keep", `return { keep = function() return true end }`)
+	if !legacy_ok {
+		return
+	}
+	policy_destroy(&policy)
+	delete_policy_test_data(&policy)
+	policy, ok = policy_load(legacy)
+	testing.expect(t, !ok)
+
+	unsupported, unsupported_ok := write_test_config(
+		t,
+		"unsupported-key",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.wrappers = true
+return config
+`,
+	)
 	if !unsupported_ok {
 		return
 	}
+	policy_destroy(&policy)
+	delete_policy_test_data(&policy)
 	policy, ok = policy_load(unsupported)
-	defer policy_destroy(&policy)
-	defer delete_policy_test_data(&policy)
 	testing.expect(t, !ok)
 }
 
 @(test)
-test_policy_sandbox_withholds_host_libraries :: proc(t: ^testing.T) {
-	// Config asserts the sandbox: io/os/package/debug and loaders are gone.
-	// If any are present the chunk errors and load fails.
+test_policy_sandbox_and_h2o_require :: proc(t: ^testing.T) {
+	// Sandbox: io/os/debug and raw loaders stay gone; package exists only for
+	// the restricted require of h2odin + sibling .lua files.
 	path, path_ok := write_test_config(
 		t,
 		"sandbox",
 		`assert(io == nil, "io must be withheld")
 assert(os == nil, "os must be withheld")
-assert(package == nil, "package must be withheld")
 assert(debug == nil, "debug must be withheld")
 assert(dofile == nil, "dofile must be withheld")
 assert(loadfile == nil, "loadfile must be withheld")
 assert(load == nil, "load must be withheld")
--- Pure libraries remain available for ordinary config logic.
+assert(type(package) == "table", "package required for require")
+assert(package.loadlib == nil, "loadlib must be withheld")
 assert(type(string.find) == "function")
 assert(type(table.insert) == "function")
 assert(type(math.abs) == "function")
-return { package = "sandboxed" }
+
+local h2o = require "h2odin"
+assert(type(h2o.config) == "function")
+assert(h2o.str.has_prefix("sqlite3_open", "sqlite3_"))
+assert(h2o.str.strip_prefix("sqlite3_open", "sqlite3_") == "open")
+assert(h2o.str.has_suffix("BoneInfo", "Info"))
+
+local config = h2o.config()
+config.package = "sandboxed"
+return config
 `,
 	)
 	if !path_ok {
@@ -164,9 +241,15 @@ return { package = "sandboxed" }
 
 @(test)
 test_policy_load_rejects_unknown_strip_prefix_keys :: proc(t: ^testing.T) {
-	// "functions" is a plausible typo for "func"; use a non-keyword name so
-	// Lua accepts the file and the policy layer's key check is what fails.
-	path, path_ok := write_test_config(t, "bad-strip-key", `return { strip_prefixes = { functions = "gl_" } }`)
+	path, path_ok := write_test_config(
+		t,
+		"bad-strip-key",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.naming.strip_prefixes = { functions = "gl_" }
+return config
+`,
+	)
 	if !path_ok {
 		return
 	}
@@ -174,4 +257,57 @@ test_policy_load_rejects_unknown_strip_prefix_keys :: proc(t: ^testing.T) {
 	defer policy_destroy(&policy)
 	defer delete_policy_test_data(&policy)
 	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_remove_where_polarity :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"remove-where",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.symbols.remove.where = function(sym)
+  return h2o.str.has_prefix(sym.name, "internal_")
+end
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect(t, policy.has_remove)
+	testing.expect(t, policy_remove(&policy, Symbol_Context{name = "internal_x", default_name = "internal_x", kind = .Func}))
+	testing.expect(t, !policy_remove(&policy, Symbol_Context{name = "public", default_name = "public", kind = .Func}))
+}
+
+@(test)
+test_policy_require_sibling_module :: proc(t: ^testing.T) {
+	dir := "/tmp/h2odin-policy-test-sibling-dir"
+	_ = os.make_directory(dir)
+	helper := fmt.tprintf("%s/helper.lua", dir)
+	main_cfg := fmt.tprintf("%s/main.lua", dir)
+	testing.expect(t, os.write_entire_file(helper, `return { tag = "from_helper" }`) == nil)
+	testing.expect(
+		t,
+		os.write_entire_file(
+			main_cfg,
+			`local h2o = require "h2odin"
+local helper = require "helper"
+local config = h2o.config()
+config.package = helper.tag
+return config
+`,
+		) ==
+		nil,
+	)
+
+	policy, ok := policy_load(main_cfg)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.package_name, "from_helper")
 }

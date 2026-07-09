@@ -14,8 +14,8 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: usable pipeline (Milestones 0–5 complete, Milestone 7 polish landed).
-Milestone 6 (idiomatic wrappers) is deferred. See [`ROADMAP.md`](ROADMAP.md).
+Status: usable pipeline (Milestones 0–5, 7–8 complete). Milestone 6 (idiomatic
+wrappers) is deferred. See [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
@@ -155,9 +155,10 @@ rather than bend it silently.
   that milestone is deliberately taken up. Analysis already records the
   length-like-neighbour facts a future pointer+length→slice decision would consume.
 
-- **Config is Lua, common cases are plain data.** Data for the easy path
-  (`package`, `headers`, `strip_prefixes`, `type_map`); callbacks (`rename`,
-  `keep`) that return a decision or `nil` to accept the default for the hard path —
+- **Config is Lua via `require "h2odin"`.** A program builds a sectioned object
+  with `h2o.config()` — data for the easy path (`package`, `foreign.import_lib`,
+  `naming.strip_prefixes`, `types.overrides`); callbacks (`naming.override`,
+  `symbols.remove.where`) that return a decision or `nil` for the hard path —
   same small API either way. Keyword-safe renames are automatic: a C symbol named
   like an Odin keyword (`matrix`, `map`, `proc`) gets a deterministic rename plus
   `@(link_name)` so the C symbol is preserved; config can override.
@@ -168,11 +169,11 @@ rather than bend it silently.
   ever land, the generator authors them from a closed conversion set and config
   only names the conversion. Conflating the two claims is a recurring confusion.
 
-- **The config surface is growing toward a fixed target.** Today's flat table of
-  keys is a subset of the sectioned, `h2o`-namespaced model in
-  [`docs/config-spec.md`](docs/config-spec.md). New config work should land as a
-  step toward that model, not orthogonal to it; `docs/configuration.md` carries the
-  migration table, including the `keep` → `symbols.remove.where` polarity flip.
+- **The config surface is the sectioned `h2o` model** in
+  [`docs/config-spec.md`](docs/config-spec.md). Milestone 8 landed the shape;
+  later milestones fill sections (naming algorithms, macros, enums, …).
+  `docs/configuration.md` describes what is wired today and the migration from
+  the old flat keys (including the `keep` → `symbols.remove.where` polarity flip).
 
 ---
 

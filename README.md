@@ -4,7 +4,7 @@ A C-header-to-Odin bindings generator, written in Odin.
 
 H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings — configured through a small but powerful Lua policy layer.
 
-> Status: usable pipeline (Milestones 0–5 + 7). Idiomatic *wrappers* (Milestone 6) are deferred.
+> Status: usable pipeline (Milestones 0–5 + 7–8). Idiomatic *wrappers* (Milestone 6) are deferred.
 
 ---
 
@@ -12,7 +12,7 @@ H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings
 
 - **Two type modes.** *ABI mode* preserves the C API faithfully using Odin's C-compatible types (`c.int`, `c.size_t`, …). *Idiomatic mode* generates native Odin types (`i32`, `f64`, …) where the substitution is proven ABI-safe on the target. Generated wrapper procedures (e.g. `cstring → string` params, `pointer+length → []T` slices) are planned, not yet implemented.
 - **Correctness first.** A type is never swapped for a nicer-looking one if it would break behavior or the ABI. When the header is ambiguous, H2Odin picks a safe default, flags it, and lets you override it — it never silently guesses wrong.
-- **Deterministic.** Same headers plus same configuration always produce identical output. The Lua config is sandboxed (no `io`/`os`/`debug`, no raw loaders) so side effects cannot sneak in by accident.
+- **Deterministic.** Same headers plus the same config tree always produce identical output. The Lua config is sandboxed (no `io`/`os`/`debug`, no raw loaders); `require` only resolves the `h2odin` prelude and sibling `.lua` under the config directory.
 - **Configurable in Lua.** Simple libraries need a few lines of data; tricky ones drop into Lua functions for the hard cases — same small API either way.
 - **Diagnostics report.** Every non-certain decision in a run (guessed pointer lowerings, unresolved idiomatic leaves, opaque layout fallbacks, …) is listed on stderr after generation.
 
@@ -66,43 +66,44 @@ odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
 
 ## Configuration
 
-Configuration is a Lua file that **returns a table**. Common cases are plain data; hard cases are callbacks that return a decision, or `nil` to accept the default.
-
-Supported keys today:
-
-| Key | Type | Role |
-|-----|------|------|
-| `package` | string | Odin package name (default: header stem) |
-| `foreign_lib` | string | `foreign import` system library name (default: header stem) |
-| `type_mode` | `"abi"` \| `"idiomatic"` | leaf type spelling family |
-| `strip_prefixes` | table `{ func?, type?, const? }` | drop a C prefix by symbol kind |
-| `type_map` | table string→string | force an Odin spelling for a named C type |
-| `rename` | function(sym) → string\|nil | rename a symbol |
-| `keep` | function(sym) → bool\|nil | drop top-level declarations |
-
-Unknown keys and not-yet-supported keys (`headers`, `include_dirs`, `defines`, `output`, `comments`, `wrappers`) fail the run with a clear error, rather than silently doing nothing.
+Configuration is a Lua program that **`require "h2odin"`**, builds a sectioned object with **`h2o.config()`**, and **returns** it. Common cases are plain data; hard cases are callbacks that return a decision, or `nil` to accept the default.
 
 ```lua
-return {
-  package     = "raylib",
-  foreign_lib = "raylib",
-  type_mode   = "idiomatic",
+local h2o = require "h2odin"
 
-  strip_prefixes = { func = "gl", type = "GL", const = "GL_" },
-  type_map       = { Vector2 = "[2]f32", Color = "distinct [4]u8" },
+local config = h2o.config()
+config.package = "raylib"
+config.foreign.import_lib = "raylib"
+config.type_mode = "idiomatic"
 
-  rename = function(sym)
+config.naming = h2o.naming.odin {
+  strip_prefixes = { proc = "gl", type = "GL", const = "GL_" },
+  override = function(sym)
     return sym.default
   end,
-
-  keep = function(sym)
-    if sym.name:match("^_") then return false end
-    return true
-  end,
 }
+
+config.types.overrides = { Vector2 = "[2]f32", Color = "distinct [4]u8" }
+
+config.symbols.remove.where = function(sym)
+  return h2o.str.has_prefix(sym.name, "_")
+end
+
+return config
 ```
 
-More detail: [`docs/configuration.md`](docs/configuration.md). The config model this surface is growing toward — a namespaced `h2o` API with sections for naming, macros, enums, and diagnostics — is specified in [`docs/config-spec.md`](docs/config-spec.md).
+| Path | Role |
+|------|------|
+| `package` / `type_mode` | package name; ABI vs idiomatic leaves |
+| `foreign.import_lib` | `foreign import` system library |
+| `naming.strip_prefixes` | drop a C prefix by kind (`proc` / `type` / `const`) |
+| `naming.override` | rename callback |
+| `types.map` / `types.overrides` | type spellings (refs only vs also drop the decl) |
+| `symbols.remove.where` | **true drops** a top-level declaration |
+
+Unknown keys and not-yet-supported sections fail the run with a clear error. Pre-M8 flat keys (`keep`, `rename`, `type_map`, …) are rejected with migration messages.
+
+More detail: [`docs/configuration.md`](docs/configuration.md). Full north-star: [`docs/config-spec.md`](docs/config-spec.md).
 
 ---
 

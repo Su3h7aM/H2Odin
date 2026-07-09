@@ -1,9 +1,8 @@
--- Filtering: false drops a declaration, nil keeps the default (keep).
-return {
-	keep = function(sym)
-		if sym.name:match("^internal_") then
-			return false
-		end
-		return nil
-	end,
-}
+-- Filtering: true drops a declaration (remove.where polarity).
+local h2o = require "h2odin"
+
+local config = h2o.config()
+config.symbols.remove.where = function(sym)
+	return h2o.str.has_prefix(sym.name, "internal_")
+end
+return config

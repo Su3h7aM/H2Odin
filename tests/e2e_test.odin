@@ -143,7 +143,7 @@ test_declarative_config_applies_prefixes_and_type_map :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_keep_config_filters_top_level_decls :: proc(t: ^testing.T) {
+test_remove_where_filters_top_level_decls :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/keep.lua", "tests/fixtures/filtering.h"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
@@ -210,7 +210,7 @@ test_bad_config_fails_without_output :: proc(t: ^testing.T) {
 
 	testing.expect(t, exit_code != 0)
 	testing.expect_value(t, len(stdout), 0)
-	expect_contains(t, stderr, "type_map[\"Foo\"] must be a string")
+	expect_contains(t, stderr, `types.overrides["Foo"] must be a string`)
 }
 
 @(test)

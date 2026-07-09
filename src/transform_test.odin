@@ -15,9 +15,9 @@ test_keyword_safe_default_suffixes_keywords :: proc(t: ^testing.T) {
 @(test)
 test_strip_configured_prefix_by_symbol_kind :: proc(t: ^testing.T) {
 	policy := Policy {
-		strip_prefix_func  = "gl_",
-		strip_prefix_type  = "GL",
-		strip_prefix_const = "GL_",
+		strip_prefix_proc  = {"gl_"},
+		strip_prefix_type  = {"GL"},
+		strip_prefix_const = {"GL_"},
 	}
 
 	testing.expect_value(t, strip_configured_prefix(&policy, "gl_Draw", .Func), "Draw")
@@ -28,7 +28,7 @@ test_strip_configured_prefix_by_symbol_kind :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_apply_type_map_rewrites_type_refs_and_suppresses_decl :: proc(t: ^testing.T) {
+test_apply_type_overrides_rewrites_type_refs_and_suppresses_decl :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)
 	testing.expect_value(t, err, nil)
@@ -46,10 +46,10 @@ test_apply_type_map_rewrites_type_refs_and_suppresses_decl :: proc(t: ^testing.T
 	testing.expect_value(t, len(ir.order), 1)
 
 	policy := Policy{}
-	policy.type_map = make(map[string]string)
-	policy.type_map["Vector2"] = "[2]f32"
+	policy.type_overrides = make(map[string]string)
+	policy.type_overrides["Vector2"] = "[2]f32"
 
-	apply_type_map(&ir, &policy)
+	apply_type_rewrites(&ir, policy.type_overrides, drop_decls = true)
 
 	mapped, is_mapped := ir.types[int(record_type)].variant.(Type_Idiomatic_Leaf)
 	testing.expect(t, is_mapped)

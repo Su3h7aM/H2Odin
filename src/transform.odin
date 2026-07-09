@@ -22,28 +22,28 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	if mode == .Idiomatic {
 		substitute_leaf_types(ir)
 	}
-	apply_type_map(ir, policy)
+	// map first, then overrides so a types.overrides entry wins on conflict.
+	apply_type_rewrites(ir, policy.type_map, drop_decls = false)
+	apply_type_rewrites(ir, policy.type_overrides, drop_decls = true)
 
 	filter_declarations(ir, policy)
 	apply_renames(ir, policy)
 }
 
-// A type_map entry names an explicit Odin spelling for a C type by name —
+// A config type spelling names an explicit Odin form for a C type by name —
 // stronger than an idiomatic proof, since the user asked for it directly —
 // so it applies in both type modes and can override an idiomatic
-// substitution already made. Anything not named in the map is untouched.
-// The record/enum/typedef the entry names is also dropped from the ordering
-// list: the user supplied its Odin spelling directly, so the generator's
-// own rendering of that declaration (its struct body, or a typedef line
-// that would just repeat the mapped spelling) would be redundant, and for
-// the "typedef struct { … } Name;" idiom, leaving it in would emit the same
-// name twice — the record's own definition sits under the same name that
-// clang's typedef borrowing gives the anonymous tag.
-apply_type_map :: proc(ir: ^IR, policy: ^Policy) {
-	if policy.type_map == nil {
+// substitution already made. Anything not named is untouched.
+//
+// types.map rewrites references only. types.overrides also drops the named
+// record/enum/typedef from the ordering list: the user supplied its Odin
+// spelling directly, so emitting the generator's own declaration would be
+// redundant (and for "typedef struct { … } Name;" would emit the name twice).
+apply_type_rewrites :: proc(ir: ^IR, type_spelling: map[string]string, drop_decls: bool) {
+	if type_spelling == nil {
 		return
 	}
-	count := len(ir.types) // matches substitute_leaf_types: don't revisit appended slots
+	count := len(ir.types) // don't revisit slots appended below
 	for i in 0 ..< count {
 		info := ir.types[i]
 		name: string
@@ -59,7 +59,7 @@ apply_type_map :: proc(ir: ^IR, policy: ^Policy) {
 		case:
 			continue
 		}
-		spelling, mapped := policy.type_map[name]
+		spelling, mapped := type_spelling[name]
 		if !mapped {
 			continue
 		}
@@ -70,6 +70,9 @@ apply_type_map :: proc(ir: ^IR, policy: ^Policy) {
 		}
 	}
 
+	if !drop_decls {
+		return
+	}
 	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
 	for ref in ir.order {
 		name: string
@@ -81,7 +84,7 @@ apply_type_map :: proc(ir: ^IR, policy: ^Policy) {
 		case .Typedef:
 			name = ir.typedefs[ref.index].name
 		}
-		if _, mapped := policy.type_map[name]; name != "" && mapped {
+		if _, mapped := type_spelling[name]; name != "" && mapped {
 			continue
 		}
 		append(&kept, ref)
@@ -89,13 +92,13 @@ apply_type_map :: proc(ir: ^IR, policy: ^Policy) {
 	ir.order = kept
 }
 
-// Offer every top-level declaration to the config's keep callback and
-// rebuild the ordering list with the survivors. Dropping is an ordering-list
-// operation only — the declaration stays in its pool, so handles held by
-// other types remain valid. Members and fields are never offered: dropping
-// one would change a layout or an enum the header defines.
+// Offer every top-level declaration to symbols.remove.where and rebuild the
+// ordering list with the survivors. Dropping is an ordering-list operation
+// only — the declaration stays in its pool, so handles held by other types
+// remain valid. Members and fields are never offered: dropping one would
+// change a layout or an enum the header defines.
 filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
-	if !policy.has_keep {
+	if !policy.has_remove {
 		return
 	}
 	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
@@ -126,7 +129,7 @@ filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
 		}
 		// Anonymous declarations are spelled inline where they are used;
 		// they stand or fall with their user, not on their own.
-		if name == "" || policy_keep(policy, Symbol_Context{name = name, default_name = name, kind = kind}) {
+		if name == "" || !policy_remove(policy, Symbol_Context{name = name, default_name = name, kind = kind}) {
 			append(&kept, ref)
 		}
 	}
@@ -215,29 +218,26 @@ rename_of :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, parent: stri
 	return new_name, true
 }
 
-// Strip the config's configured prefix for this symbol kind, if any and if
-// the name actually has it. strip_prefixes only covers func/type/const —
-// the common case named in the docs; a need to strip prefixes elsewhere can
-// go through the rename callback, which sees this result as sym.default.
+// Strip the first matching configured prefix for this symbol kind.
+// naming.strip_prefixes only covers proc/type/const — the common case; a
+// need to strip elsewhere goes through naming.override, which sees this
+// result as sym.default.
 strip_configured_prefix :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -> string {
-	prefix: string
+	prefixes: []string
 	#partial switch kind {
 	case .Func:
-		prefix = policy.strip_prefix_func
+		prefixes = policy.strip_prefix_proc
 	case .Type:
-		prefix = policy.strip_prefix_type
+		prefixes = policy.strip_prefix_type
 	case .Const:
-		prefix = policy.strip_prefix_const
+		prefixes = policy.strip_prefix_const
 	}
-	if prefix == "" || !strings.has_prefix(name, prefix) {
-		return name
+	for prefix in prefixes {
+		if stripped := str_strip_prefix(name, prefix); stripped != name {
+			return stripped
+		}
 	}
-	rest := name[len(prefix):]
-	if rest == "" {
-		// Stripping the whole name would leave nothing to emit.
-		return name
-	}
-	return rest
+	return name
 }
 
 // Parameter names are not symbols — the policy is never consulted — but a
