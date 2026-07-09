@@ -25,7 +25,15 @@ Yes → a fact → **Analysis** (or captured raw in Extraction). No → a decisi
 
 This project uses **Jujutsu (`jj`)** as its VCS — always use `jj`, not raw `git`, for any repository operation (status, diff, describe, rebase, bookmark, push, conflict resolution, history). Git is the backend only. Prefer the non-interactive `jj desc` + `jj new` workflow over `jj commit`: start work from an empty working-copy commit, set a `WIP:` description before editing, replace it with the final description after, then `jj new` to leave a fresh empty working copy.
 
-**Before every `jj new` (and before considering a change finished):** run `make check`, `make format`, and `make test` in that order. Fix any failure; if the fix is formatting or a small correction that belongs in an earlier commit of the stack, use `jj absorb` (or squash into the right change) rather than leaving a drive-by follow-up commit.
+**Before every `jj new` (and before considering a change finished):**
+
+```sh
+make format && make check && make test && make build
+```
+
+Fix any failure; if the fix is formatting or a small correction that belongs in an earlier commit of the stack, use `jj absorb` (or squash into the right change) rather than leaving a drive-by follow-up commit.
+
+If `make check` fails inside Odin's own `base/runtime` (e.g. `Invalid build tag platform: bedrock`), the compiler binary and `ODIN_ROOT` are mismatched — the Makefile pairs them automatically; ensure `which odin` is the toolchain you intend (mise nightly vs system package).
 
 ## Style
 

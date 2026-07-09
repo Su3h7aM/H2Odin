@@ -10,16 +10,37 @@ ODIN_FLAGS := -vet -strict-style -vet-tabs -disallow-do -warnings-as-errors
 COLLECTION_FLAGS := -collection:vendored=$(CURDIR)/vendored
 ARGS ?=
 
+# Keep the compiler and its stdlib paired.
+#
+# mise often exports ODIN_ROOT for a nightly while PATH still resolves `odin` to
+# /usr/bin/odin. That mix fails in the Odin *runtime* sources with errors like
+# "Invalid build tag platform: bedrock" / "Expected '}', got 'where'" — not
+# project bugs. If the selected binary ships with a sibling base/, pin
+# ODIN_ROOT there; otherwise drop a foreign ODIN_ROOT so packaged layouts
+# (e.g. /usr/bin/odin + /usr/lib/odin) use their own stdlib.
+ODIN_PATH := $(shell command -v $(ODIN) 2>/dev/null)
+ifneq ($(ODIN_PATH),)
+  ifneq ($(wildcard $(dir $(ODIN_PATH))base/.),)
+    export ODIN_ROOT := $(abspath $(dir $(ODIN_PATH)))
+  else
+    unexport ODIN_ROOT
+    # `unexport` alone does not strip a variable already present in the
+    # environment from recipe processes; force a clean env for odin invocations.
+    RUN_ODIN := env -u ODIN_ROOT $(ODIN)
+  endif
+endif
+RUN_ODIN ?= $(ODIN)
+
 .PHONY: all check build run test test-unit test-e2e format clean
 
 all: check build
 
 check:
-	$(ODIN) check $(SRC_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS)
+	$(RUN_ODIN) check $(SRC_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS)
 
 build:
 	mkdir -p $(BUILD_DIR)
-	$(ODIN) build $(SRC_DIR) -out:$(BIN) $(ODIN_FLAGS) $(COLLECTION_FLAGS)
+	$(RUN_ODIN) build $(SRC_DIR) -out:$(BIN) $(ODIN_FLAGS) $(COLLECTION_FLAGS)
 
 run: build
 	./$(BIN) $(ARGS)
@@ -27,11 +48,11 @@ run: build
 test: test-unit test-e2e
 
 test-unit:
-	$(ODIN) test $(SRC_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS)
+	$(RUN_ODIN) test $(SRC_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS)
 
 test-e2e: build
 	@if find $(TEST_DIR) -maxdepth 1 -name "*.odin" 2>/dev/null | grep -q .; then \
-		$(ODIN) test $(TEST_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS); \
+		$(RUN_ODIN) test $(TEST_DIR) $(ODIN_FLAGS) $(COLLECTION_FLAGS); \
 	else \
 		echo "no e2e test package yet"; \
 	fi
