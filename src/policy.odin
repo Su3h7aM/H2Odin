@@ -108,7 +108,9 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 		fmt.eprintln("h2odin: failed to create the Lua state")
 		return Policy{}, false
 	}
-	lua.L_openlibs(L)
+	// Sandbox: open only pure libraries. Withholding io/os/package/debug
+	// makes "config is side-effect-free" structural rather than a convention.
+	policy_open_sandbox_libs(L)
 
 	config_path := strings.clone_to_cstring(path, context.temp_allocator)
 	if lua.L_dofile(L, config_path) != 0 {
@@ -191,6 +193,34 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	}
 
 	return policy, true
+}
+
+// Open the libraries a well-behaved config needs (string/table/math helpers)
+// and withhold everything that reaches the host: io, os, package, debug.
+// Also nil out base loaders (dofile/loadfile/load) so a config cannot pull
+// more code in by path.
+policy_open_sandbox_libs :: proc(L: ^lua.State) {
+	// open_* are lua_CFunction openers; L_requiref registers and (when glb=1)
+	// sets the module as a global, then leaves it on the stack — pop it.
+	lua.L_requiref(L, "_G", lua.open_base, 1)
+	lua.pop(L, 1)
+	lua.L_requiref(L, "table", lua.open_table, 1)
+	lua.pop(L, 1)
+	lua.L_requiref(L, "string", lua.open_string, 1)
+	lua.pop(L, 1)
+	lua.L_requiref(L, "math", lua.open_math, 1)
+	lua.pop(L, 1)
+	lua.L_requiref(L, "utf8", lua.open_utf8, 1)
+	lua.pop(L, 1)
+	lua.L_requiref(L, "coroutine", lua.open_coroutine, 1)
+	lua.pop(L, 1)
+
+	// base still exposes loaders that read from the host filesystem / compile
+	// arbitrary chunks. Config is one file; it does not need more.
+	for name in ([?]cstring{"dofile", "loadfile", "load"}) {
+		lua.pushnil(L)
+		lua.setglobal(L, name)
+	}
 }
 
 // Reject unknown and not-yet-supported top-level keys up front so a typo or

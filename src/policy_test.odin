@@ -132,6 +132,37 @@ test_policy_load_rejects_unknown_and_unsupported_keys :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_policy_sandbox_withholds_host_libraries :: proc(t: ^testing.T) {
+	// Config asserts the sandbox: io/os/package/debug and loaders are gone.
+	// If any are present the chunk errors and load fails.
+	path, path_ok := write_test_config(
+		t,
+		"sandbox",
+		`assert(io == nil, "io must be withheld")
+assert(os == nil, "os must be withheld")
+assert(package == nil, "package must be withheld")
+assert(debug == nil, "debug must be withheld")
+assert(dofile == nil, "dofile must be withheld")
+assert(loadfile == nil, "loadfile must be withheld")
+assert(load == nil, "load must be withheld")
+-- Pure libraries remain available for ordinary config logic.
+assert(type(string.find) == "function")
+assert(type(table.insert) == "function")
+assert(type(math.abs) == "function")
+return { package = "sandboxed" }
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.package_name, "sandboxed")
+}
+
+@(test)
 test_policy_load_rejects_unknown_strip_prefix_keys :: proc(t: ^testing.T) {
 	// "functions" is a plausible typo for "func"; use a non-keyword name so
 	// Lua accepts the file and the policy layer's key check is what fails.
