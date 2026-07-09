@@ -26,4 +26,4 @@ equivalent on the target.
 | Example | Highlights |
 |---------|------------|
 | `fff` | `foreign.link_prefix` + `naming.strip_prefixes` (no per-proc `@(link_name)`); `config.inputs` |
-| `sqlite3` | Same link-prefix pattern; `types.map` for 64-bit typedefs; `macros.groups` result-code enum |
+| `sqlite3` | Same link-prefix pattern; `types.map` for 64-bit typedefs; `macros.groups` for result codes, open flags, authorizer actions, and other SQLITE_* families |

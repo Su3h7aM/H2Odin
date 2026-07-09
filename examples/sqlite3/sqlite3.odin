@@ -8,181 +8,8 @@ SQLITE_SOURCE_ID :: "2026-06-03 19:12:13 d6e03d8c777cfa2d35e3b60d8ec3e0187f3e9f9
 SQLITE_SCM_BRANCH :: "branch-3.53"
 SQLITE_SCM_TAGS :: "release version-3.53.2"
 SQLITE_SCM_DATETIME :: "2026-06-03T19:12:13.350Z"
-SQLITE_OPEN_READONLY :: 0x00000001
-SQLITE_OPEN_READWRITE :: 0x00000002
-SQLITE_OPEN_CREATE :: 0x00000004
-SQLITE_OPEN_DELETEONCLOSE :: 0x00000008
-SQLITE_OPEN_EXCLUSIVE :: 0x00000010
-SQLITE_OPEN_AUTOPROXY :: 0x00000020
-SQLITE_OPEN_URI :: 0x00000040
-SQLITE_OPEN_MEMORY :: 0x00000080
-SQLITE_OPEN_MAIN_DB :: 0x00000100
-SQLITE_OPEN_TEMP_DB :: 0x00000200
-SQLITE_OPEN_TRANSIENT_DB :: 0x00000400
-SQLITE_OPEN_MAIN_JOURNAL :: 0x00000800
-SQLITE_OPEN_TEMP_JOURNAL :: 0x00001000
-SQLITE_OPEN_SUBJOURNAL :: 0x00002000
-SQLITE_OPEN_SUPER_JOURNAL :: 0x00004000
-SQLITE_OPEN_NOMUTEX :: 0x00008000
-SQLITE_OPEN_FULLMUTEX :: 0x00010000
-SQLITE_OPEN_SHAREDCACHE :: 0x00020000
-SQLITE_OPEN_PRIVATECACHE :: 0x00040000
-SQLITE_OPEN_WAL :: 0x00080000
-SQLITE_OPEN_NOFOLLOW :: 0x01000000
-SQLITE_OPEN_EXRESCODE :: 0x02000000
-SQLITE_OPEN_MASTER_JOURNAL :: 0x00004000
-SQLITE_IOCAP_ATOMIC :: 0x00000001
-SQLITE_IOCAP_ATOMIC512 :: 0x00000002
-SQLITE_IOCAP_ATOMIC1K :: 0x00000004
-SQLITE_IOCAP_ATOMIC2K :: 0x00000008
-SQLITE_IOCAP_ATOMIC4K :: 0x00000010
-SQLITE_IOCAP_ATOMIC8K :: 0x00000020
-SQLITE_IOCAP_ATOMIC16K :: 0x00000040
-SQLITE_IOCAP_ATOMIC32K :: 0x00000080
-SQLITE_IOCAP_ATOMIC64K :: 0x00000100
-SQLITE_IOCAP_SAFE_APPEND :: 0x00000200
-SQLITE_IOCAP_SEQUENTIAL :: 0x00000400
-SQLITE_IOCAP_UNDELETABLE_WHEN_OPEN :: 0x00000800
-SQLITE_IOCAP_POWERSAFE_OVERWRITE :: 0x00001000
-SQLITE_IOCAP_IMMUTABLE :: 0x00002000
-SQLITE_IOCAP_BATCH_ATOMIC :: 0x00004000
-SQLITE_IOCAP_SUBPAGE_READ :: 0x00008000
-SQLITE_LOCK_NONE :: 0
-SQLITE_LOCK_SHARED :: 1
-SQLITE_LOCK_RESERVED :: 2
-SQLITE_LOCK_PENDING :: 3
-SQLITE_LOCK_EXCLUSIVE :: 4
-SQLITE_SYNC_NORMAL :: 0x00002
-SQLITE_SYNC_FULL :: 0x00003
-SQLITE_SYNC_DATAONLY :: 0x00010
-SQLITE_FCNTL_LOCKSTATE :: 1
-SQLITE_FCNTL_GET_LOCKPROXYFILE :: 2
-SQLITE_FCNTL_SET_LOCKPROXYFILE :: 3
-SQLITE_FCNTL_LAST_ERRNO :: 4
-SQLITE_FCNTL_SIZE_HINT :: 5
-SQLITE_FCNTL_CHUNK_SIZE :: 6
-SQLITE_FCNTL_FILE_POINTER :: 7
-SQLITE_FCNTL_SYNC_OMITTED :: 8
-SQLITE_FCNTL_WIN32_AV_RETRY :: 9
-SQLITE_FCNTL_PERSIST_WAL :: 10
-SQLITE_FCNTL_OVERWRITE :: 11
-SQLITE_FCNTL_VFSNAME :: 12
-SQLITE_FCNTL_POWERSAFE_OVERWRITE :: 13
-SQLITE_FCNTL_PRAGMA :: 14
-SQLITE_FCNTL_BUSYHANDLER :: 15
-SQLITE_FCNTL_TEMPFILENAME :: 16
-SQLITE_FCNTL_MMAP_SIZE :: 18
-SQLITE_FCNTL_TRACE :: 19
-SQLITE_FCNTL_HAS_MOVED :: 20
-SQLITE_FCNTL_SYNC :: 21
-SQLITE_FCNTL_COMMIT_PHASETWO :: 22
-SQLITE_FCNTL_WIN32_SET_HANDLE :: 23
-SQLITE_FCNTL_WAL_BLOCK :: 24
-SQLITE_FCNTL_ZIPVFS :: 25
-SQLITE_FCNTL_RBU :: 26
-SQLITE_FCNTL_VFS_POINTER :: 27
-SQLITE_FCNTL_JOURNAL_POINTER :: 28
-SQLITE_FCNTL_WIN32_GET_HANDLE :: 29
-SQLITE_FCNTL_PDB :: 30
-SQLITE_FCNTL_BEGIN_ATOMIC_WRITE :: 31
-SQLITE_FCNTL_COMMIT_ATOMIC_WRITE :: 32
-SQLITE_FCNTL_ROLLBACK_ATOMIC_WRITE :: 33
-SQLITE_FCNTL_LOCK_TIMEOUT :: 34
-SQLITE_FCNTL_DATA_VERSION :: 35
-SQLITE_FCNTL_SIZE_LIMIT :: 36
-SQLITE_FCNTL_CKPT_DONE :: 37
-SQLITE_FCNTL_RESERVE_BYTES :: 38
-SQLITE_FCNTL_CKPT_START :: 39
-SQLITE_FCNTL_EXTERNAL_READER :: 40
-SQLITE_FCNTL_CKSM_FILE :: 41
-SQLITE_FCNTL_RESET_CACHE :: 42
-SQLITE_FCNTL_NULL_IO :: 43
-SQLITE_FCNTL_BLOCK_ON_CONNECT :: 44
-SQLITE_FCNTL_FILESTAT :: 45
-SQLITE_ACCESS_EXISTS :: 0
-SQLITE_ACCESS_READWRITE :: 1
-SQLITE_ACCESS_READ :: 2
-SQLITE_SHM_UNLOCK :: 1
-SQLITE_SHM_LOCK :: 2
-SQLITE_SHM_SHARED :: 4
-SQLITE_SHM_EXCLUSIVE :: 8
 SQLITE_SHM_NLOCK :: 8
-SQLITE_CONFIG_SINGLETHREAD :: 1
-SQLITE_CONFIG_MULTITHREAD :: 2
-SQLITE_CONFIG_SERIALIZED :: 3
-SQLITE_CONFIG_MALLOC :: 4
-SQLITE_CONFIG_GETMALLOC :: 5
-SQLITE_CONFIG_SCRATCH :: 6
-SQLITE_CONFIG_PAGECACHE :: 7
-SQLITE_CONFIG_HEAP :: 8
-SQLITE_CONFIG_MEMSTATUS :: 9
-SQLITE_CONFIG_MUTEX :: 10
-SQLITE_CONFIG_GETMUTEX :: 11
-SQLITE_CONFIG_LOOKASIDE :: 13
-SQLITE_CONFIG_PCACHE :: 14
-SQLITE_CONFIG_GETPCACHE :: 15
-SQLITE_CONFIG_LOG :: 16
-SQLITE_CONFIG_URI :: 17
-SQLITE_CONFIG_PCACHE2 :: 18
-SQLITE_CONFIG_GETPCACHE2 :: 19
-SQLITE_CONFIG_COVERING_INDEX_SCAN :: 20
-SQLITE_CONFIG_SQLLOG :: 21
-SQLITE_CONFIG_MMAP_SIZE :: 22
-SQLITE_CONFIG_WIN32_HEAPSIZE :: 23
-SQLITE_CONFIG_PCACHE_HDRSZ :: 24
-SQLITE_CONFIG_PMASZ :: 25
-SQLITE_CONFIG_STMTJRNL_SPILL :: 26
-SQLITE_CONFIG_SMALL_MALLOC :: 27
-SQLITE_CONFIG_SORTERREF_SIZE :: 28
-SQLITE_CONFIG_MEMDB_MAXSIZE :: 29
-SQLITE_CONFIG_ROWID_IN_VIEW :: 30
-SQLITE_DBCONFIG_MAINDBNAME :: 1000
-SQLITE_DBCONFIG_LOOKASIDE :: 1001
-SQLITE_DBCONFIG_ENABLE_FKEY :: 1002
-SQLITE_DBCONFIG_ENABLE_TRIGGER :: 1003
-SQLITE_DBCONFIG_ENABLE_FTS3_TOKENIZER :: 1004
-SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION :: 1005
-SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE :: 1006
-SQLITE_DBCONFIG_ENABLE_QPSG :: 1007
-SQLITE_DBCONFIG_TRIGGER_EQP :: 1008
-SQLITE_DBCONFIG_RESET_DATABASE :: 1009
-SQLITE_DBCONFIG_DEFENSIVE :: 1010
-SQLITE_DBCONFIG_WRITABLE_SCHEMA :: 1011
-SQLITE_DBCONFIG_LEGACY_ALTER_TABLE :: 1012
-SQLITE_DBCONFIG_DQS_DML :: 1013
-SQLITE_DBCONFIG_DQS_DDL :: 1014
-SQLITE_DBCONFIG_ENABLE_VIEW :: 1015
-SQLITE_DBCONFIG_LEGACY_FILE_FORMAT :: 1016
-SQLITE_DBCONFIG_TRUSTED_SCHEMA :: 1017
-SQLITE_DBCONFIG_STMT_SCANSTATUS :: 1018
-SQLITE_DBCONFIG_REVERSE_SCANORDER :: 1019
-SQLITE_DBCONFIG_ENABLE_ATTACH_CREATE :: 1020
-SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE :: 1021
-SQLITE_DBCONFIG_ENABLE_COMMENTS :: 1022
-SQLITE_DBCONFIG_FP_DIGITS :: 1023
-SQLITE_DBCONFIG_MAX :: 1023
-SQLITE_TRACE_STMT :: 0x01
-SQLITE_TRACE_PROFILE :: 0x02
-SQLITE_TRACE_ROW :: 0x04
-SQLITE_TRACE_CLOSE :: 0x08
-SQLITE_LIMIT_LENGTH :: 0
-SQLITE_LIMIT_SQL_LENGTH :: 1
-SQLITE_LIMIT_COLUMN :: 2
-SQLITE_LIMIT_EXPR_DEPTH :: 3
-SQLITE_LIMIT_COMPOUND_SELECT :: 4
-SQLITE_LIMIT_VDBE_OP :: 5
-SQLITE_LIMIT_FUNCTION_ARG :: 6
-SQLITE_LIMIT_ATTACHED :: 7
-SQLITE_LIMIT_LIKE_PATTERN_LENGTH :: 8
-SQLITE_LIMIT_VARIABLE_NUMBER :: 9
-SQLITE_LIMIT_TRIGGER_DEPTH :: 10
-SQLITE_LIMIT_WORKER_THREADS :: 11
-SQLITE_LIMIT_PARSER_DEPTH :: 12
-SQLITE_PREPARE_PERSISTENT :: 0x01
-SQLITE_PREPARE_NORMALIZE :: 0x02
-SQLITE_PREPARE_NO_VTAB :: 0x04
-SQLITE_PREPARE_DONT_LOG :: 0x10
-SQLITE_PREPARE_FROM_DDL :: 0x20
+SQLITE_SETLK_BLOCK_ON_CONNECT :: 0x01
 SQLITE3_TEXT :: 3
 SQLITE_DETERMINISTIC :: 0x000000800
 SQLITE_DIRECTONLY :: 0x000080000
@@ -192,88 +19,7 @@ SQLITE_RESULT_SUBTYPE :: 0x001000000
 SQLITE_SELFORDER1 :: 0x002000000
 SQLITE_WIN32_DATA_DIRECTORY_TYPE :: 1
 SQLITE_WIN32_TEMP_DIRECTORY_TYPE :: 2
-SQLITE_TXN_NONE :: 0
-SQLITE_TXN_READ :: 1
-SQLITE_TXN_WRITE :: 2
-SQLITE_INDEX_SCAN_UNIQUE :: 0x00000001
-SQLITE_INDEX_SCAN_HEX :: 0x00000002
-SQLITE_INDEX_CONSTRAINT_EQ :: 2
-SQLITE_INDEX_CONSTRAINT_GT :: 4
-SQLITE_INDEX_CONSTRAINT_LE :: 8
-SQLITE_INDEX_CONSTRAINT_LT :: 16
-SQLITE_INDEX_CONSTRAINT_GE :: 32
-SQLITE_INDEX_CONSTRAINT_MATCH :: 64
-SQLITE_INDEX_CONSTRAINT_LIKE :: 65
-SQLITE_INDEX_CONSTRAINT_GLOB :: 66
-SQLITE_INDEX_CONSTRAINT_REGEXP :: 67
-SQLITE_INDEX_CONSTRAINT_NE :: 68
-SQLITE_INDEX_CONSTRAINT_ISNOT :: 69
-SQLITE_INDEX_CONSTRAINT_ISNOTNULL :: 70
-SQLITE_INDEX_CONSTRAINT_ISNULL :: 71
-SQLITE_INDEX_CONSTRAINT_IS :: 72
-SQLITE_INDEX_CONSTRAINT_LIMIT :: 73
-SQLITE_INDEX_CONSTRAINT_OFFSET :: 74
-SQLITE_INDEX_CONSTRAINT_FUNCTION :: 150
-SQLITE_STATUS_MEMORY_USED :: 0
-SQLITE_STATUS_PAGECACHE_USED :: 1
-SQLITE_STATUS_PAGECACHE_OVERFLOW :: 2
-SQLITE_STATUS_SCRATCH_USED :: 3
-SQLITE_STATUS_SCRATCH_OVERFLOW :: 4
-SQLITE_STATUS_MALLOC_SIZE :: 5
-SQLITE_STATUS_PARSER_STACK :: 6
-SQLITE_STATUS_PAGECACHE_SIZE :: 7
-SQLITE_STATUS_SCRATCH_SIZE :: 8
-SQLITE_STATUS_MALLOC_COUNT :: 9
-SQLITE_DBSTATUS_LOOKASIDE_USED :: 0
-SQLITE_DBSTATUS_CACHE_USED :: 1
-SQLITE_DBSTATUS_SCHEMA_USED :: 2
-SQLITE_DBSTATUS_STMT_USED :: 3
-SQLITE_DBSTATUS_LOOKASIDE_HIT :: 4
-SQLITE_DBSTATUS_LOOKASIDE_MISS_SIZE :: 5
-SQLITE_DBSTATUS_LOOKASIDE_MISS_FULL :: 6
-SQLITE_DBSTATUS_CACHE_HIT :: 7
-SQLITE_DBSTATUS_CACHE_MISS :: 8
-SQLITE_DBSTATUS_CACHE_WRITE :: 9
-SQLITE_DBSTATUS_DEFERRED_FKS :: 10
-SQLITE_DBSTATUS_CACHE_USED_SHARED :: 11
-SQLITE_DBSTATUS_CACHE_SPILL :: 12
-SQLITE_DBSTATUS_TEMPBUF_SPILL :: 13
-SQLITE_DBSTATUS_MAX :: 13
-SQLITE_STMTSTATUS_FULLSCAN_STEP :: 1
-SQLITE_STMTSTATUS_SORT :: 2
-SQLITE_STMTSTATUS_AUTOINDEX :: 3
-SQLITE_STMTSTATUS_VM_STEP :: 4
-SQLITE_STMTSTATUS_REPREPARE :: 5
-SQLITE_STMTSTATUS_RUN :: 6
-SQLITE_STMTSTATUS_FILTER_MISS :: 7
-SQLITE_STMTSTATUS_FILTER_HIT :: 8
-SQLITE_STMTSTATUS_MEMUSED :: 99
-SQLITE_CHECKPOINT_PASSIVE :: 0
-SQLITE_CHECKPOINT_FULL :: 1
-SQLITE_CHECKPOINT_RESTART :: 2
-SQLITE_CHECKPOINT_TRUNCATE :: 3
-SQLITE_VTAB_CONSTRAINT_SUPPORT :: 1
-SQLITE_VTAB_INNOCUOUS :: 2
-SQLITE_VTAB_DIRECTONLY :: 3
-SQLITE_VTAB_USES_ALL_SCHEMAS :: 4
-SQLITE_SCANSTAT_NLOOP :: 0
-SQLITE_SCANSTAT_NVISIT :: 1
-SQLITE_SCANSTAT_EST :: 2
-SQLITE_SCANSTAT_NAME :: 3
-SQLITE_SCANSTAT_EXPLAIN :: 4
-SQLITE_SCANSTAT_SELECTID :: 5
-SQLITE_SCANSTAT_PARENTID :: 6
-SQLITE_SCANSTAT_NCYCLE :: 7
 SQLITE_SCANSTAT_COMPLEX :: 0x0001
-SQLITE_SERIALIZE_NOCOPY :: 0x001
-SQLITE_DESERIALIZE_FREEONCLOSE :: 1
-SQLITE_DESERIALIZE_RESIZEABLE :: 2
-SQLITE_DESERIALIZE_READONLY :: 4
-CARRAY_INT32 :: 0
-CARRAY_INT64 :: 1
-CARRAY_DOUBLE :: 2
-CARRAY_TEXT :: 3
-CARRAY_BLOB :: 4
 NOT_WITHIN :: 0
 PARTLY_WITHIN :: 1
 FULLY_WITHIN :: 2
@@ -622,9 +368,397 @@ Result_Code :: enum i32 {
 	Warning = 28,
 	Row = 100,
 	Done = 101,
-	Setlk_Block_On_Connect = 1,
-	Deny = 1,
-	Ignore = 2,
+}
+
+Open_Flag :: enum i32 {
+	Readonly = 1,
+	Readwrite = 2,
+	Create = 4,
+	Deleteonclose = 8,
+	Exclusive = 16,
+	Autoproxy = 32,
+	Uri = 64,
+	Memory = 128,
+	Main_Db = 256,
+	Temp_Db = 512,
+	Transient_Db = 1024,
+	Main_Journal = 2048,
+	Temp_Journal = 4096,
+	Subjournal = 8192,
+	Super_Journal = 16384,
+	Nomutex = 32768,
+	Fullmutex = 65536,
+	Sharedcache = 131072,
+	Privatecache = 262144,
+	Wal = 524288,
+	Nofollow = 16777216,
+	Exrescode = 33554432,
+	Master_Journal = 16384,
+}
+
+Io_Capability :: enum i32 {
+	Atomic = 1,
+	Atomic512 = 2,
+	Atomic1_K = 4,
+	Atomic2_K = 8,
+	Atomic4_K = 16,
+	Atomic8_K = 32,
+	Atomic16_K = 64,
+	Atomic32_K = 128,
+	Atomic64_K = 256,
+	Safe_Append = 512,
+	Sequential = 1024,
+	Undeletable_When_Open = 2048,
+	Powersafe_Overwrite = 4096,
+	Immutable = 8192,
+	Batch_Atomic = 16384,
+	Subpage_Read = 32768,
+}
+
+Lock_Level :: enum i32 {
+	None = 0,
+	Shared = 1,
+	Reserved = 2,
+	Pending = 3,
+	Exclusive = 4,
+}
+
+Sync_Flag :: enum i32 {
+	Normal = 2,
+	Full = 3,
+	Dataonly = 16,
+}
+
+Fcntl_Opcode :: enum i32 {
+	Lockstate = 1,
+	Get_Lockproxyfile = 2,
+	Set_Lockproxyfile = 3,
+	Last_Errno = 4,
+	Size_Hint = 5,
+	Chunk_Size = 6,
+	File_Pointer = 7,
+	Sync_Omitted = 8,
+	Win32_Av_Retry = 9,
+	Persist_Wal = 10,
+	Overwrite = 11,
+	Vfsname = 12,
+	Powersafe_Overwrite = 13,
+	Pragma = 14,
+	Busyhandler = 15,
+	Tempfilename = 16,
+	Mmap_Size = 18,
+	Trace = 19,
+	Has_Moved = 20,
+	Sync = 21,
+	Commit_Phasetwo = 22,
+	Win32_Set_Handle = 23,
+	Wal_Block = 24,
+	Zipvfs = 25,
+	Rbu = 26,
+	Vfs_Pointer = 27,
+	Journal_Pointer = 28,
+	Win32_Get_Handle = 29,
+	Pdb = 30,
+	Begin_Atomic_Write = 31,
+	Commit_Atomic_Write = 32,
+	Rollback_Atomic_Write = 33,
+	Lock_Timeout = 34,
+	Data_Version = 35,
+	Size_Limit = 36,
+	Ckpt_Done = 37,
+	Reserve_Bytes = 38,
+	Ckpt_Start = 39,
+	External_Reader = 40,
+	Cksm_File = 41,
+	Reset_Cache = 42,
+	Null_Io = 43,
+	Block_On_Connect = 44,
+	Filestat = 45,
+}
+
+Access_Mode :: enum i32 {
+	Exists = 0,
+	Readwrite = 1,
+	Read = 2,
+}
+
+Shm_Flag :: enum i32 {
+	Unlock = 1,
+	Lock = 2,
+	Shared = 4,
+	Exclusive = 8,
+}
+
+Checkpoint_Mode :: enum i32 {
+	Passive = 0,
+	Full = 1,
+	Restart = 2,
+	Truncate = 3,
+}
+
+Config_Opcode :: enum i32 {
+	Singlethread = 1,
+	Multithread = 2,
+	Serialized = 3,
+	Malloc = 4,
+	Getmalloc = 5,
+	Scratch = 6,
+	Pagecache = 7,
+	Heap = 8,
+	Memstatus = 9,
+	Mutex = 10,
+	Getmutex = 11,
+	Lookaside = 13,
+	Pcache = 14,
+	Getpcache = 15,
+	Log = 16,
+	Uri = 17,
+	Pcache2 = 18,
+	Getpcache2 = 19,
+	Covering_Index_Scan = 20,
+	Sqllog = 21,
+	Mmap_Size = 22,
+	Win32_Heapsize = 23,
+	Pcache_Hdrsz = 24,
+	Pmasz = 25,
+	Stmtjrnl_Spill = 26,
+	Small_Malloc = 27,
+	Sorterref_Size = 28,
+	Memdb_Maxsize = 29,
+	Rowid_In_View = 30,
+}
+
+Db_Config :: enum i32 {
+	Maindbname = 1000,
+	Lookaside = 1001,
+	Enable_Fkey = 1002,
+	Enable_Trigger = 1003,
+	Enable_Fts3_Tokenizer = 1004,
+	Enable_Load_Extension = 1005,
+	No_Ckpt_On_Close = 1006,
+	Enable_Qpsg = 1007,
+	Trigger_Eqp = 1008,
+	Reset_Database = 1009,
+	Defensive = 1010,
+	Writable_Schema = 1011,
+	Legacy_Alter_Table = 1012,
+	Dqs_Dml = 1013,
+	Dqs_Ddl = 1014,
+	Enable_View = 1015,
+	Legacy_File_Format = 1016,
+	Trusted_Schema = 1017,
+	Stmt_Scanstatus = 1018,
+	Reverse_Scanorder = 1019,
+	Enable_Attach_Create = 1020,
+	Enable_Attach_Write = 1021,
+	Enable_Comments = 1022,
+	Fp_Digits = 1023,
+	Max = 1023,
+}
+
+Limit :: enum i32 {
+	Length = 0,
+	Sql_Length = 1,
+	Column = 2,
+	Expr_Depth = 3,
+	Compound_Select = 4,
+	Vdbe_Op = 5,
+	Function_Arg = 6,
+	Attached = 7,
+	Like_Pattern_Length = 8,
+	Variable_Number = 9,
+	Trigger_Depth = 10,
+	Worker_Threads = 11,
+	Parser_Depth = 12,
+}
+
+Status :: enum i32 {
+	Memory_Used = 0,
+	Pagecache_Used = 1,
+	Pagecache_Overflow = 2,
+	Scratch_Used = 3,
+	Scratch_Overflow = 4,
+	Malloc_Size = 5,
+	Parser_Stack = 6,
+	Pagecache_Size = 7,
+	Scratch_Size = 8,
+	Malloc_Count = 9,
+}
+
+Db_Status :: enum i32 {
+	Lookaside_Used = 0,
+	Cache_Used = 1,
+	Schema_Used = 2,
+	Stmt_Used = 3,
+	Lookaside_Hit = 4,
+	Lookaside_Miss_Size = 5,
+	Lookaside_Miss_Full = 6,
+	Cache_Hit = 7,
+	Cache_Miss = 8,
+	Cache_Write = 9,
+	Deferred_Fks = 10,
+	Cache_Used_Shared = 11,
+	Cache_Spill = 12,
+	Tempbuf_Spill = 13,
+	Max = 13,
+}
+
+Stmt_Status :: enum i32 {
+	Fullscan_Step = 1,
+	Sort = 2,
+	Autoindex = 3,
+	Vm_Step = 4,
+	Reprepare = 5,
+	Run = 6,
+	Filter_Miss = 7,
+	Filter_Hit = 8,
+	Memused = 99,
+}
+
+Trace_Flag :: enum i32 {
+	Stmt = 1,
+	Profile = 2,
+	Row = 4,
+	Close = 8,
+}
+
+Prepare_Flag :: enum i32 {
+	Persistent = 1,
+	Normalize = 2,
+	No_Vtab = 4,
+	Dont_Log = 16,
+	From_Ddl = 32,
+}
+
+Txn_State :: enum i32 {
+	None = 0,
+	Read = 1,
+	Write = 2,
+}
+
+Serialize_Flag :: enum i32 {
+	Nocopy = 1,
+}
+
+Deserialize_Flag :: enum i32 {
+	Freeonclose = 1,
+	Resizeable = 2,
+	Readonly = 4,
+}
+
+Vtab_Config :: enum i32 {
+	Constraint_Support = 1,
+	Innocuous = 2,
+	Directonly = 3,
+	Uses_All_Schemas = 4,
+}
+
+Index_Scan :: enum i32 {
+	Unique = 1,
+	Hex = 2,
+}
+
+Index_Constraint_Op :: enum i32 {
+	Eq = 2,
+	Gt = 4,
+	Le = 8,
+	Lt = 16,
+	Ge = 32,
+	Match = 64,
+	Like = 65,
+	Glob = 66,
+	Regexp = 67,
+	Ne = 68,
+	Isnot = 69,
+	Isnotnull = 70,
+	Isnull = 71,
+	Is = 72,
+	Limit = 73,
+	Offset = 74,
+	Function = 150,
+}
+
+Scanstat :: enum i32 {
+	Nloop = 0,
+	Nvisit = 1,
+	Est = 2,
+	Name = 3,
+	Explain = 4,
+	Selectid = 5,
+	Parentid = 6,
+	Ncycle = 7,
+}
+
+Mutex_Type :: enum i32 {
+	Fast = 0,
+	Recursive = 1,
+	Static_Main = 2,
+	Static_Mem = 3,
+	Static_Mem2 = 4,
+	Static_Open = 4,
+	Static_Prng = 5,
+	Static_Lru = 6,
+	Static_Lru2 = 7,
+	Static_Pmem = 7,
+	Static_App1 = 8,
+	Static_App2 = 9,
+	Static_App3 = 10,
+	Static_Vfs1 = 11,
+	Static_Vfs2 = 12,
+	Static_Vfs3 = 13,
+	Static_Master = 2,
+}
+
+Testctrl :: enum i32 {
+	First = 5,
+	Prng_Save = 5,
+	Prng_Restore = 6,
+	Prng_Reset = 7,
+	Fk_No_Action = 7,
+	Bitvec_Test = 8,
+	Fault_Install = 9,
+	Benign_Malloc_Hooks = 10,
+	Pending_Byte = 11,
+	Assert = 12,
+	Always = 13,
+	Reserve = 14,
+	Json_Selfcheck = 14,
+	Optimizations = 15,
+	Iskeyword = 16,
+	Getopt = 16,
+	Scratchmalloc = 17,
+	Internal_Functions = 17,
+	Localtime_Fault = 18,
+	Explain_Stmt = 19,
+	Once_Reset_Threshold = 19,
+	Never_Corrupt = 20,
+	Vdbe_Coverage = 21,
+	Byteorder = 22,
+	Isinit = 23,
+	Sorter_Mmap = 24,
+	Imposter = 25,
+	Parser_Coverage = 26,
+	Result_Intreal = 27,
+	Prng_Seed = 28,
+	Extra_Schema_Checks = 29,
+	Seek_Count = 30,
+	Traceflags = 31,
+	Tune = 32,
+	Logest = 33,
+	Uselongdouble = 34,
+	Atof = 34,
+	Last = 34,
+}
+
+Carray_Type :: enum i32 {
+	Int32 = 0,
+	Int64 = 1,
+	Double = 2,
+	Text = 3,
+	Blob = 4,
+}
+
+Authorizer_Action :: enum i32 {
 	Create_Index = 1,
 	Create_Table = 2,
 	Create_Temp_Index = 3,
@@ -659,11 +793,22 @@ Result_Code :: enum i32 {
 	Savepoint = 32,
 	Copy = 0,
 	Recursive = 33,
+}
+
+Authorizer_Result :: enum i32 {
+	Deny = 1,
+	Ignore = 2,
+}
+
+Datatype :: enum i32 {
 	Integer = 1,
 	Float = 2,
 	Blob = 4,
 	Null = 5,
 	Text = 3,
+}
+
+Text_Encoding :: enum i32 {
 	Utf8 = 1,
 	Utf16_Le = 2,
 	Utf16_Be = 3,
@@ -671,69 +816,12 @@ Result_Code :: enum i32 {
 	Any = 5,
 	Utf16_Aligned = 8,
 	Utf8_Zt = 16,
-	Mutex_Fast = 0,
-	Mutex_Recursive = 1,
-	Mutex_Static_Main = 2,
-	Mutex_Static_Mem = 3,
-	Mutex_Static_Mem2 = 4,
-	Mutex_Static_Open = 4,
-	Mutex_Static_Prng = 5,
-	Mutex_Static_Lru = 6,
-	Mutex_Static_Lru2 = 7,
-	Mutex_Static_Pmem = 7,
-	Mutex_Static_App1 = 8,
-	Mutex_Static_App2 = 9,
-	Mutex_Static_App3 = 10,
-	Mutex_Static_Vfs1 = 11,
-	Mutex_Static_Vfs2 = 12,
-	Mutex_Static_Vfs3 = 13,
-	Mutex_Static_Master = 2,
-	Testctrl_First = 5,
-	Testctrl_Prng_Save = 5,
-	Testctrl_Prng_Restore = 6,
-	Testctrl_Prng_Reset = 7,
-	Testctrl_Fk_No_Action = 7,
-	Testctrl_Bitvec_Test = 8,
-	Testctrl_Fault_Install = 9,
-	Testctrl_Benign_Malloc_Hooks = 10,
-	Testctrl_Pending_Byte = 11,
-	Testctrl_Assert = 12,
-	Testctrl_Always = 13,
-	Testctrl_Reserve = 14,
-	Testctrl_Json_Selfcheck = 14,
-	Testctrl_Optimizations = 15,
-	Testctrl_Iskeyword = 16,
-	Testctrl_Getopt = 16,
-	Testctrl_Scratchmalloc = 17,
-	Testctrl_Internal_Functions = 17,
-	Testctrl_Localtime_Fault = 18,
-	Testctrl_Explain_Stmt = 19,
-	Testctrl_Once_Reset_Threshold = 19,
-	Testctrl_Never_Corrupt = 20,
-	Testctrl_Vdbe_Coverage = 21,
-	Testctrl_Byteorder = 22,
-	Testctrl_Isinit = 23,
-	Testctrl_Sorter_Mmap = 24,
-	Testctrl_Imposter = 25,
-	Testctrl_Parser_Coverage = 26,
-	Testctrl_Result_Intreal = 27,
-	Testctrl_Prng_Seed = 28,
-	Testctrl_Extra_Schema_Checks = 29,
-	Testctrl_Seek_Count = 30,
-	Testctrl_Traceflags = 31,
-	Testctrl_Tune = 32,
-	Testctrl_Logest = 33,
-	Testctrl_Uselongdouble = 34,
-	Testctrl_Atof = 34,
-	Testctrl_Last = 34,
+}
+
+Conflict_Action :: enum i32 {
 	Rollback = 1,
 	Fail = 3,
 	Replace = 5,
-	Carray_Int32 = 0,
-	Carray_Int64 = 1,
-	Carray_Double = 2,
-	Carray_Text = 3,
-	Carray_Blob = 4,
 }
 
 @(link_prefix = "sqlite3_")
