@@ -62,11 +62,11 @@ Each pass gets a file, aligned with the config section it serves:
 | `extract_decls.odin` | Per-declaration extraction: funcs, vars, macros, and the record/enum/typedef get-or-create + fill visitors. |
 | `extract_types.odin` | `capture_type` and friends: builtin mapping, measured size/signedness, param decay. |
 
-### `emit.odin` — done (bit-field file deferred)
+### `emit.odin` — done
 
 | File | Scope |
 |------|-------|
 | `emit.odin` | `Emit_Options`, output assembly, prelude, foreign-block plumbing. |
 | `emit_decls.odin` | Per-declaration emitters (record, enum, typedef, var, func, macro, bit_set) and doc/indent helpers. |
 | `emit_types.odin` | `write_type`, `write_params`, spelling dispatch. |
-| `emit_bit_field.odin` | (with Milestone 12) bit-field run grouping and the layout proof — the one decision-adjacent computation in Emission, kept visibly separate. |
+| `emit_bit_field.odin` | Bit-field run grouping and the layout proof — the one decision-adjacent computation in Emission, kept visibly separate. |

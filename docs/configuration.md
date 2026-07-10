@@ -213,6 +213,7 @@ config.diagnostics = {
   pointer_lowering_guess    = "warn",
   unresolved_idiomatic_leaf = "warn",
   opaque_layout_fallback    = "warn",
+  bit_field_layout_fallback = "warn",
   naming_ambiguity          = "warn",
   macro_group_conflict      = "warn",
   macro_group_empty         = "warn",

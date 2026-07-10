@@ -133,6 +133,16 @@ measured_size_of :: proc(type: clang.Type) -> int {
 	return int(size)
 }
 
+// The alignment of a Clang type in bytes on the extraction target. It has
+// the same negative-error contract as measured_size_of.
+measured_alignment_of :: proc(type: clang.Type) -> int {
+	alignment := clang.Type_getAlignOf(type)
+	if alignment < 0 {
+		return -1
+	}
+	return int(alignment)
+}
+
 // Signedness of an integer type's canonical (typedef-resolved) form, as
 // libclang reports it on the extraction target — never guessed from the
 // type's name. Used to derive a native spelling for std typedefs whose

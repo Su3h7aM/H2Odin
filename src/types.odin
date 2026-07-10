@@ -152,6 +152,42 @@ odin_type_size :: proc(spelling: string) -> int {
 	return -1
 }
 
+// Alignment companion to odin_type_size, used when a transformed ordinary
+// field sits beside a measured C bit-field region.
+odin_type_alignment :: proc(spelling: string) -> int {
+	switch spelling {
+	case "bool":
+		return align_of(bool)
+	case "i8":
+		return align_of(i8)
+	case "u8":
+		return align_of(u8)
+	case "i16":
+		return align_of(i16)
+	case "u16":
+		return align_of(u16)
+	case "i32":
+		return align_of(i32)
+	case "u32":
+		return align_of(u32)
+	case "f32":
+		return align_of(f32)
+	case "i64":
+		return align_of(i64)
+	case "u64":
+		return align_of(u64)
+	case "f64":
+		return align_of(f64)
+	case "int":
+		return align_of(int)
+	case "uint":
+		return align_of(uint)
+	case "uintptr":
+		return align_of(uintptr)
+	}
+	return -1
+}
+
 std_mapping_for :: proc(name: string) -> (Std_Mapping, bool) {
 	for mapping in std_mappings {
 		if mapping.c_name == name {

@@ -516,3 +516,53 @@ return config
 	expect_contains(t, imports_data, "foreign import lib")
 	expect_contains(t, imports_data, "package m10f")
 }
+
+@(test)
+test_m12_bit_fields_emit_proven_layout_and_fail_closed :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/bit_fields.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "H2O_IndexOptions :: struct")
+	expect_contains(t, stdout, "using _: bit_field u16 {")
+	expect_contains(t, stdout, "ExcludeDeclarationsFromPCH: u16 | 1")
+	expect_contains(t, stdout, "_: u16 | 13")
+	expect_contains(t, stdout, "H2O_Plain :: struct")
+	expect_contains(t, stdout, "x: c.int")
+	expect_contains(t, stdout, "H2O_Overlapping :: struct {}")
+	expect_contains(t, stderr, "warning[bit_field_layout_fallback]:")
+	expect_not_contains(t, stderr, `record "H2O_Overlapping" field "pointer"`)
+
+	out_dir := "/tmp/h2odin-m12-bit-fields"
+	_ = os.remove_all(out_dir)
+	testing.expect_value(t, os.make_directory_all(out_dir), nil)
+	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-m12-bit-fields/generated.odin", stdout), nil)
+	layout_check := `package bit_fields
+
+import clang "vendored:libclang"
+
+#assert(size_of(H2O_IndexOptions) == size_of(clang.Index_Options))
+#assert(offset_of(H2O_IndexOptions, PreambleStoragePath) == offset_of(clang.Index_Options, PreambleStoragePath))
+#assert(offset_of(H2O_IndexOptions, InvocationEmissionPath) == offset_of(clang.Index_Options, InvocationEmissionPath))
+`
+	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-m12-bit-fields/layout_check.odin", layout_check), nil)
+
+	check_cmd := [?]string{"odin", "check", out_dir, "-no-entry-point", "-collection:vendored=./vendored"}
+	check_stdout, check_stderr, check_ok := run_h2odin(t, check_cmd[:])
+	defer delete(check_stdout)
+	defer delete(check_stderr)
+	testing.expect(t, check_ok)
+
+	override_cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/bit_fields_override.lua"}
+	override_stdout, override_stderr, override_ok := run_h2odin(t, override_cmd[:])
+	defer delete(override_stdout)
+	defer delete(override_stderr)
+	if override_ok {
+		expect_contains(t, override_stdout, "H2O_IndexOptions :: struct {}")
+		expect_contains(t, override_stderr, `warning[bit_field_layout_fallback]: "H2O_IndexOptions"`)
+	}
+}

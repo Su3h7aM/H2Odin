@@ -142,7 +142,7 @@ lower_pointer :: proc(ir: ^IR, pointee: Type_Handle) -> Type_Lowered_Pointer {
 	return Type_Lowered_Pointer{pointee = pointee, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}
 }
 
-report_pointer_lowering_guesses :: proc(ir: ^IR) {
+report_pointer_lowering_guesses :: proc(ir: ^IR, opaque_records: []bool = nil) {
 	for ref in ir.order {
 		switch ref.kind {
 		case .Invalid, .Macro, .Bit_Set:
@@ -164,6 +164,10 @@ report_pointer_lowering_guesses :: proc(ir: ^IR) {
 			}
 		case .Record:
 			decl := ir.records[ref.index]
+			emission_fallback := len(opaque_records) == len(ir.records) && opaque_records[ref.index]
+			if !decl.is_complete || decl.has_unrepresentable_fields || emission_fallback {
+				continue
+			}
 			for field in decl.fields {
 				if field.name != "" {
 					report_type_guesses(ir, field.type, fmt.tprintf("record %q field %q", record_display_name(decl), field.name))

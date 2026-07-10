@@ -20,7 +20,6 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	for _, i in ir.types {
 		lower_type(ir, Type_Handle(i))
 	}
-	report_pointer_lowering_guesses(ir)
 
 	if mode == .Idiomatic {
 		substitute_leaf_types(ir)

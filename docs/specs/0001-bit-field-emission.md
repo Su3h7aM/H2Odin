@@ -1,6 +1,6 @@
 # Spec 0001 — C bit-fields become Odin `bit_field` regions, proven from measured layout
 
-**Status:** accepted (planned — Milestone 12, not yet implemented)
+**Status:** implemented (Milestone 12)
 **Date:** 2026-07-09
 
 ## Context

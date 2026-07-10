@@ -4,13 +4,14 @@ A C-header-to-Odin bindings generator, written in Odin.
 
 H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings — configured through a small but powerful Lua policy layer.
 
-> Status: usable pipeline (Milestones 0–5 + 7–8). Idiomatic *wrappers* (Milestone 6) are deferred.
+> Status: usable pipeline (Milestones 0–5 + 7–12). Idiomatic *wrappers* (Milestone 6) are deferred.
 
 ---
 
 ## Features
 
 - **Two type modes.** *ABI mode* preserves the C API faithfully using Odin's C-compatible types (`c.int`, `c.size_t`, …). *Idiomatic mode* generates native Odin types (`i32`, `f64`, …) where the substitution is proven ABI-safe on the target. Generated wrapper procedures (e.g. `cstring → string` params, `pointer+length → []T` slices) are planned, not yet implemented.
+- **Measured C bit-fields.** Representable bit-field runs become Odin `bit_field` regions only when their size, alignment, and offsets can be proven from libclang's target layout; everything else fails closed to an opaque record with a diagnostic.
 - **Correctness first.** A type is never swapped for a nicer-looking one if it would break behavior or the ABI. When the header is ambiguous, H2Odin picks a safe default, flags it, and lets you override it — it never silently guesses wrong.
 - **Deterministic.** Same headers plus the same config tree always produce identical output. The Lua config is sandboxed (no `io`/`os`/`debug`, no raw loaders); `require` only resolves the `h2odin` prelude and sibling `.lua` under the config directory.
 - **Configurable in Lua.** Simple libraries need a few lines of data; tricky ones drop into Lua functions for the hard cases — same small API either way.
@@ -59,6 +60,7 @@ Check generated examples:
 ```sh
 odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
 odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
+odin check examples/bit_fields -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
 ---

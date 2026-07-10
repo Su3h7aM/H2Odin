@@ -90,6 +90,11 @@ main :: proc() {
 		emit_comments     = policy.emit_comments,
 		imports_file      = policy.imports_file,
 	}
+	bit_field_plan := plan_bit_field_emission(&ir, context.temp_allocator)
+	for diagnostic in bit_field_plan.diagnostics {
+		append(&ir.diagnostics, diagnostic)
+	}
+	report_pointer_lowering_guesses(&ir, bit_field_plan.opaque_records)
 	result := emit(&ir, opts)
 
 	if !write_emit_result(result, &policy, stem) {

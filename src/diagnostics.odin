@@ -20,6 +20,7 @@ Diag_Category :: enum u8 {
 	Pointer_Lowering_Guess,
 	Unresolved_Idiomatic_Leaf,
 	Opaque_Layout_Fallback,
+	Bit_Field_Layout_Fallback,
 	Naming_Ambiguity,
 	Macro_Group_Conflict,
 	Macro_Group_Empty,
@@ -50,6 +51,8 @@ diag_category_name :: proc(c: Diag_Category) -> string {
 		return "unresolved_idiomatic_leaf"
 	case .Opaque_Layout_Fallback:
 		return "opaque_layout_fallback"
+	case .Bit_Field_Layout_Fallback:
+		return "bit_field_layout_fallback"
 	case .Naming_Ambiguity:
 		return "naming_ambiguity"
 	case .Macro_Group_Conflict:
@@ -82,6 +85,8 @@ diag_category_from_name :: proc(name: string) -> (Diag_Category, bool) {
 		return .Unresolved_Idiomatic_Leaf, true
 	case "opaque_layout_fallback":
 		return .Opaque_Layout_Fallback, true
+	case "bit_field_layout_fallback":
+		return .Bit_Field_Layout_Fallback, true
 	case "naming_ambiguity":
 		return .Naming_Ambiguity, true
 	case "macro_group_conflict":

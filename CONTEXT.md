@@ -14,11 +14,11 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: usable pipeline (Milestones 0–5, 7–11 complete). Milestone 6 (idiomatic
+Status: usable pipeline (Milestones 0–5, 7–12 complete). Milestone 6 (idiomatic
 wrappers) is deferred. **The next goal is self-hosting: H2Odin generates the
 libclang bindings its own Extraction stage uses**, in the Odin naming
-convention, with C bit-field → Odin `bit_field` emission as the prerequisite —
-see [`ROADMAP.md`](ROADMAP.md) (Milestones 12–13) and
+convention; C bit-field → Odin `bit_field` emission is now in place as its
+prerequisite. See [`ROADMAP.md`](ROADMAP.md) (Milestones 12–13) and
 [`docs/specs/`](docs/specs/).
 
 ---
@@ -149,6 +149,15 @@ rather than bend it silently.
   type-level mapping decisions and are always on — `cstring` for `const char *`
   predates and is independent of any wrapper machinery.
 
+- **Bit-field emission is planned before it is serialized.** Extraction stores
+  measured widths, offsets, sizes, and alignments; Emission proves a whole
+  record layout arithmetically and emits `bit_field uN` only when that proof
+  succeeds. The plan is an emission-local view and never mutates semantic IR.
+  Any user-authored adjacent field spelling or config type rewrite makes the
+  proof fail closed, because the original C measurements no longer prove the
+  bytes that Odin will emit. Opaque records do not produce diagnostics for
+  pointer guesses in fields that never appear.
+
 - **Wrappers are NOT implemented.** Milestone 6 (generated wrapper procs:
   `cstring→string`, pointer+length→slice, flag-enum→`bit_set`) is **deferred and
   has never existed** in the codebase — earlier roadmap boxes that implied
@@ -199,7 +208,7 @@ rather than bend it silently.
   tests sit beside sources (`*_test.odin`, package `h2odin`); e2e tests
   (`tests/e2e_test.odin`, package `h2odin_e2e`) drive the built binary against
   fixtures in `tests/fixtures/`.
-- **Examples** in `examples/` (`fff`, `sqlite3`) are checked-in generated output;
+- **Examples** in `examples/` (`bit_fields`, `fff`, `sqlite3`) are checked-in generated output;
   regenerate and `odin check` them when emission changes.
 - **Style.** Plain, data-oriented Odin. Readable over clever, small procedures,
   state passed explicitly (Odin procs do not capture). Match surrounding

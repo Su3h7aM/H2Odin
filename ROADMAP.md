@@ -138,27 +138,27 @@ makes by-value construction — required for e.g. libclang's `CXIndexOptions` �
 impossible. Design decisions are recorded in
 [`docs/specs/0001-bit-field-emission.md`](docs/specs/0001-bit-field-emission.md).
 
-- [ ] Extraction: stop dropping bit-field members. Capture per-field facts:
+- [x] Extraction: stop dropping bit-field members. Capture per-field facts:
       `is_bitfield` (`clang_Cursor_isBitField`), `bit_width`
       (`clang_getFieldDeclBitWidth`), and the measured bit offset
       (`clang_Cursor_getOffsetOfField`) — facts, decided nothing.
-- [ ] IR: extend `Field` with the bit-field facts;
+- [x] IR: extend `Field` with the bit-field facts;
       `has_unrepresentable_fields` remains only for genuine failures (unknown
       width, unsupported field type) — a representable bit-field no longer
       forces opacity. Fix the current inconsistency where a record marked
       unrepresentable still carries a partial `fields` slice.
-- [ ] Emission: group runs of adjacent bit-fields into
+- [x] Emission: group runs of adjacent bit-fields into
       `using _: bit_field uN { Name: uN | width, ... }` regions with the
       backing type and placement *proven* from the measured offsets and record
       size; anonymous/reserved members emit as `_` with their width.
-- [ ] Fail closed: when the measured layout cannot be reproduced with an Odin
+- [x] Fail closed: when the measured layout cannot be reproduced with an Odin
       `bit_field` region, keep the opaque fallback and emit the new
       `bit_field_layout_fallback` diagnostic category (registered
       Milestone-11-style, `warn` by default).
-- [ ] Stop emitting `pointer_lowering_guess` diagnostics for fields of records
+- [x] Stop emitting `pointer_lowering_guess` diagnostics for fields of records
       that emit opaque — today they reference fields that never appear in the
       output.
-- [ ] Tests: unit fixtures for width/offset capture; a golden
+- [x] Tests: unit fixtures for width/offset capture; a golden
       `CXIndexOptions`-shaped fixture whose emitted layout matches the
       known-good hand binding (`size_of` equality is the hard acceptance bar —
       "looks right but wrong size" is a fail); regression coverage that
@@ -225,7 +225,7 @@ opportunistically or alongside the milestone that touches the same area.
 
 ### Start here
 
-Milestones 0–5 and 7–11 are complete. **The next goal is self-hosted libclang
-bindings (Milestone 13)**, with **bit-field emission (Milestone 12)** as its
-prerequisite — start with Milestone 12. **Milestone 6 (wrappers)** remains
+Milestones 0–5 and 7–12 are complete. **The next goal is self-hosted libclang
+bindings (Milestone 13)**; its **bit-field emission prerequisite (Milestone 12)**
+is complete. **Milestone 6 (wrappers)** remains
 deferred and independent.

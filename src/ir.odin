@@ -239,6 +239,15 @@ Func_Decl :: struct {
 Field :: struct {
 	name:          string, // "" for C11 anonymous struct/union members
 	type:          Type_Handle,
+	// Target-measured layout facts copied from libclang. bit_offset is from
+	// the start of the containing record. size/alignment describe an ordinary
+	// field's type; bit-field storage is proven from the surrounding offsets
+	// instead. Negative values mean libclang could not answer.
+	is_bitfield:   bool,
+	bit_width:     i64,
+	bit_offset:    i64,
+	size:          int,
+	alignment:     int,
 	// Non-empty: emit this spelling instead of following `type` (structs.field).
 	type_spelling: string,
 	// Non-empty: field tag text inside backticks, e.g. fmt:"s,0".
@@ -250,15 +259,18 @@ Field :: struct {
 Record_Decl :: struct {
 	name:                       string, // "" when anonymous
 	fields:                     []Field,
+	// Target-measured record layout. Negative means libclang could not answer.
+	size:                       int,
+	alignment:                  int,
 	is_union:                   bool,
 	is_packed:                  bool,
 	// Positive → emit #align(N). Zero means no alignment attribute.
 	align:                      int,
 	is_complete:                bool, // false → opaque (forward-declared only)
 
-	// The header defines a layout the IR cannot represent yet (bit-fields,
-	// or a field of an unsupported type). Extraction reports why; emission
-	// falls back to an opaque body rather than guessing at the layout.
+	// The header defines a layout the IR cannot represent (for example, a
+	// field of an unsupported type). Extraction or the bit-field layout proof
+	// reports why; emission falls back rather than guessing.
 	has_unrepresentable_fields: bool,
 	is_typedef_named:           bool, // anonymous tag that a typedef gives a name to
 	doc:                        string,

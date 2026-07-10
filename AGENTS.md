@@ -63,8 +63,10 @@ After emission changes, regenerate and check the checked-in examples
 ```sh
 ./build/h2odin -config:examples/sqlite3/config.lua
 ./build/h2odin -config:examples/fff/config.lua
+./build/h2odin -config:examples/bit_fields/config.lua
 odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
 odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
+odin check examples/bit_fields -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
 Unit tests must stay runnable without inventing new foreign deps in the pure stages. E2e tests drive `build/h2odin` against `tests/fixtures/`.

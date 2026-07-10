@@ -236,12 +236,12 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 }
 
 Record_Fill :: struct {
-	ctx:           runtime.Context,
-	state:         ^Extract_State,
-	fields:        [dynamic]Field,
-	is_packed:     bool,
-	has_bitfields: bool,
-	failed_field:  string, // first field with an unsupported type; "" if none
+	ctx:                  runtime.Context,
+	state:                ^Extract_State,
+	fields:               [dynamic]Field,
+	is_packed:            bool,
+	failed_field:         string, // first field with an unsupported type; "" if none
+	failed_bitfield_fact: string, // first bit-field whose width/offset is unavailable
 }
 
 fill_record :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cursor) {
@@ -261,19 +261,32 @@ fill_record :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cu
 	record := state.ir.records[int(handle)]
 	record.is_complete = true
 	record.is_packed = fill.is_packed
-	record.fields = fill.fields[:]
-	if fill.has_bitfields {
+	record_type := clang.getCursorType(cursor)
+	record.size = measured_size_of(record_type)
+	record.alignment = measured_alignment_of(record_type)
+	if fill.failed_field != "" || fill.failed_bitfield_fact != "" {
+		// An opaque record must not retain a misleading partial field list.
+		record.fields = nil
 		record.has_unrepresentable_fields = true
-		ir_diag(state.ir, .Opaque_Layout_Fallback, "%q uses bit-fields; emitted opaque — by-value use of it would be wrong", record_display_name(record))
+	} else {
+		record.fields = fill.fields[:]
 	}
 	if fill.failed_field != "" {
-		record.has_unrepresentable_fields = true
 		ir_diag(
 			state.ir,
 			.Opaque_Layout_Fallback,
 			"%q field %q has an unsupported type; emitted opaque — by-value use of it would be wrong",
 			record_display_name(record),
 			fill.failed_field,
+		)
+	}
+	if fill.failed_bitfield_fact != "" {
+		ir_diag(
+			state.ir,
+			.Bit_Field_Layout_Fallback,
+			"%q bit-field %q has an unknown width or offset; emitted opaque",
+			record_display_name(record),
+			fill.failed_bitfield_fact,
 		)
 	}
 	state.ir.records[int(handle)] = record
@@ -293,18 +306,39 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 	#partial switch clang.getCursorKind(cursor) {
 	case .FieldDecl:
 		name := clone_clang_string(clang.getCursorSpelling(cursor))
-		if clang.Cursor_isBitField(cursor) != 0 {
-			fill.has_bitfields = true
-			return .Continue
-		}
-		type, type_ok := capture_type(fill.state, clang.getCursorType(cursor))
+		clang_type := clang.getCursorType(cursor)
+		type, type_ok := capture_type(fill.state, clang_type)
 		if !type_ok {
 			if fill.failed_field == "" {
 				fill.failed_field = name
 			}
 			return .Continue
 		}
-		append(&fill.fields, Field{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
+		is_bitfield := clang.Cursor_isBitField(cursor) != 0
+		bit_width: i64
+		if is_bitfield {
+			bit_width = i64(clang.getFieldDeclBitWidth(cursor))
+		}
+		bit_offset := i64(clang.Cursor_getOffsetOfField(cursor))
+		if is_bitfield && (bit_width < 0 || bit_offset < 0) {
+			if fill.failed_bitfield_fact == "" {
+				fill.failed_bitfield_fact = name if name != "" else "(anonymous)"
+			}
+			return .Continue
+		}
+		append(
+			&fill.fields,
+			Field {
+				name = name,
+				type = type,
+				is_bitfield = is_bitfield,
+				bit_width = bit_width,
+				bit_offset = bit_offset,
+				size = measured_size_of(clang_type),
+				alignment = measured_alignment_of(clang_type),
+				doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+			},
+		)
 	case .PackedAttr:
 		fill.is_packed = true
 	case .StructDecl, .UnionDecl, .EnumDecl:
@@ -314,14 +348,25 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 		// Named tag declarations are captured lazily when a field's type
 		// references them; nothing to do for those.
 		if clang.Cursor_isAnonymousRecordDecl(cursor) != 0 {
-			type, type_ok := capture_type(fill.state, clang.getCursorType(cursor))
+			clang_type := clang.getCursorType(cursor)
+			type, type_ok := capture_type(fill.state, clang_type)
 			if !type_ok {
 				if fill.failed_field == "" {
 					fill.failed_field = "(anonymous member)"
 				}
 				return .Continue
 			}
-			append(&fill.fields, Field{name = "", type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
+			append(
+				&fill.fields,
+				Field {
+					name = "",
+					type = type,
+					bit_offset = i64(clang.Cursor_getOffsetOfField(cursor)),
+					size = measured_size_of(clang_type),
+					alignment = measured_alignment_of(clang_type),
+					doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+				},
+			)
 		}
 	}
 	return .Continue

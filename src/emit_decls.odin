@@ -16,7 +16,8 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comm
 }
 
 write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, emit_comments: bool, uses_core_c: ^bool) {
-	if !record.is_complete || record.has_unrepresentable_fields {
+	bit_field_layout, bit_fields_ok := prove_record_bit_field_layout(record, ir, context.temp_allocator)
+	if !record.is_complete || record.has_unrepresentable_fields || !bit_fields_ok {
 		// No layout to preserve (forward-declared), or a layout the IR
 		// cannot represent yet — an opaque body is the honest fallback;
 		// pointers to it stay fully usable.
@@ -38,7 +39,17 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 		return
 	}
 	strings.write_string(b, " {\n")
-	for field in record.fields {
+	run_index := 0
+	field_index := 0
+	for field_index < len(record.fields) {
+		if run_index < len(bit_field_layout.runs) && bit_field_layout.runs[run_index].first_field == field_index {
+			run := bit_field_layout.runs[run_index]
+			write_bit_field_run(b, record.fields, run, indent + 1, emit_comments)
+			field_index = run.one_past_last_field
+			run_index += 1
+			continue
+		}
+		field := record.fields[field_index]
 		write_doc(b, field.doc, indent + 1, emit_comments)
 		write_indent(b, indent + 1)
 		if field.name == "" {
@@ -56,6 +67,7 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 			fmt.sbprintf(b, " `%s`", field.tag)
 		}
 		strings.write_string(b, ",\n")
+		field_index += 1
 	}
 	write_indent(b, indent)
 	strings.write_string(b, "}")
