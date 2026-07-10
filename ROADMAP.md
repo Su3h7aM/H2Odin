@@ -240,12 +240,15 @@ opportunistically or alongside the milestone that touches the same area.
 - [x] **Split oversized source files** into files with one well-defined scope
       each — `policy_*`, `transform_*`, `extract_*`, `emit_*` per
       [`docs/source-layout.md`](docs/source-layout.md).
-- [ ] **Bug — `output.imports_file` cannot share Odin names across files.**
-      `import "core:c"` aliases and `foreign import lib` names are file-local,
-      so a generated body that refers to `c` or opens `foreign lib` does not
-      compile when those declarations exist only in `imports.odin`. Add an
-      `odin check` regression and redesign or remove this option independently;
-      Milestone 14 rejects it in per-header layout.
+- [ ] **Remove `output.imports_file`** — decided in
+      [`docs/specs/0006-remove-imports-file.md`](docs/specs/0006-remove-imports-file.md).
+      The option is unsound by Odin's scoping rules (`import` aliases and the
+      `foreign import` lib name are file-local, so the main file's body cannot
+      compile), and its output never compiled, so nothing can depend on it.
+      Reject the key by name with a migration message (legacy-key pattern),
+      delete the split branch in `emit` and the text-level e2e assertions.
+      The hand-editable-foreign-import desire behind it becomes a future
+      per-OS `foreign.import_lib` spec (see Later, Windows parity).
 - [x] **Bug (ABI) — generated `bit_set`s have no explicit backing width.**
       `enums.bit_sets` emitted `Name :: bit_set[Enum]`; Odin sized it from the
       highest flag bit, not from the C type it replaces.
@@ -260,14 +263,16 @@ opportunistically or alongside the milestone that touches the same area.
       also allocates `ir.input_headers` since Milestone 14. Fixed by using an
       arena like the sibling tests.
 - [ ] **Type-safety gap — opaque handles are non-distinct `rawptr` aliases.**
-      The generated libclang package spells every opaque handle as
-      `Index :: rawptr`, `Translation_Unit :: rawptr`, …, so all handle types
-      are mutually assignable; the replaced hand binding's `distinct` handles
-      caught that confusion at compile time. There is no config surface to
-      mark a typedef `distinct` today. Needs a small design decision (a
-      `distinct` knob on `types` overrides, or an automatic conservative
-      default for opaque handle typedefs) — record it as a spec before
-      implementing.
+      Decided in
+      [`docs/specs/0005-opaque-handle-typedefs.md`](docs/specs/0005-opaque-handle-typedefs.md):
+      a typedef of a pointer to an *incomplete* record emits
+      `Foo :: distinct rawptr` automatically (C itself distinguishes these
+      types — provable, ABI-identical, and honest where the current empty
+      `Impl` struct lies about its size); `void*` typedefs stay plain aliases
+      unless opted in via a new `types.distinct` list. Aliased handles of one
+      record stay mutually assignable; completed records emit normally. Then
+      drop the libclang config's `types.overrides` rawptr-collapse block and
+      its `symbols.remove` `*Impl` entries, and regenerate the package.
 
 ## Later
 
@@ -292,5 +297,6 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-The next correctness work is in **Code health**: the `output.imports_file`
-redesign and the `distinct`-handle design gap.
+The next correctness work is in **Code health**, both decided and ready to
+implement: remove `output.imports_file` (spec 0006) and emit opaque handle
+typedefs as `distinct rawptr` (spec 0005).

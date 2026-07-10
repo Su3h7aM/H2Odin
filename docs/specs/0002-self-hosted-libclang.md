@@ -117,8 +117,11 @@ binding surfaced:
 2. **Opaque handles lost `distinct`.** The generated `Index :: rawptr`,
    `Translation_Unit :: rawptr`, … are mutually assignable; the hand
    binding's `distinct` handles caught handle confusion at compile time.
-   There is no config surface for `distinct` yet — needs its own spec
-   (Code health roadmap item).
+   Worse, for `typedef struct FooImpl *Foo` handles the config's rawptr
+   collapse removed type discipline the *C header itself* has. Decided in
+   [spec 0005](0005-opaque-handle-typedefs.md): pointer-to-incomplete
+   typedefs emit `distinct rawptr` automatically; `void*` handles opt in
+   via `types.distinct`.
 3. **~173 `pointer_lowering_guess` warnings remain** on the full surface —
    within this spec's declared out-of-scope, now tracked as a "Later"
    roadmap item so it doesn't silently rot.

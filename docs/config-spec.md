@@ -288,7 +288,6 @@ config.types.map = {
 -- Declaration override: replace the emitted representation of a type.
 config.types.overrides = {
     Vector2 = "[2]f32",           -- typedef/record → Vector2 :: [2]f32 (uses keep the name)
-    CXTargetInfo = "rawptr",      -- opaque handle → Target_Info :: rawptr
 }
 
 -- Programmatic: a stable type view in, an action out.
@@ -298,9 +297,16 @@ config.types.override = function(t)
     end
     return nil
 end
+
+-- Handle safety beyond what C states: opt a void* typedef into a
+-- distinct handle type (typedefs of pointers to *incomplete* records are
+-- already distinct automatically — C itself distinguishes those).
+config.types.distinct = { "CXIndex", "CXClientData" }
 ```
 
 **Why separate `map` and `overrides`.** `map` changes *references* to a type (every `sqlite3_int64` in a signature becomes `i64`) without changing the declaration. `overrides` rewrites the declaration: a typedef becomes `Name :: <spelling>` with use sites still naming `Name`; a named record/enum is dropped and the spelling is inlined at use sites.
+
+**Opaque handles** (see [spec 0005](specs/0005-opaque-handle-typedefs.md)): a typedef of a pointer to an incomplete record emits `Name :: distinct rawptr` automatically, because the C type system already makes those handles mutually incompatible — the generator preserves a provable fact of the header. `void*` typedefs stay plain `rawptr` aliases (C states no distinction), and `types.distinct` is the opt-in for hardening them.
 
 ---
 
@@ -448,13 +454,13 @@ config.foreign.link_prefix = "sqlite3_"
 
 config.output.layout            = "merged" -- or "per_header"
 config.output.procedures_at_end = true
-config.output.imports_file      = "imports.odin" -- merged only
+-- output.imports_file was removed (spec 0006): imports are file-local in Odin
 config.output.footer_per_header = true
 ```
 
 **Why `link_prefix` is under `foreign`, not `naming`.** `link_prefix` is the *external C symbol* name — what the linker resolves — not the Odin-facing procedure name. Putting it under `foreign` keeps the "Odin name vs. C symbol" distinction clear; it is the counterpart to renaming, not a form of it.
 
-`output.layout = "per_header"` emits one Odin file per `config.inputs` header into `output_folder` (required). Placement follows each declaration's home input header; synthesized macro-group enums and bit sets inherit documented placement rules. Each file carries its own prelude because Odin `import` / `foreign import` names are file-local. `imports_file` is rejected with `per_header`. Full rules: [spec 0003](specs/0003-multi-file-odin-emission.md).
+`output.layout = "per_header"` emits one Odin file per `config.inputs` header into `output_folder` (required). Placement follows each declaration's home input header; synthesized macro-group enums and bit sets inherit documented placement rules. Each file carries its own prelude because Odin `import` / `foreign import` names are file-local. `output.imports_file` is removed entirely (spec 0006). Full rules: [spec 0003](specs/0003-multi-file-odin-emission.md).
 
 `footer_per_header` supports the hand-written-layer philosophy: a `raylib.h` binding can have a `raylib_footer.odin` appended, giving users a clean place for their own Odin on top of the raw output — the sanctioned alternative to generator-authored wrappers.
 
