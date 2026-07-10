@@ -10,6 +10,11 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	if clang.Cursor_isMacroBuiltin(cursor) != 0 {
 		return
 	}
+	// Skip when this macro was already captured from a sibling input's TU
+	// (or earlier in this walk). Macros have USRs in modern libclang.
+	if already_captured(state, cursor) {
+		return
+	}
 
 	tokens: [^]clang.Token
 	num_tokens: c.uint
@@ -40,6 +45,7 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 			doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
 		},
 	)
+	remember_captured(state, cursor, .Macro, u32(len(state.ir.macros) - 1))
 }
 
 macro_token_kind_from_clang :: proc(kind: clang.Token_Kind) -> Macro_Token_Kind {
@@ -59,6 +65,9 @@ macro_token_kind_from_clang :: proc(kind: clang.Token_Kind) -> Macro_Token_Kind 
 }
 
 extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
+	if already_captured(state, cursor) {
+		return
+	}
 	name := clone_clang_string(clang.getCursorSpelling(cursor))
 
 	// static file-scope variables have no linkable symbol to bind.
@@ -80,6 +89,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	}
 
 	ir_add_var(state.ir, Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
+	remember_captured(state, cursor, .Var, u32(len(state.ir.vars) - 1))
 }
 
 // Get or create the IR declaration for a typedef cursor. The underlying type
@@ -373,6 +383,9 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 }
 
 extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
+	if already_captured(state, cursor) {
+		return
+	}
 	name := clone_clang_string(clang.getCursorSpelling(cursor))
 
 	// static (usually static inline) functions have no linkable symbol.
@@ -410,6 +423,30 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		doc         = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
 	}
 	ir_add_func(state.ir, func)
+	remember_captured(state, cursor, .Func, u32(len(state.ir.funcs) - 1))
+}
+
+// True when this cursor's USR is already in decl_map (captured from another
+// input TU or an earlier include of the same sibling). Empty USR means the
+// entity cannot be shared; treat it as not-yet-captured.
+already_captured :: proc(state: ^Extract_State, cursor: clang.Cursor) -> bool {
+	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	if usr == "" {
+		return false
+	}
+	_, found := state.decl_map[usr]
+	return found
+}
+
+remember_captured :: proc(state: ^Extract_State, cursor: clang.Cursor, kind: Decl_Kind, index: u32) {
+	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	if usr == "" {
+		return
+	}
+	state.decl_map[usr] = Decl_Ref {
+		kind  = kind,
+		index = index,
+	}
 }
 
 // Copy a libclang-owned string into the generation arena and release the

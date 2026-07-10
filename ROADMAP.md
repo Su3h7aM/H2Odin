@@ -174,7 +174,7 @@ new names. Decisions and bootstrap plan in
 [`docs/specs/0002-self-hosted-libclang.md`](docs/specs/0002-self-hosted-libclang.md).
 Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaque.
 
-- [ ] Multi-header input correctness: treat every header in `config.inputs` as
+- [x] Multi-header input correctness: treat every header in `config.inputs` as
       "ours" during capture, not just the current TU's main file — today a
       typedef declared in a sibling input header is resolved transparently at
       use sites (its name is lost), which breaks the `clang-c/*.h` family

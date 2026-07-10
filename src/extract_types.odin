@@ -76,11 +76,11 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 
 	case .Typedef:
 		decl_cursor := clang.getTypeDeclaration(type)
-		// Typedefs declared in included headers are not ours to re-declare.
-		// The C standard ones keep their familiar name via core:c; anything
-		// else resolves transparently to its underlying type — an alias adds
-		// no ABI information, only a name we must not claim.
-		if clang.Location_isFromMainFile(clang.getCursorLocation(decl_cursor)) == 0 {
+		// Typedefs from config.inputs keep their name (including siblings
+		// included from another input). Everything else is not ours: C
+		// standard names stay via core:c; other foreign aliases peel to the
+		// underlying type so we never claim a name we did not bind.
+		if !location_is_ours(state, clang.getCursorLocation(decl_cursor)) {
 			name := clone_clang_string(clang.getCursorSpelling(decl_cursor))
 			if is_std_c_type(name) {
 				return ir_add_type(

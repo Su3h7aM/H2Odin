@@ -396,6 +396,42 @@ test_m10_multi_header_inputs :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_m13_sibling_input_typedef_keeps_name :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m13_sibling.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "package m13s")
+	expect_contains(t, stdout, "Sibling_Id ::")
+	// Use site in a.h must reference the sibling typedef, not peel to c.int.
+	expect_contains(t, stdout, "m13_use_sibling :: proc(id: Sibling_Id)")
+	expect_contains(t, stdout, "m13_make_sibling :: proc")
+	expect_contains(t, stdout, "M13_SIBLING_FLAG")
+	// No duplicate emission of the sibling proc.
+	count := strings.count(string(stdout), "m13_make_sibling :: proc")
+	testing.expect_value(t, count, 1)
+}
+
+@(test)
+test_m13_non_input_include_typedef_peels :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m13_peel.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "package m13p")
+	expect_not_contains(t, stdout, "Hidden_Id")
+	expect_contains(t, stdout, "m13_use_hidden :: proc(id: c.int)")
+}
+
+@(test)
 test_m10_preprocess_include_and_define :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_preprocess.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
