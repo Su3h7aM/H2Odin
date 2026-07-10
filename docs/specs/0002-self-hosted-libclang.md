@@ -102,3 +102,25 @@ A dry run against `clang-c/Index.h` already produces ~6k lines that pass
 - The `known_tokens` dictionary and naming callbacks get their first
   large-scale, dogfooded workout (`getNumArgTypes`, `USR`, `PCH`, …ambiguous
   splits will surface `naming_ambiguity` diagnostics to resolve in config).
+
+## Post-landing findings (2026-07-10)
+
+The switch landed (definition of done met; `make regen-libclang` sustains the
+bootstrap). A review of the generated package against the replaced hand
+binding surfaced:
+
+1. **`bit_set` backing width is an ABI bug**, not polish:
+   `Translation_Unit_Flags` sizes to 2 bytes against C's 4-byte `unsigned`,
+   and Extraction passes it at its own `parse_translation_unit` call site.
+   Tracked as [spec 0004](0004-bit-set-backing-width.md) and a Code health
+   roadmap item.
+2. **Opaque handles lost `distinct`.** The generated `Index :: rawptr`,
+   `Translation_Unit :: rawptr`, … are mutually assignable; the hand
+   binding's `distinct` handles caught handle confusion at compile time.
+   There is no config surface for `distinct` yet — needs its own spec
+   (Code health roadmap item).
+3. **~173 `pointer_lowering_guess` warnings remain** on the full surface —
+   within this spec's declared out-of-scope, now tracked as a "Later"
+   roadmap item so it doesn't silently rot.
+4. The Windows `foreign import` stanza gap declared out of scope above is
+   likewise now a "Later" roadmap item.

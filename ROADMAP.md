@@ -246,10 +246,42 @@ opportunistically or alongside the milestone that touches the same area.
       compile when those declarations exist only in `imports.odin`. Add an
       `odin check` regression and redesign or remove this option independently;
       Milestone 14 rejects it in per-header layout.
+- [ ] **Bug (ABI) — generated `bit_set`s have no explicit backing width.**
+      `enums.bit_sets` emits `Name :: bit_set[Enum]`; Odin sizes it from the
+      highest flag bit, not from the C type it replaces.
+      `Translation_Unit_Flags` is 2 bytes against a 4-byte C `unsigned`
+      parameter, and Extraction's own `parse_translation_unit` call passes it —
+      it works only because x86-64 happens to zero-extend. Fix per
+      [`docs/specs/0004-bit-set-backing-width.md`](docs/specs/0004-bit-set-backing-width.md):
+      carry the measured enum width in `Bit_Set_Decl`, emit
+      `bit_set[Enum; uN]`, fail closed on mismatch, regenerate
+      `vendored/libclang` and the examples in the same change.
+- [ ] **Bug — 128B leak in every unit-test run.**
+      `test_bit_field_layout_rejects_user_authored_adjacent_field_type`
+      (`src/emit_bit_field_test.odin`) frees only `ir.types`, but `ir_init`
+      also allocates `ir.input_headers` since Milestone 14. Use an arena like
+      the sibling tests (leaks in tests hide real leaks behind noise).
+- [ ] **Type-safety gap — opaque handles are non-distinct `rawptr` aliases.**
+      The generated libclang package spells every opaque handle as
+      `Index :: rawptr`, `Translation_Unit :: rawptr`, …, so all handle types
+      are mutually assignable; the replaced hand binding's `distinct` handles
+      caught that confusion at compile time. There is no config surface to
+      mark a typedef `distinct` today. Needs a small design decision (a
+      `distinct` knob on `types` overrides, or an automatic conservative
+      default for opaque handle typedefs) — record it as a spec before
+      implementing.
 
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
+- [ ] Curate the rest of the generated libclang surface: ~173
+      `pointer_lowering_guess` warnings remain outside Extraction's call
+      surface (array params like `CXUnsavedFile *` as `^Unsaved_File`,
+      out-params, …). Spec 0002 scoped self-host to Extraction's needs; this
+      is the follow-up polish.
+- [ ] Windows multi-lib `foreign import` parity for the generated libclang
+      package (the hand binding had a `when ODIN_OS` stanza; generated output
+      is Unix `system:clang` only — documented out of scope in spec 0002).
 - [ ] Multi-target runs (generate per target, merge).
 - [ ] A license.
 
@@ -261,3 +293,8 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 (Milestone 13)** and **multi-file Odin emission (Milestone 14)**. Regenerate the
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
+
+The next correctness work is in **Code health**: the `bit_set` backing-width
+ABI bug ([spec 0004](docs/specs/0004-bit-set-backing-width.md)) is live at
+Extraction's own `parse_translation_unit` call site and should land before
+further widening; the test leak and the `distinct`-handle design gap follow.

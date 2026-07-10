@@ -14,11 +14,13 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: usable pipeline (Milestones 0–5, 7–12 complete). Milestone 6 (idiomatic
-wrappers) is deferred. **The next goal is self-hosting: H2Odin generates the
-libclang bindings its own Extraction stage uses**, in the Odin naming
-convention; C bit-field → Odin `bit_field` emission is now in place as its
-prerequisite. See [`ROADMAP.md`](ROADMAP.md) (Milestones 12–13) and
+Status: Milestones 0–5, 7–14 complete; Milestone 6 (idiomatic wrappers) is
+deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
+H2Odin itself generates (`vendored/libclang`, Odin naming convention,
+regenerated generation-over-generation via `make regen-libclang` — spec 0002).
+Known correctness debt lives in ROADMAP's **Code health** section; the top
+item is the `bit_set` backing-width ABI bug (spec 0004), live at Extraction's
+own `parse_translation_unit` call site. See [`ROADMAP.md`](ROADMAP.md) and
 [`docs/specs/`](docs/specs/).
 
 ---
@@ -237,7 +239,7 @@ rather than bend it silently.
 
 - [`docs/overview.md`](docs/overview.md) — the spirit of the project.
 - [`docs/architecture.md`](docs/architecture.md) — the stages and their boundaries.
-- [`docs/specs/`](docs/specs/) — numbered design specs: bit-field emission (0001), self-hosted libclang bindings (0002).
+- [`docs/specs/`](docs/specs/) — numbered design specs: bit-field emission (0001), self-hosted libclang bindings (0002), multi-file emission (0003), bit_set backing width (0004).
 - [`docs/source-layout.md`](docs/source-layout.md) — what each `src/` file is for; planned file splits.
 - [`docs/type-modes.md`](docs/type-modes.md) — ABI vs idiomatic in depth.
 - [`docs/configuration.md`](docs/configuration.md) — the Lua policy surface today.
