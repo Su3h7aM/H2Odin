@@ -37,4 +37,32 @@ config.naming = h2o.naming.odin {
 	end,
 }
 
+-- cbindgen uses mutable `char *` for owned strings. The header documents
+-- these fields as strings (and the context fields as arrays of strings), so
+-- their NUL-terminated meaning is known even though constness cannot prove it.
+config.structs.fields = {
+	["FffResult.error"] = { type = "cstring" },
+	["FffFileItem.relative_path"] = { type = "cstring" },
+	["FffFileItem.file_name"] = { type = "cstring" },
+	["FffFileItem.git_status"] = { type = "cstring" },
+	["FffScore.match_type"] = { type = "cstring" },
+	["FffGrepMatch.relative_path"] = { type = "cstring" },
+	["FffGrepMatch.file_name"] = { type = "cstring" },
+	["FffGrepMatch.git_status"] = { type = "cstring" },
+	["FffGrepMatch.line_content"] = { type = "cstring" },
+	["FffGrepMatch.context_before"] = { type = "[^]cstring" },
+	["FffGrepMatch.context_after"] = { type = "[^]cstring" },
+	["FffGrepResult.regex_fallback_error"] = { type = "cstring" },
+	["FffDirItem.relative_path"] = { type = "cstring" },
+	["FffDirItem.dir_name"] = { type = "cstring" },
+	["FffMixedItem.relative_path"] = { type = "cstring" },
+	["FffMixedItem.display_name"] = { type = "cstring" },
+	["FffMixedItem.git_status"] = { type = "cstring" },
+}
+
+-- The parameter is documented as a C string allocated by this library.
+config.procs.params = {
+	["fff_free_string.s"] = { type = "cstring" },
+}
+
 return config

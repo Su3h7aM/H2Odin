@@ -37,7 +37,7 @@ Result :: struct {
 	/**
 	   * Error message on failure. Null on success.
 	   */
-	error: ^u8,
+	error: cstring,
 	/**
 	   * Opaque pointer payload. May be null.
 	   */
@@ -131,9 +131,9 @@ Create_Options :: struct {
  * Free the entire result with `fff_free_search_result`.
  */
 File_Item :: struct {
-	relative_path: ^u8,
-	file_name: ^u8,
-	git_status: ^u8,
+	relative_path: cstring,
+	file_name: cstring,
+	git_status: cstring,
 	size: u64,
 	modified: u64,
 	access_frecency_score: i64,
@@ -156,7 +156,7 @@ Score :: struct {
 	combo_match_boost: i32,
 	path_alignment_bonus: i32,
 	exact_match: bool,
-	match_type: ^u8,
+	match_type: cstring,
 }
 
 /**
@@ -223,13 +223,13 @@ Match_Range :: struct {
  * `FffGrepResult` with `fff_free_grep_result` to release everything.
  */
 Grep_Match :: struct {
-	relative_path: ^u8,
-	file_name: ^u8,
-	git_status: ^u8,
-	line_content: ^u8,
+	relative_path: cstring,
+	file_name: cstring,
+	git_status: cstring,
+	line_content: cstring,
 	match_ranges: ^Match_Range,
-	context_before: ^^u8,
-	context_after: ^^u8,
+	context_before: [^]cstring,
+	context_after: [^]cstring,
 	size: u64,
 	modified: u64,
 	total_frecency_score: i64,
@@ -284,7 +284,7 @@ Grep_Result :: struct {
 	/**
 	   * Regex compilation error when falling back to literal matching. Null if none.
 	   */
-	regex_fallback_error: ^u8,
+	regex_fallback_error: cstring,
 }
 
 /**
@@ -305,8 +305,8 @@ Scan_Progress :: struct {
  * Free the entire result with `fff_free_dir_search_result`.
  */
 Dir_Item :: struct {
-	relative_path: ^u8,
-	dir_name: ^u8,
+	relative_path: cstring,
+	dir_name: cstring,
 	max_access_frecency: i32,
 }
 
@@ -349,12 +349,12 @@ Mixed_Item :: struct {
 	   * 0 = file, 1 = directory.
 	   */
 	item_type: u8,
-	relative_path: ^u8,
+	relative_path: cstring,
 	/**
 	   * Filename for files, last directory segment for directories.
 	   */
-	display_name: ^u8,
-	git_status: ^u8,
+	display_name: cstring,
+	git_status: cstring,
 	size: u64,
 	modified: u64,
 	/**
@@ -792,7 +792,7 @@ foreign lib {
 	 * ## Safety
 	 * `s` must be a valid C string allocated by this library.
 	 */
-	free_string :: proc(s: ^u8) ---
+	free_string :: proc(s: cstring) ---
 	/**
 	 * Free a directory search result returned by `fff_search_directories`.
 	 *

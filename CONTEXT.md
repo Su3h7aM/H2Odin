@@ -149,6 +149,13 @@ rather than bend it silently.
   type-level mapping decisions and are always on — `cstring` for `const char *`
   predates and is independent of any wrapper machinery.
 
+  Constness alone does not prove NUL termination, and mutable `char *` may be
+  either a string or a byte/output buffer. The automatic rule therefore leaves
+  mutable pointers as `^u8`; when header comments or domain names establish a
+  string contract, config should override that specific field/parameter to
+  `cstring` (or `[^]cstring` for a counted array of C strings). The fff example
+  documents this boundary explicitly.
+
 - **Bit-field emission is planned before it is serialized.** Extraction stores
   measured widths, offsets, sizes, and alignments; Emission proves a whole
   record layout arithmetically and emits `bit_field uN` only when that proof
