@@ -40,12 +40,12 @@ Split along the six concerns (verbatim move; behavior unchanged):
 The invariant is untouched by the split: algorithms live in pure modules
 (`naming.odin`, `str.odin`); the policy files only marshal and register.
 
-### `transform.odin` (~940 lines)
+### `transform.odin` — done
 
 Each pass gets a file, aligned with the config section it serves:
 
-| New file | Scope |
-|----------|-------|
+| File | Scope |
+|------|-------|
 | `transform.odin` | `Type_Mode`, the `transform` pass order — nothing else. |
 | `transform_types.odin` | Pointer lowering, idiomatic leaf substitution (the three-rung ladder), guess reporting. |
 | `transform_naming.odin` | `apply_renames`, affix stripping, keyword safety, `link_name` logic. |
@@ -54,21 +54,18 @@ Each pass gets a file, aligned with the config section it serves:
 | `transform_enums.odin` | Anonymous-enum naming, member policy, `bit_set` transform. |
 | `transform_members.odin` | `structs.fields` / `structs.field` / `structs.align`, `procs.params` / `.results` adjustments. |
 
-### `extract.odin` (~710 lines)
+### `extract.odin` — done
 
-| New file | Scope |
-|----------|-------|
+| File | Scope |
+|------|-------|
 | `extract.odin` | TU orchestration: clang args, parse-diagnostics gate, resource-dir lookup, `clone_clang_string`, top-level visitor. |
 | `extract_decls.odin` | Per-declaration extraction: funcs, vars, macros, and the record/enum/typedef get-or-create + fill visitors. |
 | `extract_types.odin` | `capture_type` and friends: builtin mapping, measured size/signedness, param decay. |
 
-### `emit.odin` (~540 lines)
+### `emit.odin` — done (bit-field file deferred)
 
-Lower priority; split when bit-field emission (spec 0001) adds its layout
-code:
-
-| New file | Scope |
-|----------|-------|
+| File | Scope |
+|------|-------|
 | `emit.odin` | `Emit_Options`, output assembly, prelude, foreign-block plumbing. |
 | `emit_decls.odin` | Per-declaration emitters (record, enum, typedef, var, func, macro, bit_set) and doc/indent helpers. |
 | `emit_types.odin` | `write_type`, `write_params`, spelling dispatch. |
