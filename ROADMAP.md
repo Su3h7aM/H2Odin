@@ -274,6 +274,14 @@ opportunistically or alongside the milestone that touches the same area.
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
+- [ ] **`types.opaque` — handle-style emission for incomplete tag records**
+      (sqlite3-style `typedef struct T T;` used as `T *`). Decided in
+      [`docs/specs/0007-opaque-tag-records.md`](docs/specs/0007-opaque-tag-records.md):
+      default stays the faithful `T :: struct {}` + `^T` (already type-safe);
+      the opt-in emits `T :: distinct rawptr` and collapses one pointer level
+      at every reference, failing closed (`opaque_record_complete`) if the
+      named record is complete anywhere in the inputs. Separate key from
+      `types.distinct` by design.
 - [ ] Curate the rest of the generated libclang surface: ~173
       `pointer_lowering_guess` warnings remain outside Extraction's call
       surface (array params like `CXUnsavedFile *` as `^Unsaved_File`,
@@ -295,6 +303,6 @@ checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
 Code health items for specs 0005 (opaque handles) and 0006
-(`output.imports_file`) are done. Remaining Code health / Later items are
-polish and deferred work (wrappers, full pointer-lowering curation, Windows
-multi-lib, …).
+(`output.imports_file`) are done. The next decided-and-ready item is
+**`types.opaque`** (spec 0007, in Later); the rest is polish and deferred
+work (wrappers, full pointer-lowering curation, Windows multi-lib, …).

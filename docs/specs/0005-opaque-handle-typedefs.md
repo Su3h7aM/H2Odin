@@ -71,3 +71,11 @@ A fixture with two incomplete-record handles must emit `distinct rawptr` for
 both and reject cross-assignment under `odin check`; a fixture with two
 typedefs of one record must keep them mutually assignable; regenerated
 examples and the libclang package pass `odin check` and `make test`.
+
+## See also
+
+C's third opaque idiom — an incomplete tag typedef (`typedef struct T T;`)
+used as `T *`, sqlite3-style — is deliberately not covered here: it has no
+pointer-to-incomplete typedef and its faithful emission is already
+type-safe. [Spec 0007](0007-opaque-tag-records.md) adds the opt-in
+`types.opaque` handle style for it.

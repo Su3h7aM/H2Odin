@@ -19,9 +19,10 @@ deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
 Code health items for opaque handles (spec 0005) and `output.imports_file`
-removal (spec 0006) are done. Remaining debt is polish / deferred work in
-ROADMAP's **Later** section. See [`ROADMAP.md`](ROADMAP.md) and
-[`docs/specs/`](docs/specs/).
+removal (spec 0006) are done. The next decided-and-ready item is
+`types.opaque` for sqlite3-style incomplete tag records (spec 0007);
+the rest is polish / deferred work in ROADMAP's **Later** section. See
+[`ROADMAP.md`](ROADMAP.md) and [`docs/specs/`](docs/specs/).
 
 ---
 
@@ -239,7 +240,7 @@ rather than bend it silently.
 
 - [`docs/overview.md`](docs/overview.md) — the spirit of the project.
 - [`docs/architecture.md`](docs/architecture.md) — the stages and their boundaries.
-- [`docs/specs/`](docs/specs/) — numbered design specs: bit-field emission (0001), self-hosted libclang bindings (0002), multi-file emission (0003), bit_set backing width (0004), opaque handle typedefs (0005), imports_file removal (0006).
+- [`docs/specs/`](docs/specs/) — numbered design specs: bit-field emission (0001), self-hosted libclang bindings (0002), multi-file emission (0003), bit_set backing width (0004), opaque handle typedefs (0005), imports_file removal (0006), opaque tag records (0007).
 - [`docs/source-layout.md`](docs/source-layout.md) — what each `src/` file is for; planned file splits.
 - [`docs/type-modes.md`](docs/type-modes.md) — ABI vs idiomatic in depth.
 - [`docs/configuration.md`](docs/configuration.md) — the Lua policy surface today.
