@@ -285,6 +285,10 @@ Record_Decl :: struct {
 	// field of an unsupported type). Extraction or the bit-field layout proof
 	// reports why; emission falls back rather than guessing.
 	has_unrepresentable_fields: bool,
+	// Spec 0007: incomplete tag emitted as handle (mode default or
+	// types.opaque override): `Name :: distinct rawptr`, one pointer level
+	// collapsed at references.
+	emit_as_handle:             bool,
 	is_typedef_named:           bool, // anonymous tag that a typedef gives a name to
 	doc:                        string,
 	// Definition site wins over an earlier placeholder's home (see fill_record).

@@ -356,6 +356,41 @@ policy_optional_string_field :: proc(L: ^lua.State, table_name: string, field_ke
 	return strings.clone(string(lua.tostring(L, -1))), true
 }
 
+// Read parent[key] as string→bool. Parent table is at stack top.
+// Absent → nil map. Keys are cloned into context.allocator.
+policy_bool_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstring) -> (result: map[string]bool, ok: bool) {
+	field_type := lua.getfield(L, -1, key)
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return nil, true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		fmt.eprintfln("h2odin: config: %s.%s must be a table of booleans", parent_name, key)
+		lua.pop(L, 1)
+		return nil, false
+	}
+	defer lua.pop(L, 1)
+
+	result = make(map[string]bool)
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		if lua.type(L, -2) != .STRING {
+			fmt.eprintfln("h2odin: config: %s.%s keys must be strings", parent_name, key)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		if lua.type(L, -1) != .BOOLEAN {
+			fmt.eprintfln("h2odin: config: %s.%s[%q] must be a boolean", parent_name, key, lua.tostring(L, -2))
+			lua.pop(L, 2)
+			return nil, false
+		}
+		k := strings.clone(string(lua.tostring(L, -2)))
+		result[k] = bool(lua.toboolean(L, -1))
+		lua.pop(L, 1)
+	}
+	return result, true
+}
+
 // Read parent[key] as string→string. Parent table is at stack top.
 // Absent → nil map. Entries are cloned into context.allocator.
 policy_string_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstring) -> (result: map[string]string, ok: bool) {

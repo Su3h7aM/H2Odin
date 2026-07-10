@@ -8,6 +8,11 @@
 -- C name == prefix + Odin name. types.map rewrites 64-bit typedefs at use
 -- sites; those typedef decls are removed as pure aliases.
 --
+-- type_mode = idiomatic: incomplete tag handles (sqlite3, stmt, value, …)
+-- become distinct rawptr with collapsed pointers (spec 0007). Complete
+-- records (file, vfs, …) stay as structs. Override a name with
+-- types.opaque = { sqlite3_stmt = false } if you need the faithful shape.
+--
 -- macros.groups turns related SQLITE_* integer macros into explicit-valued
 -- enums (Result_Code, Open_Flag, …). emit_original_consts = false drops the
 -- consumed macros so each value appears once.

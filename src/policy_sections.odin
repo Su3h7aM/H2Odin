@@ -249,7 +249,7 @@ policy_read_types :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "types", []cstring{"map", "overrides", "override", "distinct"}) {
+	if !policy_reject_unknown_subkeys(L, "types", []cstring{"map", "overrides", "override", "distinct", "opaque"}) {
 		return false
 	}
 	if !policy_reject_nested_if_set(L, "types", "override") {
@@ -287,6 +287,12 @@ policy_read_types :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 	policy.types_distinct = distinct_list
+
+	opaque_map, opaque_ok := policy_bool_map_nested(L, "types", "opaque")
+	if !opaque_ok {
+		return false
+	}
+	policy.types_opaque = opaque_map
 	return true
 }
 

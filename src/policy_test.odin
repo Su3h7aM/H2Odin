@@ -47,6 +47,7 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 	delete_string_map(&policy.type_map)
 	delete_string_map(&policy.type_overrides)
 	delete_string_slice(policy.types_distinct)
+	delete_string_bool_map(&policy.types_opaque)
 	for g in policy.macro_groups {
 		delete(g.id)
 		delete(g.name)
@@ -112,6 +113,17 @@ delete_string_map :: proc(m: ^map[string]string) {
 	for key, value in m^ {
 		delete(key)
 		delete(value)
+	}
+	delete(m^)
+	m^ = nil
+}
+
+delete_string_bool_map :: proc(m: ^map[string]bool) {
+	if m^ == nil {
+		return
+	}
+	for key in m^ {
+		delete(key)
 	}
 	delete(m^)
 	m^ = nil

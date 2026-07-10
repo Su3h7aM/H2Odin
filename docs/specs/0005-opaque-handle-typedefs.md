@@ -76,6 +76,6 @@ examples and the libclang package pass `odin check` and `make test`.
 
 C's third opaque idiom — an incomplete tag typedef (`typedef struct T T;`)
 used as `T *`, sqlite3-style — is deliberately not covered here: it has no
-pointer-to-incomplete typedef and its faithful emission is already
-type-safe. [Spec 0007](0007-opaque-tag-records.md) adds the opt-in
-`types.opaque` handle style for it.
+pointer-to-incomplete typedef. [Spec 0007](0007-opaque-tag-records.md)
+makes that idiom **mode-driven** (ABI faithful / idiomatic handle) with
+`types.opaque` as a per-name bool override.

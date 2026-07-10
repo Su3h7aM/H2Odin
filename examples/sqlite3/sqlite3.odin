@@ -28,7 +28,7 @@ FTS5_TOKENIZE_PREFIX :: 0x0002
 FTS5_TOKENIZE_DOCUMENT :: 0x0004
 FTS5_TOKENIZE_AUX :: 0x0008
 FTS5_TOKEN_COLOCATED :: 0x0001
-Sqlite3 :: struct {}
+Sqlite3 :: distinct rawptr
 
 Callback :: proc "c" (_: rawptr, _: i32, _: ^^u8, _: ^^u8) -> i32
 
@@ -58,9 +58,9 @@ Io_Methods :: struct {
 	x_unfetch:                proc "c" (_: ^File, _: i64, _: rawptr) -> i32,
 }
 
-Mutex :: struct {}
+Mutex :: distinct rawptr
 
-Api_Routines :: struct {}
+Api_Routines :: distinct rawptr
 
 Filename :: cstring
 
@@ -109,11 +109,11 @@ Va_List_Tag :: struct {
 	reg_save_area:     rawptr,
 }
 
-Stmt :: struct {}
+Stmt :: distinct rawptr
 
-Value :: struct {}
+Value :: distinct rawptr
 
-Context :: struct {}
+Context :: distinct rawptr
 
 Destructor_Type :: proc "c" (_: rawptr)
 
@@ -145,24 +145,24 @@ Vtab_Cursor :: struct {
 
 Module :: struct {
 	i_version:       i32,
-	x_create:        proc "c" (_: ^Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
-	x_connect:       proc "c" (_: ^Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
+	x_create:        proc "c" (_: Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
+	x_connect:       proc "c" (_: Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
 	x_best_index:    proc "c" (_: ^Vtab, _: ^Index_Info) -> i32,
 	x_disconnect:    proc "c" (_: ^Vtab) -> i32,
 	x_destroy:       proc "c" (_: ^Vtab) -> i32,
 	x_open:          proc "c" (_: ^Vtab, _: ^^Vtab_Cursor) -> i32,
 	x_close:         proc "c" (_: ^Vtab_Cursor) -> i32,
-	x_filter:        proc "c" (_: ^Vtab_Cursor, _: i32, _: cstring, _: i32, _: ^^Value) -> i32,
+	x_filter:        proc "c" (_: ^Vtab_Cursor, _: i32, _: cstring, _: i32, _: ^Value) -> i32,
 	x_next:          proc "c" (_: ^Vtab_Cursor) -> i32,
 	x_eof:           proc "c" (_: ^Vtab_Cursor) -> i32,
-	x_column:        proc "c" (_: ^Vtab_Cursor, _: ^Context, _: i32) -> i32,
+	x_column:        proc "c" (_: ^Vtab_Cursor, _: Context, _: i32) -> i32,
 	x_rowid:         proc "c" (_: ^Vtab_Cursor, _: ^i64) -> i32,
-	x_update:        proc "c" (_: ^Vtab, _: i32, _: ^^Value, _: ^i64) -> i32,
+	x_update:        proc "c" (_: ^Vtab, _: i32, _: ^Value, _: ^i64) -> i32,
 	x_begin:         proc "c" (_: ^Vtab) -> i32,
 	x_sync:          proc "c" (_: ^Vtab) -> i32,
 	x_commit:        proc "c" (_: ^Vtab) -> i32,
 	x_rollback:      proc "c" (_: ^Vtab) -> i32,
-	x_find_function: proc "c" (_: ^Vtab, _: i32, _: cstring, _: ^proc "c" (_: ^Context, _: i32, _: ^^Value), _: ^rawptr) -> i32,
+	x_find_function: proc "c" (_: ^Vtab, _: i32, _: cstring, _: ^proc "c" (_: Context, _: i32, _: ^Value), _: ^rawptr) -> i32,
 	x_rename:        proc "c" (_: ^Vtab, _: cstring) -> i32,
 	x_savepoint:     proc "c" (_: ^Vtab, _: i32) -> i32,
 	x_release:       proc "c" (_: ^Vtab, _: i32) -> i32,
@@ -188,23 +188,23 @@ Index_Constraint_Usage :: struct {
 	omit:       u8,
 }
 
-Blob :: struct {}
+Blob :: distinct rawptr
 
 Mutex_Methods :: struct {
 	x_mutex_init:    proc "c" () -> i32,
 	x_mutex_end:     proc "c" () -> i32,
-	x_mutex_alloc:   proc "c" (_: i32) -> ^Mutex,
-	x_mutex_free:    proc "c" (_: ^Mutex),
-	x_mutex_enter:   proc "c" (_: ^Mutex),
-	x_mutex_try:     proc "c" (_: ^Mutex) -> i32,
-	x_mutex_leave:   proc "c" (_: ^Mutex),
-	x_mutex_held:    proc "c" (_: ^Mutex) -> i32,
-	x_mutex_notheld: proc "c" (_: ^Mutex) -> i32,
+	x_mutex_alloc:   proc "c" (_: i32) -> Mutex,
+	x_mutex_free:    proc "c" (_: Mutex),
+	x_mutex_enter:   proc "c" (_: Mutex),
+	x_mutex_try:     proc "c" (_: Mutex) -> i32,
+	x_mutex_leave:   proc "c" (_: Mutex),
+	x_mutex_held:    proc "c" (_: Mutex) -> i32,
+	x_mutex_notheld: proc "c" (_: Mutex) -> i32,
 }
 
-Str :: struct {}
+Str :: distinct rawptr
 
-Pcache :: struct {}
+Pcache :: distinct rawptr
 
 Pcache_Page :: struct {
 	p_buf:   rawptr,
@@ -216,32 +216,32 @@ Pcache_Methods2 :: struct {
 	p_arg:       rawptr,
 	x_init:      proc "c" (_: rawptr) -> i32,
 	x_shutdown:  proc "c" (_: rawptr),
-	x_create:    proc "c" (_: i32, _: i32, _: i32) -> ^Pcache,
-	x_cachesize: proc "c" (_: ^Pcache, _: i32),
-	x_pagecount: proc "c" (_: ^Pcache) -> i32,
-	x_fetch:     proc "c" (_: ^Pcache, _: u32, _: i32) -> ^Pcache_Page,
-	x_unpin:     proc "c" (_: ^Pcache, _: ^Pcache_Page, _: i32),
-	x_rekey:     proc "c" (_: ^Pcache, _: ^Pcache_Page, _: u32, _: u32),
-	x_truncate:  proc "c" (_: ^Pcache, _: u32),
-	x_destroy:   proc "c" (_: ^Pcache),
-	x_shrink:    proc "c" (_: ^Pcache),
+	x_create:    proc "c" (_: i32, _: i32, _: i32) -> Pcache,
+	x_cachesize: proc "c" (_: Pcache, _: i32),
+	x_pagecount: proc "c" (_: Pcache) -> i32,
+	x_fetch:     proc "c" (_: Pcache, _: u32, _: i32) -> ^Pcache_Page,
+	x_unpin:     proc "c" (_: Pcache, _: ^Pcache_Page, _: i32),
+	x_rekey:     proc "c" (_: Pcache, _: ^Pcache_Page, _: u32, _: u32),
+	x_truncate:  proc "c" (_: Pcache, _: u32),
+	x_destroy:   proc "c" (_: Pcache),
+	x_shrink:    proc "c" (_: Pcache),
 }
 
 Pcache_Methods :: struct {
 	p_arg:       rawptr,
 	x_init:      proc "c" (_: rawptr) -> i32,
 	x_shutdown:  proc "c" (_: rawptr),
-	x_create:    proc "c" (_: i32, _: i32) -> ^Pcache,
-	x_cachesize: proc "c" (_: ^Pcache, _: i32),
-	x_pagecount: proc "c" (_: ^Pcache) -> i32,
-	x_fetch:     proc "c" (_: ^Pcache, _: u32, _: i32) -> rawptr,
-	x_unpin:     proc "c" (_: ^Pcache, _: rawptr, _: i32),
-	x_rekey:     proc "c" (_: ^Pcache, _: rawptr, _: u32, _: u32),
-	x_truncate:  proc "c" (_: ^Pcache, _: u32),
-	x_destroy:   proc "c" (_: ^Pcache),
+	x_create:    proc "c" (_: i32, _: i32) -> Pcache,
+	x_cachesize: proc "c" (_: Pcache, _: i32),
+	x_pagecount: proc "c" (_: Pcache) -> i32,
+	x_fetch:     proc "c" (_: Pcache, _: u32, _: i32) -> rawptr,
+	x_unpin:     proc "c" (_: Pcache, _: rawptr, _: i32),
+	x_rekey:     proc "c" (_: Pcache, _: rawptr, _: u32, _: u32),
+	x_truncate:  proc "c" (_: Pcache, _: u32),
+	x_destroy:   proc "c" (_: Pcache),
 }
 
-Backup :: struct {}
+Backup :: distinct rawptr
 
 Snapshot :: struct {
 	hidden: [48]u8,
@@ -271,43 +271,43 @@ Rtree_Query_Info :: struct {
 	e_parent_within: i32,
 	e_within:        i32,
 	r_score:         Rtree_Dbl,
-	ap_sql_param:    ^^Value,
+	ap_sql_param:    ^Value,
 }
 
 Rtree_Dbl :: f64
 
 Fts5_Extension_Api :: struct {
 	i_version:             i32,
-	x_user_data:           proc "c" (_: ^Fts5_Context) -> rawptr,
-	x_column_count:        proc "c" (_: ^Fts5_Context) -> i32,
-	x_row_count:           proc "c" (_: ^Fts5_Context, _: ^i64) -> i32,
-	x_column_total_size:   proc "c" (_: ^Fts5_Context, _: i32, _: ^i64) -> i32,
+	x_user_data:           proc "c" (_: Fts5_Context) -> rawptr,
+	x_column_count:        proc "c" (_: Fts5_Context) -> i32,
+	x_row_count:           proc "c" (_: Fts5_Context, _: ^i64) -> i32,
+	x_column_total_size:   proc "c" (_: Fts5_Context, _: i32, _: ^i64) -> i32,
 	x_tokenize:            proc "c" (
-		_: ^Fts5_Context,
+		_: Fts5_Context,
 		_: cstring,
 		_: i32,
 		_: rawptr,
 		_: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32,
 	) -> i32,
-	x_phrase_count:        proc "c" (_: ^Fts5_Context) -> i32,
-	x_phrase_size:         proc "c" (_: ^Fts5_Context, _: i32) -> i32,
-	x_inst_count:          proc "c" (_: ^Fts5_Context, _: ^i32) -> i32,
-	x_inst:                proc "c" (_: ^Fts5_Context, _: i32, _: ^i32, _: ^i32, _: ^i32) -> i32,
-	x_rowid:               proc "c" (_: ^Fts5_Context) -> i64,
-	x_column_text:         proc "c" (_: ^Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
-	x_column_size:         proc "c" (_: ^Fts5_Context, _: i32, _: ^i32) -> i32,
-	x_query_phrase:        proc "c" (_: ^Fts5_Context, _: i32, _: rawptr, _: proc "c" (_: ^Fts5_Extension_Api, _: ^Fts5_Context, _: rawptr) -> i32) -> i32,
-	x_set_auxdata:         proc "c" (_: ^Fts5_Context, _: rawptr, _: proc "c" (_: rawptr)) -> i32,
-	x_get_auxdata:         proc "c" (_: ^Fts5_Context, _: i32) -> rawptr,
-	x_phrase_first:        proc "c" (_: ^Fts5_Context, _: i32, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32) -> i32,
-	x_phrase_next:         proc "c" (_: ^Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32),
-	x_phrase_first_column: proc "c" (_: ^Fts5_Context, _: i32, _: ^Fts5_Phrase_Iter, _: ^i32) -> i32,
-	x_phrase_next_column:  proc "c" (_: ^Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32),
-	x_query_token:         proc "c" (_: ^Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
-	x_inst_token:          proc "c" (_: ^Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
-	x_column_locale:       proc "c" (_: ^Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_phrase_count:        proc "c" (_: Fts5_Context) -> i32,
+	x_phrase_size:         proc "c" (_: Fts5_Context, _: i32) -> i32,
+	x_inst_count:          proc "c" (_: Fts5_Context, _: ^i32) -> i32,
+	x_inst:                proc "c" (_: Fts5_Context, _: i32, _: ^i32, _: ^i32, _: ^i32) -> i32,
+	x_rowid:               proc "c" (_: Fts5_Context) -> i64,
+	x_column_text:         proc "c" (_: Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_column_size:         proc "c" (_: Fts5_Context, _: i32, _: ^i32) -> i32,
+	x_query_phrase:        proc "c" (_: Fts5_Context, _: i32, _: rawptr, _: proc "c" (_: ^Fts5_Extension_Api, _: Fts5_Context, _: rawptr) -> i32) -> i32,
+	x_set_auxdata:         proc "c" (_: Fts5_Context, _: rawptr, _: proc "c" (_: rawptr)) -> i32,
+	x_get_auxdata:         proc "c" (_: Fts5_Context, _: i32) -> rawptr,
+	x_phrase_first:        proc "c" (_: Fts5_Context, _: i32, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32) -> i32,
+	x_phrase_next:         proc "c" (_: Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32),
+	x_phrase_first_column: proc "c" (_: Fts5_Context, _: i32, _: ^Fts5_Phrase_Iter, _: ^i32) -> i32,
+	x_phrase_next_column:  proc "c" (_: Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32),
+	x_query_token:         proc "c" (_: Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_inst_token:          proc "c" (_: Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_column_locale:       proc "c" (_: Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
 	x_tokenize_v2:         proc "c" (
-		_: ^Fts5_Context,
+		_: Fts5_Context,
 		_: cstring,
 		_: i32,
 		_: cstring,
@@ -317,23 +317,23 @@ Fts5_Extension_Api :: struct {
 	) -> i32,
 }
 
-Fts5_Context :: struct {}
+Fts5_Context :: distinct rawptr
 
 Fts5_Phrase_Iter :: struct {
 	a: ^u8,
 	b: ^u8,
 }
 
-Fts5_Extension_Function :: proc "c" (_: ^Fts5_Extension_Api, _: ^Fts5_Context, _: ^Context, _: i32, _: ^^Value)
+Fts5_Extension_Function :: proc "c" (_: ^Fts5_Extension_Api, _: Fts5_Context, _: Context, _: i32, _: ^Value)
 
-Fts5_Tokenizer :: struct {}
+Fts5_Tokenizer :: distinct rawptr
 
 Fts5_Tokenizer_V2 :: struct {
 	i_version:  i32,
-	x_create:   proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^^Fts5_Tokenizer) -> i32,
-	x_delete:   proc "c" (_: ^Fts5_Tokenizer),
+	x_create:   proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^Fts5_Tokenizer) -> i32,
+	x_delete:   proc "c" (_: Fts5_Tokenizer),
 	x_tokenize: proc "c" (
-		_: ^Fts5_Tokenizer,
+		_: Fts5_Tokenizer,
 		_: rawptr,
 		_: i32,
 		_: cstring,
@@ -345,10 +345,10 @@ Fts5_Tokenizer_V2 :: struct {
 }
 
 Fts5_Tokenizer_Methods :: struct {
-	x_create:   proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^^Fts5_Tokenizer) -> i32,
-	x_delete:   proc "c" (_: ^Fts5_Tokenizer),
+	x_create:   proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^Fts5_Tokenizer) -> i32,
+	x_delete:   proc "c" (_: Fts5_Tokenizer),
 	x_tokenize: proc "c" (
-		_: ^Fts5_Tokenizer,
+		_: Fts5_Tokenizer,
 		_: rawptr,
 		_: i32,
 		_: cstring,
@@ -863,30 +863,30 @@ foreign lib {
 	compileoption_used :: proc(zOptName: cstring) -> i32 ---
 	compileoption_get :: proc(N: i32) -> cstring ---
 	threadsafe :: proc() -> i32 ---
-	close :: proc(_: ^Sqlite3) -> i32 ---
-	close_v2 :: proc(_: ^Sqlite3) -> i32 ---
-	exec :: proc(_: ^Sqlite3, sql: cstring, callback: proc "c" (_: rawptr, _: i32, _: ^^u8, _: ^^u8) -> i32, _: rawptr, errmsg: ^^u8) -> i32 ---
+	close :: proc(_: Sqlite3) -> i32 ---
+	close_v2 :: proc(_: Sqlite3) -> i32 ---
+	exec :: proc(_: Sqlite3, sql: cstring, callback: proc "c" (_: rawptr, _: i32, _: ^^u8, _: ^^u8) -> i32, _: rawptr, errmsg: ^^u8) -> i32 ---
 	initialize :: proc() -> i32 ---
 	shutdown :: proc() -> i32 ---
 	os_init :: proc() -> i32 ---
 	os_end :: proc() -> i32 ---
 	config :: proc(_: i32, #c_vararg _: ..any) -> i32 ---
-	db_config :: proc(_: ^Sqlite3, op: i32, #c_vararg _: ..any) -> i32 ---
-	extended_result_codes :: proc(_: ^Sqlite3, onoff: i32) -> i32 ---
-	last_insert_rowid :: proc(_: ^Sqlite3) -> i64 ---
-	set_last_insert_rowid :: proc(_: ^Sqlite3, _: i64) ---
-	changes :: proc(_: ^Sqlite3) -> i32 ---
-	changes64 :: proc(_: ^Sqlite3) -> i64 ---
-	total_changes :: proc(_: ^Sqlite3) -> i32 ---
-	total_changes64 :: proc(_: ^Sqlite3) -> i64 ---
-	interrupt :: proc(_: ^Sqlite3) ---
-	is_interrupted :: proc(_: ^Sqlite3) -> i32 ---
+	db_config :: proc(_: Sqlite3, op: i32, #c_vararg _: ..any) -> i32 ---
+	extended_result_codes :: proc(_: Sqlite3, onoff: i32) -> i32 ---
+	last_insert_rowid :: proc(_: Sqlite3) -> i64 ---
+	set_last_insert_rowid :: proc(_: Sqlite3, _: i64) ---
+	changes :: proc(_: Sqlite3) -> i32 ---
+	changes64 :: proc(_: Sqlite3) -> i64 ---
+	total_changes :: proc(_: Sqlite3) -> i32 ---
+	total_changes64 :: proc(_: Sqlite3) -> i64 ---
+	interrupt :: proc(_: Sqlite3) ---
+	is_interrupted :: proc(_: Sqlite3) -> i32 ---
 	complete :: proc(sql: cstring) -> i32 ---
 	complete16 :: proc(sql: rawptr) -> i32 ---
-	busy_handler :: proc(_: ^Sqlite3, _: proc "c" (_: rawptr, _: i32) -> i32, _: rawptr) -> i32 ---
-	busy_timeout :: proc(_: ^Sqlite3, ms: i32) -> i32 ---
-	setlk_timeout :: proc(_: ^Sqlite3, ms: i32, flags: i32) -> i32 ---
-	get_table :: proc(db: ^Sqlite3, zSql: cstring, pazResult: ^^^u8, pnRow: ^i32, pnColumn: ^i32, pzErrmsg: ^^u8) -> i32 ---
+	busy_handler :: proc(_: Sqlite3, _: proc "c" (_: rawptr, _: i32) -> i32, _: rawptr) -> i32 ---
+	busy_timeout :: proc(_: Sqlite3, ms: i32) -> i32 ---
+	setlk_timeout :: proc(_: Sqlite3, ms: i32, flags: i32) -> i32 ---
+	get_table :: proc(db: Sqlite3, zSql: cstring, pazResult: ^^^u8, pnRow: ^i32, pnColumn: ^i32, pzErrmsg: ^^u8) -> i32 ---
 	free_table :: proc(result: ^^u8) ---
 	mprintf :: proc(_: cstring, #c_vararg _: ..any) -> ^u8 ---
 	vmprintf :: proc(_: cstring, _: ^Va_List_Tag) -> ^u8 ---
@@ -901,14 +901,14 @@ foreign lib {
 	memory_used :: proc() -> i64 ---
 	memory_highwater :: proc(resetFlag: i32) -> i64 ---
 	randomness :: proc(N: i32, P: rawptr) ---
-	set_authorizer :: proc(_: ^Sqlite3, xAuth: proc "c" (_: rawptr, _: i32, _: cstring, _: cstring, _: cstring, _: cstring) -> i32, pUserData: rawptr) -> i32 ---
-	trace :: proc(_: ^Sqlite3, xTrace: proc "c" (_: rawptr, _: cstring), _: rawptr) -> rawptr ---
-	profile :: proc(_: ^Sqlite3, xProfile: proc "c" (_: rawptr, _: cstring, _: u64), _: rawptr) -> rawptr ---
-	trace_v2 :: proc(_: ^Sqlite3, uMask: u32, xCallback: proc "c" (_: u32, _: rawptr, _: rawptr, _: rawptr) -> i32, pCtx: rawptr) -> i32 ---
-	progress_handler :: proc(_: ^Sqlite3, _: i32, _: proc "c" (_: rawptr) -> i32, _: rawptr) ---
-	open :: proc(filename: cstring, ppDb: ^^Sqlite3) -> i32 ---
-	open16 :: proc(filename: rawptr, ppDb: ^^Sqlite3) -> i32 ---
-	open_v2 :: proc(filename: cstring, ppDb: ^^Sqlite3, flags: i32, zVfs: cstring) -> i32 ---
+	set_authorizer :: proc(_: Sqlite3, xAuth: proc "c" (_: rawptr, _: i32, _: cstring, _: cstring, _: cstring, _: cstring) -> i32, pUserData: rawptr) -> i32 ---
+	trace :: proc(_: Sqlite3, xTrace: proc "c" (_: rawptr, _: cstring), _: rawptr) -> rawptr ---
+	profile :: proc(_: Sqlite3, xProfile: proc "c" (_: rawptr, _: cstring, _: u64), _: rawptr) -> rawptr ---
+	trace_v2 :: proc(_: Sqlite3, uMask: u32, xCallback: proc "c" (_: u32, _: rawptr, _: rawptr, _: rawptr) -> i32, pCtx: rawptr) -> i32 ---
+	progress_handler :: proc(_: Sqlite3, _: i32, _: proc "c" (_: rawptr) -> i32, _: rawptr) ---
+	open :: proc(filename: cstring, ppDb: ^Sqlite3) -> i32 ---
+	open16 :: proc(filename: rawptr, ppDb: ^Sqlite3) -> i32 ---
+	open_v2 :: proc(filename: cstring, ppDb: ^Sqlite3, flags: i32, zVfs: cstring) -> i32 ---
 	uri_parameter :: proc(z: Filename, zParam: cstring) -> cstring ---
 	uri_boolean :: proc(z: Filename, zParam: cstring, bDefault: i32) -> i32 ---
 	uri_int64 :: proc(_: Filename, _: cstring, _: i64) -> i64 ---
@@ -919,242 +919,242 @@ foreign lib {
 	database_file_object :: proc(_: cstring) -> ^File ---
 	create_filename :: proc(zDatabase: cstring, zJournal: cstring, zWal: cstring, nParam: i32, azParam: ^cstring) -> Filename ---
 	free_filename :: proc(_: Filename) ---
-	errcode :: proc(db: ^Sqlite3) -> i32 ---
-	extended_errcode :: proc(db: ^Sqlite3) -> i32 ---
-	errmsg :: proc(_: ^Sqlite3) -> cstring ---
-	errmsg16 :: proc(_: ^Sqlite3) -> rawptr ---
+	errcode :: proc(db: Sqlite3) -> i32 ---
+	extended_errcode :: proc(db: Sqlite3) -> i32 ---
+	errmsg :: proc(_: Sqlite3) -> cstring ---
+	errmsg16 :: proc(_: Sqlite3) -> rawptr ---
 	errstr :: proc(_: i32) -> cstring ---
-	error_offset :: proc(db: ^Sqlite3) -> i32 ---
-	set_errmsg :: proc(db: ^Sqlite3, errcode: i32, zErrMsg: cstring) -> i32 ---
-	limit :: proc(_: ^Sqlite3, id: i32, newVal: i32) -> i32 ---
-	prepare :: proc(db: ^Sqlite3, zSql: cstring, nByte: i32, ppStmt: ^^Stmt, pzTail: ^cstring) -> i32 ---
-	prepare_v2 :: proc(db: ^Sqlite3, zSql: cstring, nByte: i32, ppStmt: ^^Stmt, pzTail: ^cstring) -> i32 ---
-	prepare_v3 :: proc(db: ^Sqlite3, zSql: cstring, nByte: i32, prepFlags: u32, ppStmt: ^^Stmt, pzTail: ^cstring) -> i32 ---
-	prepare16 :: proc(db: ^Sqlite3, zSql: rawptr, nByte: i32, ppStmt: ^^Stmt, pzTail: ^rawptr) -> i32 ---
-	prepare16_v2 :: proc(db: ^Sqlite3, zSql: rawptr, nByte: i32, ppStmt: ^^Stmt, pzTail: ^rawptr) -> i32 ---
-	prepare16_v3 :: proc(db: ^Sqlite3, zSql: rawptr, nByte: i32, prepFlags: u32, ppStmt: ^^Stmt, pzTail: ^rawptr) -> i32 ---
-	sql :: proc(pStmt: ^Stmt) -> cstring ---
-	expanded_sql :: proc(pStmt: ^Stmt) -> ^u8 ---
-	stmt_readonly :: proc(pStmt: ^Stmt) -> i32 ---
-	stmt_isexplain :: proc(pStmt: ^Stmt) -> i32 ---
-	stmt_explain :: proc(pStmt: ^Stmt, eMode: i32) -> i32 ---
-	stmt_busy :: proc(_: ^Stmt) -> i32 ---
-	bind_blob :: proc(_: ^Stmt, _: i32, _: rawptr, n: i32, _: proc "c" (_: rawptr)) -> i32 ---
-	bind_blob64 :: proc(_: ^Stmt, _: i32, _: rawptr, _: u64, _: proc "c" (_: rawptr)) -> i32 ---
-	bind_double :: proc(_: ^Stmt, _: i32, _: f64) -> i32 ---
-	bind_int :: proc(_: ^Stmt, _: i32, _: i32) -> i32 ---
-	bind_int64 :: proc(_: ^Stmt, _: i32, _: i64) -> i32 ---
-	bind_null :: proc(_: ^Stmt, _: i32) -> i32 ---
-	bind_text :: proc(_: ^Stmt, _: i32, _: cstring, _: i32, _: proc "c" (_: rawptr)) -> i32 ---
-	bind_text16 :: proc(_: ^Stmt, _: i32, _: rawptr, _: i32, _: proc "c" (_: rawptr)) -> i32 ---
-	bind_text64 :: proc(_: ^Stmt, _: i32, _: cstring, _: u64, _: proc "c" (_: rawptr), encoding: u8) -> i32 ---
-	bind_value :: proc(_: ^Stmt, _: i32, _: ^Value) -> i32 ---
-	bind_pointer :: proc(_: ^Stmt, _: i32, _: rawptr, _: cstring, _: proc "c" (_: rawptr)) -> i32 ---
-	bind_zeroblob :: proc(_: ^Stmt, _: i32, n: i32) -> i32 ---
-	bind_zeroblob64 :: proc(_: ^Stmt, _: i32, _: u64) -> i32 ---
-	bind_parameter_count :: proc(_: ^Stmt) -> i32 ---
-	bind_parameter_name :: proc(_: ^Stmt, _: i32) -> cstring ---
-	bind_parameter_index :: proc(_: ^Stmt, zName: cstring) -> i32 ---
-	clear_bindings :: proc(_: ^Stmt) -> i32 ---
-	column_count :: proc(pStmt: ^Stmt) -> i32 ---
-	column_name :: proc(_: ^Stmt, N: i32) -> cstring ---
-	column_name16 :: proc(_: ^Stmt, N: i32) -> rawptr ---
-	column_database_name :: proc(_: ^Stmt, _: i32) -> cstring ---
-	column_database_name16 :: proc(_: ^Stmt, _: i32) -> rawptr ---
-	column_table_name :: proc(_: ^Stmt, _: i32) -> cstring ---
-	column_table_name16 :: proc(_: ^Stmt, _: i32) -> rawptr ---
-	column_origin_name :: proc(_: ^Stmt, _: i32) -> cstring ---
-	column_origin_name16 :: proc(_: ^Stmt, _: i32) -> rawptr ---
-	column_decltype :: proc(_: ^Stmt, _: i32) -> cstring ---
-	column_decltype16 :: proc(_: ^Stmt, _: i32) -> rawptr ---
-	step :: proc(_: ^Stmt) -> i32 ---
-	data_count :: proc(pStmt: ^Stmt) -> i32 ---
-	column_blob :: proc(_: ^Stmt, iCol: i32) -> rawptr ---
-	column_double :: proc(_: ^Stmt, iCol: i32) -> f64 ---
-	column_int :: proc(_: ^Stmt, iCol: i32) -> i32 ---
-	column_int64 :: proc(_: ^Stmt, iCol: i32) -> i64 ---
-	column_text :: proc(_: ^Stmt, iCol: i32) -> ^u8 ---
-	column_text16 :: proc(_: ^Stmt, iCol: i32) -> rawptr ---
-	column_value :: proc(_: ^Stmt, iCol: i32) -> ^Value ---
-	column_bytes :: proc(_: ^Stmt, iCol: i32) -> i32 ---
-	column_bytes16 :: proc(_: ^Stmt, iCol: i32) -> i32 ---
-	column_type :: proc(_: ^Stmt, iCol: i32) -> i32 ---
-	finalize :: proc(pStmt: ^Stmt) -> i32 ---
-	reset :: proc(pStmt: ^Stmt) -> i32 ---
-	create_function :: proc(db: ^Sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: ^Context, _: i32, _: ^^Value), xStep: proc "c" (_: ^Context, _: i32, _: ^^Value), xFinal: proc "c" (_: ^Context)) -> i32 ---
-	create_function16 :: proc(db: ^Sqlite3, zFunctionName: rawptr, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: ^Context, _: i32, _: ^^Value), xStep: proc "c" (_: ^Context, _: i32, _: ^^Value), xFinal: proc "c" (_: ^Context)) -> i32 ---
-	create_function_v2 :: proc(db: ^Sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: ^Context, _: i32, _: ^^Value), xStep: proc "c" (_: ^Context, _: i32, _: ^^Value), xFinal: proc "c" (_: ^Context), xDestroy: proc "c" (_: rawptr)) -> i32 ---
-	create_window_function :: proc(db: ^Sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xStep: proc "c" (_: ^Context, _: i32, _: ^^Value), xFinal: proc "c" (_: ^Context), xValue: proc "c" (_: ^Context), xInverse: proc "c" (_: ^Context, _: i32, _: ^^Value), xDestroy: proc "c" (_: rawptr)) -> i32 ---
-	aggregate_count :: proc(_: ^Context) -> i32 ---
-	expired :: proc(_: ^Stmt) -> i32 ---
-	transfer_bindings :: proc(_: ^Stmt, _: ^Stmt) -> i32 ---
+	error_offset :: proc(db: Sqlite3) -> i32 ---
+	set_errmsg :: proc(db: Sqlite3, errcode: i32, zErrMsg: cstring) -> i32 ---
+	limit :: proc(_: Sqlite3, id: i32, newVal: i32) -> i32 ---
+	prepare :: proc(db: Sqlite3, zSql: cstring, nByte: i32, ppStmt: ^Stmt, pzTail: ^cstring) -> i32 ---
+	prepare_v2 :: proc(db: Sqlite3, zSql: cstring, nByte: i32, ppStmt: ^Stmt, pzTail: ^cstring) -> i32 ---
+	prepare_v3 :: proc(db: Sqlite3, zSql: cstring, nByte: i32, prepFlags: u32, ppStmt: ^Stmt, pzTail: ^cstring) -> i32 ---
+	prepare16 :: proc(db: Sqlite3, zSql: rawptr, nByte: i32, ppStmt: ^Stmt, pzTail: ^rawptr) -> i32 ---
+	prepare16_v2 :: proc(db: Sqlite3, zSql: rawptr, nByte: i32, ppStmt: ^Stmt, pzTail: ^rawptr) -> i32 ---
+	prepare16_v3 :: proc(db: Sqlite3, zSql: rawptr, nByte: i32, prepFlags: u32, ppStmt: ^Stmt, pzTail: ^rawptr) -> i32 ---
+	sql :: proc(pStmt: Stmt) -> cstring ---
+	expanded_sql :: proc(pStmt: Stmt) -> ^u8 ---
+	stmt_readonly :: proc(pStmt: Stmt) -> i32 ---
+	stmt_isexplain :: proc(pStmt: Stmt) -> i32 ---
+	stmt_explain :: proc(pStmt: Stmt, eMode: i32) -> i32 ---
+	stmt_busy :: proc(_: Stmt) -> i32 ---
+	bind_blob :: proc(_: Stmt, _: i32, _: rawptr, n: i32, _: proc "c" (_: rawptr)) -> i32 ---
+	bind_blob64 :: proc(_: Stmt, _: i32, _: rawptr, _: u64, _: proc "c" (_: rawptr)) -> i32 ---
+	bind_double :: proc(_: Stmt, _: i32, _: f64) -> i32 ---
+	bind_int :: proc(_: Stmt, _: i32, _: i32) -> i32 ---
+	bind_int64 :: proc(_: Stmt, _: i32, _: i64) -> i32 ---
+	bind_null :: proc(_: Stmt, _: i32) -> i32 ---
+	bind_text :: proc(_: Stmt, _: i32, _: cstring, _: i32, _: proc "c" (_: rawptr)) -> i32 ---
+	bind_text16 :: proc(_: Stmt, _: i32, _: rawptr, _: i32, _: proc "c" (_: rawptr)) -> i32 ---
+	bind_text64 :: proc(_: Stmt, _: i32, _: cstring, _: u64, _: proc "c" (_: rawptr), encoding: u8) -> i32 ---
+	bind_value :: proc(_: Stmt, _: i32, _: Value) -> i32 ---
+	bind_pointer :: proc(_: Stmt, _: i32, _: rawptr, _: cstring, _: proc "c" (_: rawptr)) -> i32 ---
+	bind_zeroblob :: proc(_: Stmt, _: i32, n: i32) -> i32 ---
+	bind_zeroblob64 :: proc(_: Stmt, _: i32, _: u64) -> i32 ---
+	bind_parameter_count :: proc(_: Stmt) -> i32 ---
+	bind_parameter_name :: proc(_: Stmt, _: i32) -> cstring ---
+	bind_parameter_index :: proc(_: Stmt, zName: cstring) -> i32 ---
+	clear_bindings :: proc(_: Stmt) -> i32 ---
+	column_count :: proc(pStmt: Stmt) -> i32 ---
+	column_name :: proc(_: Stmt, N: i32) -> cstring ---
+	column_name16 :: proc(_: Stmt, N: i32) -> rawptr ---
+	column_database_name :: proc(_: Stmt, _: i32) -> cstring ---
+	column_database_name16 :: proc(_: Stmt, _: i32) -> rawptr ---
+	column_table_name :: proc(_: Stmt, _: i32) -> cstring ---
+	column_table_name16 :: proc(_: Stmt, _: i32) -> rawptr ---
+	column_origin_name :: proc(_: Stmt, _: i32) -> cstring ---
+	column_origin_name16 :: proc(_: Stmt, _: i32) -> rawptr ---
+	column_decltype :: proc(_: Stmt, _: i32) -> cstring ---
+	column_decltype16 :: proc(_: Stmt, _: i32) -> rawptr ---
+	step :: proc(_: Stmt) -> i32 ---
+	data_count :: proc(pStmt: Stmt) -> i32 ---
+	column_blob :: proc(_: Stmt, iCol: i32) -> rawptr ---
+	column_double :: proc(_: Stmt, iCol: i32) -> f64 ---
+	column_int :: proc(_: Stmt, iCol: i32) -> i32 ---
+	column_int64 :: proc(_: Stmt, iCol: i32) -> i64 ---
+	column_text :: proc(_: Stmt, iCol: i32) -> ^u8 ---
+	column_text16 :: proc(_: Stmt, iCol: i32) -> rawptr ---
+	column_value :: proc(_: Stmt, iCol: i32) -> Value ---
+	column_bytes :: proc(_: Stmt, iCol: i32) -> i32 ---
+	column_bytes16 :: proc(_: Stmt, iCol: i32) -> i32 ---
+	column_type :: proc(_: Stmt, iCol: i32) -> i32 ---
+	finalize :: proc(pStmt: Stmt) -> i32 ---
+	reset :: proc(pStmt: Stmt) -> i32 ---
+	create_function :: proc(db: Sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: Context, _: i32, _: ^Value), xStep: proc "c" (_: Context, _: i32, _: ^Value), xFinal: proc "c" (_: Context)) -> i32 ---
+	create_function16 :: proc(db: Sqlite3, zFunctionName: rawptr, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: Context, _: i32, _: ^Value), xStep: proc "c" (_: Context, _: i32, _: ^Value), xFinal: proc "c" (_: Context)) -> i32 ---
+	create_function_v2 :: proc(db: Sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xFunc: proc "c" (_: Context, _: i32, _: ^Value), xStep: proc "c" (_: Context, _: i32, _: ^Value), xFinal: proc "c" (_: Context), xDestroy: proc "c" (_: rawptr)) -> i32 ---
+	create_window_function :: proc(db: Sqlite3, zFunctionName: cstring, nArg: i32, eTextRep: i32, pApp: rawptr, xStep: proc "c" (_: Context, _: i32, _: ^Value), xFinal: proc "c" (_: Context), xValue: proc "c" (_: Context), xInverse: proc "c" (_: Context, _: i32, _: ^Value), xDestroy: proc "c" (_: rawptr)) -> i32 ---
+	aggregate_count :: proc(_: Context) -> i32 ---
+	expired :: proc(_: Stmt) -> i32 ---
+	transfer_bindings :: proc(_: Stmt, _: Stmt) -> i32 ---
 	global_recover :: proc() -> i32 ---
 	thread_cleanup :: proc() ---
 	memory_alarm :: proc(_: proc "c" (_: rawptr, _: i64, _: i32), _: rawptr, _: i64) -> i32 ---
-	value_blob :: proc(_: ^Value) -> rawptr ---
-	value_double :: proc(_: ^Value) -> f64 ---
-	value_int :: proc(_: ^Value) -> i32 ---
-	value_int64 :: proc(_: ^Value) -> i64 ---
-	value_pointer :: proc(_: ^Value, _: cstring) -> rawptr ---
-	value_text :: proc(_: ^Value) -> ^u8 ---
-	value_text16 :: proc(_: ^Value) -> rawptr ---
-	value_text16le :: proc(_: ^Value) -> rawptr ---
-	value_text16be :: proc(_: ^Value) -> rawptr ---
-	value_bytes :: proc(_: ^Value) -> i32 ---
-	value_bytes16 :: proc(_: ^Value) -> i32 ---
-	value_type :: proc(_: ^Value) -> i32 ---
-	value_numeric_type :: proc(_: ^Value) -> i32 ---
-	value_nochange :: proc(_: ^Value) -> i32 ---
-	value_frombind :: proc(_: ^Value) -> i32 ---
-	value_encoding :: proc(_: ^Value) -> i32 ---
-	value_subtype :: proc(_: ^Value) -> u32 ---
-	value_dup :: proc(_: ^Value) -> ^Value ---
-	value_free :: proc(_: ^Value) ---
-	aggregate_context :: proc(_: ^Context, nBytes: i32) -> rawptr ---
-	user_data :: proc(_: ^Context) -> rawptr ---
-	context_db_handle :: proc(_: ^Context) -> ^Sqlite3 ---
-	get_auxdata :: proc(_: ^Context, N: i32) -> rawptr ---
-	set_auxdata :: proc(_: ^Context, N: i32, _: rawptr, _: proc "c" (_: rawptr)) ---
-	get_clientdata :: proc(_: ^Sqlite3, _: cstring) -> rawptr ---
-	set_clientdata :: proc(_: ^Sqlite3, _: cstring, _: rawptr, _: proc "c" (_: rawptr)) -> i32 ---
-	result_blob :: proc(_: ^Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	result_blob64 :: proc(_: ^Context, _: rawptr, _: u64, _: proc "c" (_: rawptr)) ---
-	result_double :: proc(_: ^Context, _: f64) ---
-	result_error :: proc(_: ^Context, _: cstring, _: i32) ---
-	result_error16 :: proc(_: ^Context, _: rawptr, _: i32) ---
-	result_error_toobig :: proc(_: ^Context) ---
-	result_error_nomem :: proc(_: ^Context) ---
-	result_error_code :: proc(_: ^Context, _: i32) ---
-	result_int :: proc(_: ^Context, _: i32) ---
-	result_int64 :: proc(_: ^Context, _: i64) ---
-	result_null :: proc(_: ^Context) ---
-	result_text :: proc(_: ^Context, _: cstring, _: i32, _: proc "c" (_: rawptr)) ---
-	result_text64 :: proc(_: ^Context, z: cstring, n: u64, _: proc "c" (_: rawptr), encoding: u8) ---
-	result_text16 :: proc(_: ^Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	result_text16le :: proc(_: ^Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	result_text16be :: proc(_: ^Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
-	result_value :: proc(_: ^Context, _: ^Value) ---
-	result_pointer :: proc(_: ^Context, _: rawptr, _: cstring, _: proc "c" (_: rawptr)) ---
-	result_zeroblob :: proc(_: ^Context, n: i32) ---
-	result_zeroblob64 :: proc(_: ^Context, n: u64) -> i32 ---
-	result_subtype :: proc(_: ^Context, _: u32) ---
-	create_collation :: proc(_: ^Sqlite3, zName: cstring, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32) -> i32 ---
-	create_collation_v2 :: proc(_: ^Sqlite3, zName: cstring, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32, xDestroy: proc "c" (_: rawptr)) -> i32 ---
-	create_collation16 :: proc(_: ^Sqlite3, zName: rawptr, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32) -> i32 ---
-	collation_needed :: proc(_: ^Sqlite3, _: rawptr, _: proc "c" (_: rawptr, _: ^Sqlite3, _: i32, _: cstring)) -> i32 ---
-	collation_needed16 :: proc(_: ^Sqlite3, _: rawptr, _: proc "c" (_: rawptr, _: ^Sqlite3, _: i32, _: rawptr)) -> i32 ---
+	value_blob :: proc(_: Value) -> rawptr ---
+	value_double :: proc(_: Value) -> f64 ---
+	value_int :: proc(_: Value) -> i32 ---
+	value_int64 :: proc(_: Value) -> i64 ---
+	value_pointer :: proc(_: Value, _: cstring) -> rawptr ---
+	value_text :: proc(_: Value) -> ^u8 ---
+	value_text16 :: proc(_: Value) -> rawptr ---
+	value_text16le :: proc(_: Value) -> rawptr ---
+	value_text16be :: proc(_: Value) -> rawptr ---
+	value_bytes :: proc(_: Value) -> i32 ---
+	value_bytes16 :: proc(_: Value) -> i32 ---
+	value_type :: proc(_: Value) -> i32 ---
+	value_numeric_type :: proc(_: Value) -> i32 ---
+	value_nochange :: proc(_: Value) -> i32 ---
+	value_frombind :: proc(_: Value) -> i32 ---
+	value_encoding :: proc(_: Value) -> i32 ---
+	value_subtype :: proc(_: Value) -> u32 ---
+	value_dup :: proc(_: Value) -> Value ---
+	value_free :: proc(_: Value) ---
+	aggregate_context :: proc(_: Context, nBytes: i32) -> rawptr ---
+	user_data :: proc(_: Context) -> rawptr ---
+	context_db_handle :: proc(_: Context) -> Sqlite3 ---
+	get_auxdata :: proc(_: Context, N: i32) -> rawptr ---
+	set_auxdata :: proc(_: Context, N: i32, _: rawptr, _: proc "c" (_: rawptr)) ---
+	get_clientdata :: proc(_: Sqlite3, _: cstring) -> rawptr ---
+	set_clientdata :: proc(_: Sqlite3, _: cstring, _: rawptr, _: proc "c" (_: rawptr)) -> i32 ---
+	result_blob :: proc(_: Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
+	result_blob64 :: proc(_: Context, _: rawptr, _: u64, _: proc "c" (_: rawptr)) ---
+	result_double :: proc(_: Context, _: f64) ---
+	result_error :: proc(_: Context, _: cstring, _: i32) ---
+	result_error16 :: proc(_: Context, _: rawptr, _: i32) ---
+	result_error_toobig :: proc(_: Context) ---
+	result_error_nomem :: proc(_: Context) ---
+	result_error_code :: proc(_: Context, _: i32) ---
+	result_int :: proc(_: Context, _: i32) ---
+	result_int64 :: proc(_: Context, _: i64) ---
+	result_null :: proc(_: Context) ---
+	result_text :: proc(_: Context, _: cstring, _: i32, _: proc "c" (_: rawptr)) ---
+	result_text64 :: proc(_: Context, z: cstring, n: u64, _: proc "c" (_: rawptr), encoding: u8) ---
+	result_text16 :: proc(_: Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
+	result_text16le :: proc(_: Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
+	result_text16be :: proc(_: Context, _: rawptr, _: i32, _: proc "c" (_: rawptr)) ---
+	result_value :: proc(_: Context, _: Value) ---
+	result_pointer :: proc(_: Context, _: rawptr, _: cstring, _: proc "c" (_: rawptr)) ---
+	result_zeroblob :: proc(_: Context, n: i32) ---
+	result_zeroblob64 :: proc(_: Context, n: u64) -> i32 ---
+	result_subtype :: proc(_: Context, _: u32) ---
+	create_collation :: proc(_: Sqlite3, zName: cstring, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32) -> i32 ---
+	create_collation_v2 :: proc(_: Sqlite3, zName: cstring, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32, xDestroy: proc "c" (_: rawptr)) -> i32 ---
+	create_collation16 :: proc(_: Sqlite3, zName: rawptr, eTextRep: i32, pArg: rawptr, xCompare: proc "c" (_: rawptr, _: i32, _: rawptr, _: i32, _: rawptr) -> i32) -> i32 ---
+	collation_needed :: proc(_: Sqlite3, _: rawptr, _: proc "c" (_: rawptr, _: Sqlite3, _: i32, _: cstring)) -> i32 ---
+	collation_needed16 :: proc(_: Sqlite3, _: rawptr, _: proc "c" (_: rawptr, _: Sqlite3, _: i32, _: rawptr)) -> i32 ---
 	sleep :: proc(_: i32) -> i32 ---
 	sqlite3_temp_directory: ^u8
 	sqlite3_data_directory: ^u8
 	win32_set_directory :: proc(type: u64, zValue: rawptr) -> i32 ---
 	win32_set_directory8 :: proc(type: u64, zValue: cstring) -> i32 ---
 	win32_set_directory16 :: proc(type: u64, zValue: rawptr) -> i32 ---
-	get_autocommit :: proc(_: ^Sqlite3) -> i32 ---
-	db_handle :: proc(_: ^Stmt) -> ^Sqlite3 ---
-	db_name :: proc(db: ^Sqlite3, N: i32) -> cstring ---
-	db_filename :: proc(db: ^Sqlite3, zDbName: cstring) -> Filename ---
-	db_readonly :: proc(db: ^Sqlite3, zDbName: cstring) -> i32 ---
-	txn_state :: proc(_: ^Sqlite3, zSchema: cstring) -> i32 ---
-	next_stmt :: proc(pDb: ^Sqlite3, pStmt: ^Stmt) -> ^Stmt ---
-	commit_hook :: proc(_: ^Sqlite3, _: proc "c" (_: rawptr) -> i32, _: rawptr) -> rawptr ---
-	rollback_hook :: proc(_: ^Sqlite3, _: proc "c" (_: rawptr), _: rawptr) -> rawptr ---
-	autovacuum_pages :: proc(db: ^Sqlite3, _: proc "c" (_: rawptr, _: cstring, _: u32, _: u32, _: u32) -> u32, _: rawptr, _: proc "c" (_: rawptr)) -> i32 ---
-	update_hook :: proc(_: ^Sqlite3, _: proc "c" (_: rawptr, _: i32, _: cstring, _: cstring, _: i64), _: rawptr) -> rawptr ---
+	get_autocommit :: proc(_: Sqlite3) -> i32 ---
+	db_handle :: proc(_: Stmt) -> Sqlite3 ---
+	db_name :: proc(db: Sqlite3, N: i32) -> cstring ---
+	db_filename :: proc(db: Sqlite3, zDbName: cstring) -> Filename ---
+	db_readonly :: proc(db: Sqlite3, zDbName: cstring) -> i32 ---
+	txn_state :: proc(_: Sqlite3, zSchema: cstring) -> i32 ---
+	next_stmt :: proc(pDb: Sqlite3, pStmt: Stmt) -> Stmt ---
+	commit_hook :: proc(_: Sqlite3, _: proc "c" (_: rawptr) -> i32, _: rawptr) -> rawptr ---
+	rollback_hook :: proc(_: Sqlite3, _: proc "c" (_: rawptr), _: rawptr) -> rawptr ---
+	autovacuum_pages :: proc(db: Sqlite3, _: proc "c" (_: rawptr, _: cstring, _: u32, _: u32, _: u32) -> u32, _: rawptr, _: proc "c" (_: rawptr)) -> i32 ---
+	update_hook :: proc(_: Sqlite3, _: proc "c" (_: rawptr, _: i32, _: cstring, _: cstring, _: i64), _: rawptr) -> rawptr ---
 	enable_shared_cache :: proc(_: i32) -> i32 ---
 	release_memory :: proc(_: i32) -> i32 ---
-	db_release_memory :: proc(_: ^Sqlite3) -> i32 ---
+	db_release_memory :: proc(_: Sqlite3) -> i32 ---
 	soft_heap_limit64 :: proc(N: i64) -> i64 ---
 	hard_heap_limit64 :: proc(N: i64) -> i64 ---
 	soft_heap_limit :: proc(N: i32) ---
-	table_column_metadata :: proc(db: ^Sqlite3, zDbName: cstring, zTableName: cstring, zColumnName: cstring, pzDataType: ^cstring, pzCollSeq: ^cstring, pNotNull: ^i32, pPrimaryKey: ^i32, pAutoinc: ^i32) -> i32 ---
-	load_extension :: proc(db: ^Sqlite3, zFile: cstring, zProc: cstring, pzErrMsg: ^^u8) -> i32 ---
-	enable_load_extension :: proc(db: ^Sqlite3, onoff: i32) -> i32 ---
+	table_column_metadata :: proc(db: Sqlite3, zDbName: cstring, zTableName: cstring, zColumnName: cstring, pzDataType: ^cstring, pzCollSeq: ^cstring, pNotNull: ^i32, pPrimaryKey: ^i32, pAutoinc: ^i32) -> i32 ---
+	load_extension :: proc(db: Sqlite3, zFile: cstring, zProc: cstring, pzErrMsg: ^^u8) -> i32 ---
+	enable_load_extension :: proc(db: Sqlite3, onoff: i32) -> i32 ---
 	auto_extension :: proc(xEntryPoint: proc "c" ()) -> i32 ---
 	cancel_auto_extension :: proc(xEntryPoint: proc "c" ()) -> i32 ---
 	reset_auto_extension :: proc() ---
-	create_module :: proc(db: ^Sqlite3, zName: cstring, p: ^Module, pClientData: rawptr) -> i32 ---
-	create_module_v2 :: proc(db: ^Sqlite3, zName: cstring, p: ^Module, pClientData: rawptr, xDestroy: proc "c" (_: rawptr)) -> i32 ---
-	drop_modules :: proc(db: ^Sqlite3, azKeep: ^cstring) -> i32 ---
-	declare_vtab :: proc(_: ^Sqlite3, zSQL: cstring) -> i32 ---
-	overload_function :: proc(_: ^Sqlite3, zFuncName: cstring, nArg: i32) -> i32 ---
-	blob_open :: proc(_: ^Sqlite3, zDb: cstring, zTable: cstring, zColumn: cstring, iRow: i64, flags: i32, ppBlob: ^^Blob) -> i32 ---
-	blob_reopen :: proc(_: ^Blob, _: i64) -> i32 ---
-	blob_close :: proc(_: ^Blob) -> i32 ---
-	blob_bytes :: proc(_: ^Blob) -> i32 ---
-	blob_read :: proc(_: ^Blob, Z: rawptr, N: i32, iOffset: i32) -> i32 ---
-	blob_write :: proc(_: ^Blob, z: rawptr, n: i32, iOffset: i32) -> i32 ---
+	create_module :: proc(db: Sqlite3, zName: cstring, p: ^Module, pClientData: rawptr) -> i32 ---
+	create_module_v2 :: proc(db: Sqlite3, zName: cstring, p: ^Module, pClientData: rawptr, xDestroy: proc "c" (_: rawptr)) -> i32 ---
+	drop_modules :: proc(db: Sqlite3, azKeep: ^cstring) -> i32 ---
+	declare_vtab :: proc(_: Sqlite3, zSQL: cstring) -> i32 ---
+	overload_function :: proc(_: Sqlite3, zFuncName: cstring, nArg: i32) -> i32 ---
+	blob_open :: proc(_: Sqlite3, zDb: cstring, zTable: cstring, zColumn: cstring, iRow: i64, flags: i32, ppBlob: ^Blob) -> i32 ---
+	blob_reopen :: proc(_: Blob, _: i64) -> i32 ---
+	blob_close :: proc(_: Blob) -> i32 ---
+	blob_bytes :: proc(_: Blob) -> i32 ---
+	blob_read :: proc(_: Blob, Z: rawptr, N: i32, iOffset: i32) -> i32 ---
+	blob_write :: proc(_: Blob, z: rawptr, n: i32, iOffset: i32) -> i32 ---
 	vfs_find :: proc(zVfsName: cstring) -> ^Vfs ---
 	vfs_register :: proc(_: ^Vfs, makeDflt: i32) -> i32 ---
 	vfs_unregister :: proc(_: ^Vfs) -> i32 ---
-	mutex_alloc :: proc(_: i32) -> ^Mutex ---
-	mutex_free :: proc(_: ^Mutex) ---
-	mutex_enter :: proc(_: ^Mutex) ---
-	mutex_try :: proc(_: ^Mutex) -> i32 ---
-	mutex_leave :: proc(_: ^Mutex) ---
-	mutex_held :: proc(_: ^Mutex) -> i32 ---
-	mutex_notheld :: proc(_: ^Mutex) -> i32 ---
-	db_mutex :: proc(_: ^Sqlite3) -> ^Mutex ---
-	file_control :: proc(_: ^Sqlite3, zDbName: cstring, op: i32, _: rawptr) -> i32 ---
+	mutex_alloc :: proc(_: i32) -> Mutex ---
+	mutex_free :: proc(_: Mutex) ---
+	mutex_enter :: proc(_: Mutex) ---
+	mutex_try :: proc(_: Mutex) -> i32 ---
+	mutex_leave :: proc(_: Mutex) ---
+	mutex_held :: proc(_: Mutex) -> i32 ---
+	mutex_notheld :: proc(_: Mutex) -> i32 ---
+	db_mutex :: proc(_: Sqlite3) -> Mutex ---
+	file_control :: proc(_: Sqlite3, zDbName: cstring, op: i32, _: rawptr) -> i32 ---
 	test_control :: proc(op: i32, #c_vararg _: ..any) -> i32 ---
 	keyword_count :: proc() -> i32 ---
 	keyword_name :: proc(_: i32, _: ^cstring, _: ^i32) -> i32 ---
 	keyword_check :: proc(_: cstring, _: i32) -> i32 ---
-	str_new :: proc(_: ^Sqlite3) -> ^Str ---
-	str_finish :: proc(_: ^Str) -> ^u8 ---
-	str_free :: proc(_: ^Str) ---
-	str_appendf :: proc(_: ^Str, zFormat: cstring, #c_vararg _: ..any) ---
-	str_vappendf :: proc(_: ^Str, zFormat: cstring, _: ^Va_List_Tag) ---
-	str_append :: proc(_: ^Str, zIn: cstring, N: i32) ---
-	str_appendall :: proc(_: ^Str, zIn: cstring) ---
-	str_appendchar :: proc(_: ^Str, N: i32, C: u8) ---
-	str_reset :: proc(_: ^Str) ---
-	str_truncate :: proc(_: ^Str, N: i32) ---
-	str_errcode :: proc(_: ^Str) -> i32 ---
-	str_length :: proc(_: ^Str) -> i32 ---
-	str_value :: proc(_: ^Str) -> ^u8 ---
+	str_new :: proc(_: Sqlite3) -> Str ---
+	str_finish :: proc(_: Str) -> ^u8 ---
+	str_free :: proc(_: Str) ---
+	str_appendf :: proc(_: Str, zFormat: cstring, #c_vararg _: ..any) ---
+	str_vappendf :: proc(_: Str, zFormat: cstring, _: ^Va_List_Tag) ---
+	str_append :: proc(_: Str, zIn: cstring, N: i32) ---
+	str_appendall :: proc(_: Str, zIn: cstring) ---
+	str_appendchar :: proc(_: Str, N: i32, C: u8) ---
+	str_reset :: proc(_: Str) ---
+	str_truncate :: proc(_: Str, N: i32) ---
+	str_errcode :: proc(_: Str) -> i32 ---
+	str_length :: proc(_: Str) -> i32 ---
+	str_value :: proc(_: Str) -> ^u8 ---
 	status :: proc(op: i32, pCurrent: ^i32, pHighwater: ^i32, resetFlag: i32) -> i32 ---
 	status64 :: proc(op: i32, pCurrent: ^i64, pHighwater: ^i64, resetFlag: i32) -> i32 ---
-	db_status :: proc(_: ^Sqlite3, op: i32, pCur: ^i32, pHiwtr: ^i32, resetFlg: i32) -> i32 ---
-	db_status64 :: proc(_: ^Sqlite3, _: i32, _: ^i64, _: ^i64, _: i32) -> i32 ---
-	stmt_status :: proc(_: ^Stmt, op: i32, resetFlg: i32) -> i32 ---
-	backup_init :: proc(pDest: ^Sqlite3, zDestName: cstring, pSource: ^Sqlite3, zSourceName: cstring) -> ^Backup ---
-	backup_step :: proc(p: ^Backup, nPage: i32) -> i32 ---
-	backup_finish :: proc(p: ^Backup) -> i32 ---
-	backup_remaining :: proc(p: ^Backup) -> i32 ---
-	backup_pagecount :: proc(p: ^Backup) -> i32 ---
-	unlock_notify :: proc(pBlocked: ^Sqlite3, xNotify: proc "c" (_: ^rawptr, _: i32), pNotifyArg: rawptr) -> i32 ---
+	db_status :: proc(_: Sqlite3, op: i32, pCur: ^i32, pHiwtr: ^i32, resetFlg: i32) -> i32 ---
+	db_status64 :: proc(_: Sqlite3, _: i32, _: ^i64, _: ^i64, _: i32) -> i32 ---
+	stmt_status :: proc(_: Stmt, op: i32, resetFlg: i32) -> i32 ---
+	backup_init :: proc(pDest: Sqlite3, zDestName: cstring, pSource: Sqlite3, zSourceName: cstring) -> Backup ---
+	backup_step :: proc(p: Backup, nPage: i32) -> i32 ---
+	backup_finish :: proc(p: Backup) -> i32 ---
+	backup_remaining :: proc(p: Backup) -> i32 ---
+	backup_pagecount :: proc(p: Backup) -> i32 ---
+	unlock_notify :: proc(pBlocked: Sqlite3, xNotify: proc "c" (_: ^rawptr, _: i32), pNotifyArg: rawptr) -> i32 ---
 	stricmp :: proc(_: cstring, _: cstring) -> i32 ---
 	strnicmp :: proc(_: cstring, _: cstring, _: i32) -> i32 ---
 	strglob :: proc(zGlob: cstring, zStr: cstring) -> i32 ---
 	strlike :: proc(zGlob: cstring, zStr: cstring, cEsc: u32) -> i32 ---
 	log :: proc(iErrCode: i32, zFormat: cstring, #c_vararg _: ..any) ---
-	wal_hook :: proc(_: ^Sqlite3, _: proc "c" (_: rawptr, _: ^Sqlite3, _: cstring, _: i32) -> i32, _: rawptr) -> rawptr ---
-	wal_autocheckpoint :: proc(db: ^Sqlite3, N: i32) -> i32 ---
-	wal_checkpoint :: proc(db: ^Sqlite3, zDb: cstring) -> i32 ---
-	wal_checkpoint_v2 :: proc(db: ^Sqlite3, zDb: cstring, eMode: i32, pnLog: ^i32, pnCkpt: ^i32) -> i32 ---
-	vtab_config :: proc(_: ^Sqlite3, op: i32, #c_vararg _: ..any) -> i32 ---
-	vtab_on_conflict :: proc(_: ^Sqlite3) -> i32 ---
-	vtab_nochange :: proc(_: ^Context) -> i32 ---
+	wal_hook :: proc(_: Sqlite3, _: proc "c" (_: rawptr, _: Sqlite3, _: cstring, _: i32) -> i32, _: rawptr) -> rawptr ---
+	wal_autocheckpoint :: proc(db: Sqlite3, N: i32) -> i32 ---
+	wal_checkpoint :: proc(db: Sqlite3, zDb: cstring) -> i32 ---
+	wal_checkpoint_v2 :: proc(db: Sqlite3, zDb: cstring, eMode: i32, pnLog: ^i32, pnCkpt: ^i32) -> i32 ---
+	vtab_config :: proc(_: Sqlite3, op: i32, #c_vararg _: ..any) -> i32 ---
+	vtab_on_conflict :: proc(_: Sqlite3) -> i32 ---
+	vtab_nochange :: proc(_: Context) -> i32 ---
 	vtab_collation :: proc(_: ^Index_Info, _: i32) -> cstring ---
 	vtab_distinct :: proc(_: ^Index_Info) -> i32 ---
 	vtab_in :: proc(_: ^Index_Info, iCons: i32, bHandle: i32) -> i32 ---
-	vtab_in_first :: proc(pVal: ^Value, ppOut: ^^Value) -> i32 ---
-	vtab_in_next :: proc(pVal: ^Value, ppOut: ^^Value) -> i32 ---
-	vtab_rhs_value :: proc(_: ^Index_Info, _: i32, ppVal: ^^Value) -> i32 ---
-	stmt_scanstatus :: proc(pStmt: ^Stmt, idx: i32, iScanStatusOp: i32, pOut: rawptr) -> i32 ---
-	stmt_scanstatus_v2 :: proc(pStmt: ^Stmt, idx: i32, iScanStatusOp: i32, flags: i32, pOut: rawptr) -> i32 ---
-	stmt_scanstatus_reset :: proc(_: ^Stmt) ---
-	db_cacheflush :: proc(_: ^Sqlite3) -> i32 ---
-	system_errno :: proc(_: ^Sqlite3) -> i32 ---
-	snapshot_get :: proc(db: ^Sqlite3, zSchema: cstring, ppSnapshot: ^^Snapshot) -> i32 ---
-	snapshot_open :: proc(db: ^Sqlite3, zSchema: cstring, pSnapshot: ^Snapshot) -> i32 ---
+	vtab_in_first :: proc(pVal: Value, ppOut: ^Value) -> i32 ---
+	vtab_in_next :: proc(pVal: Value, ppOut: ^Value) -> i32 ---
+	vtab_rhs_value :: proc(_: ^Index_Info, _: i32, ppVal: ^Value) -> i32 ---
+	stmt_scanstatus :: proc(pStmt: Stmt, idx: i32, iScanStatusOp: i32, pOut: rawptr) -> i32 ---
+	stmt_scanstatus_v2 :: proc(pStmt: Stmt, idx: i32, iScanStatusOp: i32, flags: i32, pOut: rawptr) -> i32 ---
+	stmt_scanstatus_reset :: proc(_: Stmt) ---
+	db_cacheflush :: proc(_: Sqlite3) -> i32 ---
+	system_errno :: proc(_: Sqlite3) -> i32 ---
+	snapshot_get :: proc(db: Sqlite3, zSchema: cstring, ppSnapshot: ^^Snapshot) -> i32 ---
+	snapshot_open :: proc(db: Sqlite3, zSchema: cstring, pSnapshot: ^Snapshot) -> i32 ---
 	snapshot_free :: proc(_: ^Snapshot) ---
 	snapshot_cmp :: proc(p1: ^Snapshot, p2: ^Snapshot) -> i32 ---
-	snapshot_recover :: proc(db: ^Sqlite3, zDb: cstring) -> i32 ---
-	serialize :: proc(db: ^Sqlite3, zSchema: cstring, piSize: ^i64, mFlags: u32) -> ^u8 ---
-	deserialize :: proc(db: ^Sqlite3, zSchema: cstring, pData: ^u8, szDb: i64, szBuf: i64, mFlags: u32) -> i32 ---
-	carray_bind_v2 :: proc(pStmt: ^Stmt, i: i32, aData: rawptr, nData: i32, mFlags: i32, xDel: proc "c" (_: rawptr), pDel: rawptr) -> i32 ---
-	carray_bind :: proc(pStmt: ^Stmt, i: i32, aData: rawptr, nData: i32, mFlags: i32, xDel: proc "c" (_: rawptr)) -> i32 ---
-	rtree_geometry_callback :: proc(db: ^Sqlite3, zGeom: cstring, xGeom: proc "c" (_: ^Rtree_Geometry, _: i32, _: ^Rtree_Dbl, _: ^i32) -> i32, pContext: rawptr) -> i32 ---
-	rtree_query_callback :: proc(db: ^Sqlite3, zQueryFunc: cstring, xQueryFunc: proc "c" (_: ^Rtree_Query_Info) -> i32, pContext: rawptr, xDestructor: proc "c" (_: rawptr)) -> i32 ---
+	snapshot_recover :: proc(db: Sqlite3, zDb: cstring) -> i32 ---
+	serialize :: proc(db: Sqlite3, zSchema: cstring, piSize: ^i64, mFlags: u32) -> ^u8 ---
+	deserialize :: proc(db: Sqlite3, zSchema: cstring, pData: ^u8, szDb: i64, szBuf: i64, mFlags: u32) -> i32 ---
+	carray_bind_v2 :: proc(pStmt: Stmt, i: i32, aData: rawptr, nData: i32, mFlags: i32, xDel: proc "c" (_: rawptr), pDel: rawptr) -> i32 ---
+	carray_bind :: proc(pStmt: Stmt, i: i32, aData: rawptr, nData: i32, mFlags: i32, xDel: proc "c" (_: rawptr)) -> i32 ---
+	rtree_geometry_callback :: proc(db: Sqlite3, zGeom: cstring, xGeom: proc "c" (_: ^Rtree_Geometry, _: i32, _: ^Rtree_Dbl, _: ^i32) -> i32, pContext: rawptr) -> i32 ---
+	rtree_query_callback :: proc(db: Sqlite3, zQueryFunc: cstring, xQueryFunc: proc "c" (_: ^Rtree_Query_Info) -> i32, pContext: rawptr, xDestructor: proc "c" (_: rawptr)) -> i32 ---
 }

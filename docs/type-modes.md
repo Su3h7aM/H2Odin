@@ -1,16 +1,38 @@
 # Type Modes
 
-H2Odin can generate bindings in two modes. They differ in philosophy, and the difference lives almost entirely in how C types become Odin types.
+H2Odin can generate bindings in two modes. They differ in philosophy: which
+Odin spelling family to use for the **same** C declarations when more than one
+spelling is proven ABI-safe.
 
 ## ABI mode — conservative
 
 ABI mode preserves the C API and ABI as faithfully as it can, using Odin's C-compatible types from `core:c` (`c.int`, `c.size_t`, and so on). It aims for maximum compatibility and minimal surprises. If you want the binding to match the C library as closely as possible, this is the mode to choose.
+
+Incomplete tag records (`typedef struct T T;` used as `T *`) stay as
+`T :: struct {}` with explicit pointer levels (`^T`, `^^T`) — call sites
+parallel the C shape.
 
 ## Idiomatic mode — aggressive
 
 Idiomatic mode tries to make the bindings feel as though the library had been written in Odin. It prefers native Odin type spellings (`i32`, `f64`, `cstring`) and Odin naming where they are safe. The ideal experience is that someone using the bindings would not realize they are calling into C at all.
 
 Idiomatic mode is a different spelling policy for the same C declarations. It still emits one `foreign` declaration per C function; it does not author procedure bodies. The difference lives in the type names and symbol names Transformation chooses before Emission serializes them.
+
+Incomplete tag records collapse to the handle idiom: `T :: distinct rawptr`
+with one pointer level removed at every reference (`T*` → `T`, `T**` →
+`^T`). That is byte-identical to `^struct {}` and matches hand bindings.
+Override per name with `types.opaque` (see [spec 0007](specs/0007-opaque-tag-records.md)).
+
+## What mode may and may not change
+
+**Mode may** choose among proven ABI-identical *spellings* of the same C
+entity (leaf widths confirmed by measurement; incomplete-tag handle vs
+empty-struct-plus-pointer). Client code shapes can therefore differ between
+modes (`^Stmt` vs `Stmt`) — modes are not drop-in interchangeable.
+
+**Mode may never** change arity, invent conversion wrappers, or rewrite
+meaning (e.g. inferring array-ness from a lone pointer). That remains
+configuration or deferred wrapper work (Milestone 6).
 
 ## Guidelines for choosing idiomatic types
 

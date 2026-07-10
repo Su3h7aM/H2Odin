@@ -31,6 +31,8 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	// Incomplete-record handles → distinct rawptr before map/overrides so a
 	// user spelling can still win (spec 0005).
 	apply_opaque_handles(ir, policy)
+	// Incomplete tag records: mode default + types.opaque overrides (spec 0007).
+	apply_opaque_tag_records(ir, policy, mode)
 
 	// map first, then overrides so a types.overrides entry wins on conflict.
 	apply_type_rewrites(ir, policy.type_map, drop_decls = false)

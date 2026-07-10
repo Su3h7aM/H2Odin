@@ -218,6 +218,136 @@ test_opaque_handles_complete_record_pointer_unchanged :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_opaque_tag_records_collapse_pointer_level :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	stmt := ir_add_record(&ir, Record_Decl{name = "sqlite3_stmt", is_complete = false})
+	stmt_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = stmt}})
+	ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = stmt_ty, kind = .Single}})
+	pptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = ptr, kind = .Single}})
+
+	policy := Policy{}
+	// ABI mode + force handle for this name.
+	policy.types_opaque = make(map[string]bool)
+	policy.types_opaque["sqlite3_stmt"] = true
+	apply_opaque_tag_records(&ir, &policy, .ABI)
+
+	testing.expect(t, ir.records[int(stmt)].emit_as_handle)
+
+	// T* → T (bare record ref)
+	rec, is_rec := ir.types[int(ptr)].variant.(Type_Record_Ref)
+	testing.expect(t, is_rec)
+	testing.expect_value(t, rec.decl, stmt)
+
+	// T** → still a pointer, pointee slot rewritten → emits as ^T
+	outer, is_outer := ir.types[int(pptr)].variant.(Type_Lowered_Pointer)
+	testing.expect(t, is_outer)
+	testing.expect_value(t, outer.kind, Pointer_Lowering_Kind.Single)
+	inner, is_inner := ir.types[int(outer.pointee)].variant.(Type_Record_Ref)
+	testing.expect(t, is_inner)
+	testing.expect_value(t, inner.decl, stmt)
+}
+
+@(test)
+test_opaque_tag_records_fail_closed_when_complete :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	rec := ir_add_record(&ir, Record_Decl{name = "Complete", is_complete = true})
+	rec_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = rec}})
+	ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = rec_ty, kind = .Single}})
+
+	policy := Policy{}
+	policy.types_opaque = make(map[string]bool)
+	policy.types_opaque["Complete"] = true
+	apply_opaque_tag_records(&ir, &policy, .ABI)
+
+	testing.expect(t, !ir.records[int(rec)].emit_as_handle)
+	_, still_ptr := ir.types[int(ptr)].variant.(Type_Lowered_Pointer)
+	testing.expect(t, still_ptr)
+	testing.expect(t, len(ir.diagnostics) >= 1)
+	found := false
+	for d in ir.diagnostics {
+		if d.category == .Opaque_Record_Complete {
+			found = true
+		}
+	}
+	testing.expect(t, found)
+}
+
+@(test)
+test_opaque_tag_records_idiomatic_default_collapses :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	stmt := ir_add_record(&ir, Record_Decl{name = "sqlite3_stmt", is_complete = false})
+	stmt_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = stmt}})
+	ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = stmt_ty, kind = .Single}})
+
+	// Idiomatic, no config: incomplete tags collapse.
+	apply_opaque_tag_records(&ir, &Policy{}, .Idiomatic)
+	testing.expect(t, ir.records[int(stmt)].emit_as_handle)
+	_, is_rec := ir.types[int(ptr)].variant.(Type_Record_Ref)
+	testing.expect(t, is_rec)
+}
+
+@(test)
+test_opaque_tag_records_opt_out_under_idiomatic :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	stmt := ir_add_record(&ir, Record_Decl{name = "sqlite3_stmt", is_complete = false})
+	stmt_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = stmt}})
+	ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = stmt_ty, kind = .Single}})
+
+	policy := Policy{}
+	policy.types_opaque = make(map[string]bool)
+	policy.types_opaque["sqlite3_stmt"] = false
+	apply_opaque_tag_records(&ir, &policy, .Idiomatic)
+
+	testing.expect(t, !ir.records[int(stmt)].emit_as_handle)
+	_, still_ptr := ir.types[int(ptr)].variant.(Type_Lowered_Pointer)
+	testing.expect(t, still_ptr)
+}
+
+@(test)
 test_opaque_handles_void_ptr_opt_in_via_types_distinct :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

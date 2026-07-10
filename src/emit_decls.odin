@@ -11,6 +11,14 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comm
 	}
 	write_doc(b, record.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: ", record.name)
+	// Spec 0007: handle style (idiomatic default or types.opaque override).
+	// Declaration is distinct rawptr; references already collapsed one
+	// pointer level in Transformation.
+	if record.emit_as_handle {
+		strings.write_string(b, SPELLING_DISTINCT_RAWPTR)
+		strings.write_string(b, "\n\n")
+		return
+	}
 	write_record_body(b, ir, record, 0, emit_comments, uses_core_c)
 	strings.write_string(b, "\n\n")
 }

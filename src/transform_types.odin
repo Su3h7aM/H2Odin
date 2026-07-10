@@ -104,6 +104,108 @@ type_is_rawptr :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 	return false
 }
 
+// Spec 0007: incomplete tag records may emit as handle style
+// (`T :: distinct rawptr`, one pointer level collapsed: T* → T, T** → ^T).
+// Mode sets the default (ABI faithful, idiomatic collapses); types.opaque
+// is a per-name bool override in either direction. Complete records never
+// auto-collapse; forcing them via types.opaque fails closed.
+apply_opaque_tag_records :: proc(ir: ^IR, policy: ^Policy, mode: Type_Mode) {
+	idiomatic_default := mode == .Idiomatic
+	if !idiomatic_default && len(policy.types_opaque) == 0 {
+		return
+	}
+
+	opaque_records := make(map[Decl_Handle]bool, context.temp_allocator)
+	for &record, i in ir.records {
+		if record.name == "" {
+			continue
+		}
+		// Override: Some(true)/Some(false). Absent → mode default.
+		want_handle: bool
+		if forced, has_override := policy.types_opaque[record.name]; has_override {
+			want_handle = forced
+		} else if !idiomatic_default {
+			continue // ABI default: faithful
+		} else {
+			want_handle = true // idiomatic default: collapse incomplete tags
+		}
+
+		if !want_handle {
+			continue
+		}
+		if record.is_complete {
+			// Collapse would change layout. Only diagnose when the user
+			// forced handle style; idiomatic auto-skip of complete records
+			// is silent (they are not incomplete tags).
+			if _, forced := policy.types_opaque[record.name]; forced {
+				ir_diag(
+					ir,
+					.Opaque_Record_Complete,
+					"types.opaque %q names a complete record; leaving faithful emission (struct body + pointers)",
+					record.name,
+				)
+			}
+			continue
+		}
+		record.emit_as_handle = true
+		opaque_records[Decl_Handle(i)] = true
+	}
+	if len(opaque_records) == 0 {
+		return
+	}
+
+	// Collapse one pointer level: rewrite every Single lowered pointer whose
+	// *immediate* pointee resolves to an opaque tag record into a bare
+	// Type_Record_Ref. Real headers usually spell `typedef struct T T`, so
+	// the pointee is a Type_Typedef_Ref that must be peeled. Identify first,
+	// then apply — rewriting in one pass would cascade (after ^T → T, ^^T
+	// looks like pointer-to-record and collapses again). Outer pointers keep
+	// their lowered-pointer form; emission writes ^T for what was T**.
+	count := len(ir.types)
+	to_collapse := make([dynamic]int, 0, 8, context.temp_allocator)
+	collapse_to := make([]Decl_Handle, count, context.temp_allocator)
+	for i in 0 ..< count {
+		ptr, is_ptr := ir.types[i].variant.(Type_Lowered_Pointer)
+		if !is_ptr || ptr.kind != .Single {
+			continue
+		}
+		rec_decl, is_rec := type_as_record_decl(ir, ptr.pointee)
+		if !is_rec || !opaque_records[rec_decl] {
+			continue
+		}
+		append(&to_collapse, i)
+		collapse_to[i] = rec_decl
+	}
+	for i in to_collapse {
+		info := ir.types[i]
+		ir.types[i] = Type_Info {
+			is_const = info.is_const,
+			variant = Type_Record_Ref{decl = collapse_to[i]},
+		}
+	}
+}
+
+// Peel typedef aliases to find a Type_Record_Ref (if any).
+type_as_record_decl :: proc(ir: ^IR, handle: Type_Handle) -> (decl: Decl_Handle, ok: bool) {
+	// Bound the peel so a pathological typedef cycle cannot hang.
+	cur := handle
+	for _ in 0 ..< 32 {
+		#partial switch variant in ir_type(ir, cur).variant {
+		case Type_Record_Ref:
+			return variant.decl, true
+		case Type_Typedef_Ref:
+			td := ir.typedefs[variant.decl]
+			if td.is_unresolvable {
+				return 0, false
+			}
+			cur = td.aliased
+		case:
+			return 0, false
+		}
+	}
+	return 0, false
+}
+
 substitute_leaf_types :: proc(ir: ^IR) {
 	count := len(ir.types) // slots appended below carry no leaves to revisit
 	for i in 0 ..< count {

@@ -18,10 +18,9 @@ Status: Milestones 0–5, 7–14 complete; Milestone 6 (idiomatic wrappers) is
 deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
-Code health items for opaque handles (spec 0005) and `output.imports_file`
-removal (spec 0006) are done. The next decided-and-ready item is
-`types.opaque` for sqlite3-style incomplete tag records (spec 0007);
-the rest is polish / deferred work in ROADMAP's **Later** section. See
+Code health items for specs 0005–0007 (opaque handles, imports_file
+removal, types.opaque for incomplete tag records) are done. Remaining debt
+is polish / deferred work in ROADMAP's **Later** section. See
 [`ROADMAP.md`](ROADMAP.md) and [`docs/specs/`](docs/specs/).
 
 ---

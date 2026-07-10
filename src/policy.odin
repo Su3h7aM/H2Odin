@@ -160,6 +160,9 @@ Policy :: struct {
 	// types.distinct: void* typedef C names that opt into `distinct rawptr`
 	// (incomplete-record handles are distinct automatically — spec 0005).
 	types_distinct:      []string,
+	// types.opaque: per-name override for incomplete tag handle style
+	// (true = force handle, false = force faithful; mode supplies default).
+	types_opaque:        map[string]bool,
 
 	// symbols.remove declarative tiers.
 	remove_names:        []string,
@@ -229,7 +232,12 @@ Symbol_Context :: struct {
 policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	if path == "" {
 		// Same emission defaults as a config with empty sections.
-		return Policy{procedures_at_end = true, emit_comments = true}, true
+		empty := Policy {
+			procedures_at_end = true,
+			emit_comments     = true,
+		}
+		policy_set_diag_defaults(&empty)
+		return empty, true
 	}
 
 	L := lua.L_newstate()
@@ -265,6 +273,9 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	policy.state = L
 	lua.setfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
 
+	// Defaults before reading config so config.diagnostics can override.
+	policy_set_diag_defaults(&policy)
+
 	if !policy_validate_keys(&policy) || !policy_read_config(&policy) {
 		policy_destroy(&policy)
 		return {}, false
@@ -272,6 +283,12 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	// Clone only after a successful load so failed validation does not leak.
 	policy.config_dir = strings.clone(config_dir)
 	return policy, true
+}
+
+// Categories whose default posture is error rather than warn.
+policy_set_diag_defaults :: proc(policy: ^Policy) {
+	// types.opaque applied to a complete record would change layout (spec 0007).
+	policy.diag_severity[.Opaque_Record_Complete] = .Error
 }
 
 policy_config_dir :: proc(path: string) -> (dir: string, ok: bool) {

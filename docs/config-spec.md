@@ -303,15 +303,18 @@ end
 -- already distinct automatically — C itself distinguishes those).
 config.types.distinct = { "CXIndex", "CXClientData" }
 
--- Handle style for incomplete tag records (typedef struct T T; used as T*):
--- collapse one pointer level everywhere (T* → Stmt, T** → ^Stmt) and emit
--- Stmt :: distinct rawptr instead of the faithful struct {} + ^Stmt.
-config.types.opaque = { "sqlite3", "sqlite3_stmt", "sqlite3_value" }
+-- Incomplete tag records (typedef struct T T; used as T*): mode default is
+-- ABI faithful (struct {} + ^T) / idiomatic handle (distinct rawptr + collapse).
+-- Per-name override in either direction:
+config.types.opaque = {
+    sqlite3_stmt = true,   -- force handle even in ABI mode
+    -- Some_Complete = false, -- force faithful even in idiomatic mode
+}
 ```
 
 **Why separate `map` and `overrides`.** `map` changes *references* to a type (every `sqlite3_int64` in a signature becomes `i64`) without changing the declaration. `overrides` rewrites the declaration: a typedef becomes `Name :: <spelling>` with use sites still naming `Name`; a named record/enum is dropped and the spelling is inlined at use sites.
 
-**Opaque handles** (see [spec 0005](specs/0005-opaque-handle-typedefs.md) and [spec 0007](specs/0007-opaque-tag-records.md)): C has three opaque idioms and each gets the treatment its own type discipline earns. A typedef of a pointer to an incomplete record (`typedef struct Impl *H`) emits `H :: distinct rawptr` automatically — C already makes those handles mutually incompatible, so the generator preserves a provable fact. `void*` typedefs stay plain `rawptr` aliases (C states no distinction); `types.distinct` is the opt-in for hardening them. An incomplete tag typedef (`typedef struct T T;` used as `T *`, sqlite3-style) faithfully emits `T :: struct {}` with explicit pointers — already type-safe — and `types.opaque` is the opt-in for collapsing it to the hand-binding handle style, failing closed if the named record is actually complete.
+**Opaque handles** (see [spec 0005](specs/0005-opaque-handle-typedefs.md) and [spec 0007](specs/0007-opaque-tag-records.md)): C has three opaque idioms and each gets the treatment its own type discipline earns. A typedef of a pointer to an incomplete record (`typedef struct Impl *H`) emits `H :: distinct rawptr` automatically — C already makes those handles mutually incompatible. `void*` typedefs stay plain `rawptr` aliases; `types.distinct` hardens them. Incomplete tag typedefs (`typedef struct T T;` used as `T *`) follow **mode**: ABI keeps `struct {}` + `^T`; idiomatic collapses to handle style. `types.opaque[name] = true/false` overrides per name; forcing a complete record fails closed under `opaque_record_complete`.
 
 ---
 

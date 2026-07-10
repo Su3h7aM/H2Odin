@@ -28,6 +28,8 @@ Diag_Category :: enum u8 {
 	Bit_Set_Target_Missing,
 	Bit_Set_Backing_Mismatch,
 	Incomplete_Extern_Array,
+	// types.opaque named a complete record (spec 0007); fail closed.
+	Opaque_Record_Complete,
 	// Spec-listed; reserved for future emitters.
 	Duplicate_Enum_Value,
 	Unresolved_Type,
@@ -68,6 +70,8 @@ diag_category_name :: proc(c: Diag_Category) -> string {
 		return "bit_set_backing_mismatch"
 	case .Incomplete_Extern_Array:
 		return "incomplete_extern_array"
+	case .Opaque_Record_Complete:
+		return "opaque_record_complete"
 	case .Duplicate_Enum_Value:
 		return "duplicate_enum_value"
 	case .Unresolved_Type:
@@ -104,6 +108,8 @@ diag_category_from_name :: proc(name: string) -> (Diag_Category, bool) {
 		return .Bit_Set_Backing_Mismatch, true
 	case "incomplete_extern_array":
 		return .Incomplete_Extern_Array, true
+	case "opaque_record_complete":
+		return .Opaque_Record_Complete, true
 	case "duplicate_enum_value":
 		return .Duplicate_Enum_Value, true
 	case "unresolved_type":

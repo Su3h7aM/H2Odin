@@ -801,6 +801,110 @@ return config
 }
 
 @(test)
+test_opaque_tags_abi_default_faithful :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/opaque_tags.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Opaque_Tag :: struct {}")
+	expect_contains(t, stdout, "take_tag :: proc(t: ^Opaque_Tag")
+	expect_contains(t, stdout, "out: ^^Opaque_Tag")
+	expect_contains(t, stdout, "c: ^Complete_Tag")
+	expect_not_contains(t, stdout, "Opaque_Tag :: distinct rawptr")
+}
+
+@(test)
+test_opaque_tags_idiomatic_default_handle :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/opaque_tags_idiomatic.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Opaque_Tag :: distinct rawptr")
+	expect_contains(t, stdout, "take_tag :: proc(t: Opaque_Tag")
+	expect_contains(t, stdout, "out: ^Opaque_Tag")
+	expect_contains(t, stdout, "c: ^Complete_Tag")
+	expect_not_contains(t, stdout, "Opaque_Tag :: struct {}")
+	expect_not_contains(t, stdout, "^^Opaque_Tag")
+}
+
+@(test)
+test_opaque_tags_abi_opt_in_handle :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/opaque_tags_opt_in.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Opaque_Tag :: distinct rawptr")
+	expect_contains(t, stdout, "take_tag :: proc(t: Opaque_Tag")
+	expect_contains(t, stdout, "out: ^Opaque_Tag")
+	expect_not_contains(t, stdout, "^^Opaque_Tag")
+
+	out_dir := "/tmp/h2odin-opaque-tags"
+	_ = os.remove_all(out_dir)
+	testing.expect_value(t, os.make_directory_all(out_dir), nil)
+	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-opaque-tags/generated.odin", stdout), nil)
+	ok_src := `package opaque_tags
+
+nil_ok :: proc() -> Opaque_Tag {
+	return nil
+}
+`
+	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-opaque-tags/ok.odin", ok_src), nil)
+	check_cmd := [?]string{"odin", "check", out_dir, "-no-entry-point"}
+	check_stdout, check_stderr, check_ok := run_h2odin(t, check_cmd[:])
+	defer delete(check_stdout)
+	defer delete(check_stderr)
+	testing.expect(t, check_ok)
+}
+
+@(test)
+test_opaque_tags_idiomatic_opt_out_faithful :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/opaque_tags_opt_out.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Opaque_Tag :: struct {}")
+	expect_contains(t, stdout, "take_tag :: proc(t: ^Opaque_Tag")
+	expect_contains(t, stdout, "out: ^^Opaque_Tag")
+	expect_not_contains(t, stdout, "Opaque_Tag :: distinct rawptr")
+}
+
+@(test)
+test_opaque_tags_complete_fails_closed :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/opaque_tags_complete.lua"}
+	stdout, stderr, code, ok := run_h2odin_expect_failure(t, cmd[:])
+	// Generator still emits (faithful), but error severity fails the run.
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	testing.expect(t, code != 0)
+
+	expect_contains(t, stderr, "opaque_record_complete")
+	expect_contains(t, stderr, "Complete_Tag")
+	// Faithful emission retained for the complete record.
+	expect_contains(t, stdout, "Complete_Tag :: struct")
+	expect_contains(t, stdout, "c: ^Complete_Tag")
+	expect_not_contains(t, stdout, "Complete_Tag :: distinct rawptr")
+}
+
+@(test)
 test_opaque_handles_distinct_rawptr :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/opaque_handles.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])

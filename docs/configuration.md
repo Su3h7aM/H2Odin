@@ -63,6 +63,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `types.map` | string → string | rewrite every *reference* to a C type |
 | `types.overrides` | string → string | rewrite references **and** suppress the declaration |
 | `types.distinct` | list of strings | opt a `void*` typedef into `distinct rawptr` (incomplete-record handles are distinct automatically — [spec 0005](specs/0005-opaque-handle-typedefs.md)) |
+| `types.opaque` | name → bool | per-name override for incomplete tag handle style ([spec 0007](specs/0007-opaque-tag-records.md)): mode default is ABI faithful / idiomatic collapse; `true` forces handle, `false` forces faithful; forcing a complete record fails closed under `opaque_record_complete` |
 | `symbols.remove.names` | list of strings | drop exact C names |
 | `symbols.remove.patterns` | list of shell patterns | drop names matching `*` / `?` patterns |
 | `symbols.remove.where` | `function(sym) → bool\|nil` | **true drops** the symbol |
@@ -237,6 +238,7 @@ config.diagnostics = {
   bit_set_target_missing    = "warn",
   bit_set_backing_mismatch  = "warn",
   incomplete_extern_array   = "warn",
+  opaque_record_complete    = "error", -- default: types.opaque on a complete record
   -- reserved (no emitter yet): duplicate_enum_value, unresolved_type,
   -- unsupported_macro, symbol_collision
 }
