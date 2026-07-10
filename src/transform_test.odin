@@ -216,3 +216,168 @@ test_link_name_for_respects_link_prefix :: proc(t: ^testing.T) {
 	policy.foreign_link_prefix = ""
 	testing.expect_value(t, link_name_for(&policy, "sqlite3_open", "open"), "sqlite3_open")
 }
+
+@(test)
+test_plan_outputs_merged_is_single_unit :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	_ = ir_register_input_headers(&ir, {"headers/a.h", "headers/b.h"})
+	ir_add_func(&ir, Func_Decl{name = "fa", return_type = ir_builtin_type(&ir, .Void), home = 1})
+	ir_add_func(&ir, Func_Decl{name = "fb", return_type = ir_builtin_type(&ir, .Void), home = 2})
+
+	plan, ok := plan_outputs(&ir, &Policy{output_layout = .Merged})
+	testing.expect(t, ok)
+	testing.expect_value(t, len(plan.units), 1)
+	testing.expect_value(t, plan.units[0].filename, "a.odin")
+	testing.expect_value(t, plan.units[0].stem, "a")
+	testing.expect_value(t, len(plan.units[0].decls), 2)
+}
+
+@(test)
+test_plan_outputs_per_header_partitions_and_keeps_empty :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	_ = ir_register_input_headers(&ir, {"headers/Index.h", "headers/CXString.h", "headers/Empty.h"})
+	ir_add_func(&ir, Func_Decl{name = "from_index", return_type = ir_builtin_type(&ir, .Void), home = 1})
+	ir_add_func(&ir, Func_Decl{name = "from_cx", return_type = ir_builtin_type(&ir, .Void), home = 2})
+	// Empty.h contributes no decls.
+
+	plan, ok := plan_outputs(&ir, &Policy{output_layout = .Per_Header, output_folder = "out"})
+	testing.expect(t, ok)
+	testing.expect_value(t, len(plan.units), 3)
+	testing.expect_value(t, plan.units[0].filename, "Index.odin")
+	testing.expect_value(t, len(plan.units[0].decls), 1)
+	testing.expect_value(t, plan.units[1].filename, "CXString.odin")
+	testing.expect_value(t, len(plan.units[1].decls), 1)
+	testing.expect_value(t, plan.units[2].filename, "Empty.odin")
+	testing.expect_value(t, len(plan.units[2].decls), 0)
+}
+
+@(test)
+test_plan_outputs_per_header_rejects_duplicate_stems :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	_ = ir_register_input_headers(&ir, {"a/foo.h", "b/foo.hpp"})
+
+	plan, ok := plan_outputs(&ir, &Policy{output_layout = .Per_Header, output_folder = "out"})
+	testing.expect(t, !ok)
+	testing.expect_value(t, len(plan.units), 0)
+}
+
+@(test)
+test_plan_outputs_per_header_rejects_missing_home :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	_ = ir_register_input_headers(&ir, {"a.h"})
+	// home = 0 is an internal planning error in per_header layout.
+	ir_add_func(&ir, Func_Decl{name = "orphan", return_type = ir_builtin_type(&ir, .Void), home = 0})
+
+	plan, ok := plan_outputs(&ir, &Policy{output_layout = .Per_Header, output_folder = "out"})
+	testing.expect(t, !ok)
+	testing.expect_value(t, len(plan.units), 0)
+}
+
+@(test)
+test_plan_outputs_per_header_rejects_imports_file :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	_ = ir_register_input_headers(&ir, {"a.h"})
+
+	plan, ok := plan_outputs(&ir, &Policy{output_layout = .Per_Header, output_folder = "out", imports_file = "imports.odin"})
+	testing.expect(t, !ok)
+	testing.expect_value(t, len(plan.units), 0)
+}
+
+@(test)
+test_macro_group_and_bit_set_inherit_home :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	_ = ir_register_input_headers(&ir, {"a.h", "b.h"})
+	// Two macros in different homes; first matched (pool order) is home_a.
+	ir_add_macro(&ir, Macro_Decl{name = "FLG_A", tokens = {{spelling = "1", kind = .Literal}}, home = 1})
+	ir_add_macro(&ir, Macro_Decl{name = "FLG_B", tokens = {{spelling = "2", kind = .Literal}}, home = 2})
+	// Backing enum for bit_set lives in header b.
+	_ = ir_add_enum(
+		&ir,
+		Enum_Decl{name = "Flag", backing = ir_builtin_type(&ir, .Int), members = {{name = "One", value = 1}, {name = "Two", value = 2}}, home = 2},
+	)
+
+	policy := Policy {
+		macro_groups  = {{name = "Flg", prefix = "FLG_"}},
+		enum_bit_sets = {{enum_name = "Flag", name = "Flag_Set", mode = "log2"}},
+	}
+	apply_macro_groups(&ir, &policy)
+	apply_enum_bit_sets(&ir, &policy)
+
+	found_enum := false
+	for e in ir.enums {
+		if e.name == "Flg" {
+			found_enum = true
+			testing.expect_value(t, e.home, Input_Header_Handle(1))
+		}
+	}
+	testing.expect(t, found_enum)
+
+	found_bs := false
+	for bs in ir.bit_sets {
+		if bs.name == "Flag_Set" {
+			found_bs = true
+			testing.expect_value(t, bs.home, Input_Header_Handle(2))
+		}
+	}
+	testing.expect(t, found_bs)
+}

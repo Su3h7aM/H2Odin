@@ -80,6 +80,11 @@ main :: proc() {
 	analyze(&ir)
 	transform(&ir, mode, &policy)
 
+	plan, plan_ok := plan_outputs(&ir, &policy)
+	if !plan_ok {
+		os.exit(1)
+	}
+
 	// Package and foreign library default to the first header's stem.
 	stem := filepath.stem(filepath.base(headers[0]))
 	opts := Emit_Options {
@@ -95,9 +100,9 @@ main :: proc() {
 		append(&ir.diagnostics, diagnostic)
 	}
 	report_pointer_lowering_guesses(&ir, bit_field_plan.opaque_records)
-	result := emit(&ir, opts)
+	result := emit(&ir, plan, opts)
 
-	if !write_emit_result(result, &policy, stem) {
+	if !write_emit_result(result, &policy) {
 		os.exit(1)
 	}
 	// Emit first, then report: errors still leave usable output on stdout /
@@ -143,20 +148,24 @@ resolve_path :: proc(path: string, base_dir: string) -> string {
 	return joined
 }
 
-write_emit_result :: proc(result: Emit_Result, policy: ^Policy, stem: string) -> bool {
-	main_text := result.main
-	if policy.footer_per_header {
-		footer := load_footer(policy, stem)
-		if footer != "" {
-			main_text = strings.concatenate({main_text, footer})
-		}
-	}
-
+write_emit_result :: proc(result: Emit_Result, policy: ^Policy) -> bool {
 	// Relative output_folder resolves against the config directory (same as inputs).
 	output_folder := resolve_path(policy.output_folder, policy.config_dir)
 
 	if output_folder == "" && policy.imports_file == "" {
-		fmt.print(main_text)
+		// Stdout only makes sense for a single merged unit.
+		if len(result.files) != 1 {
+			fmt.eprintln("h2odin: multi-file emission requires config.output_folder")
+			return false
+		}
+		text := result.files[0].content
+		if policy.footer_per_header {
+			footer := load_footer(policy, result.files[0].stem)
+			if footer != "" {
+				text = strings.concatenate({text, footer})
+			}
+		}
+		fmt.print(text)
 		return true
 	}
 
@@ -188,20 +197,40 @@ write_emit_result :: proc(result: Emit_Result, policy: ^Policy, stem: string) ->
 	}
 
 	if output_folder != "" {
-		out_path, jerr := filepath.join({output_folder, fmt.tprintf("%s.odin", stem)})
-		if jerr != nil {
-			fmt.eprintfln("h2odin: cannot join output path: %v", jerr)
-			return false
-		}
-		if werr := os.write_entire_file(out_path, main_text); werr != nil {
-			fmt.eprintfln("h2odin: failed to write %q: %v", out_path, werr)
-			return false
+		for file in result.files {
+			text := file.content
+			if policy.footer_per_header {
+				footer := load_footer(policy, file.stem)
+				if footer != "" {
+					text = strings.concatenate({text, footer})
+				}
+			}
+			out_path, jerr := filepath.join({output_folder, file.filename})
+			if jerr != nil {
+				fmt.eprintfln("h2odin: cannot join output path: %v", jerr)
+				return false
+			}
+			if werr := os.write_entire_file(out_path, text); werr != nil {
+				fmt.eprintfln("h2odin: failed to write %q: %v", out_path, werr)
+				return false
+			}
 		}
 		return true
 	}
 
 	// imports_file without output_folder: imports on disk, main on stdout.
-	fmt.print(main_text)
+	if len(result.files) != 1 {
+		fmt.eprintln("h2odin: multi-file emission requires config.output_folder")
+		return false
+	}
+	text := result.files[0].content
+	if policy.footer_per_header {
+		footer := load_footer(policy, result.files[0].stem)
+		if footer != "" {
+			text = strings.concatenate({text, footer})
+		}
+	}
+	fmt.print(text)
 	return true
 }
 

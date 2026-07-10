@@ -43,8 +43,8 @@ config.comments = false
 -- Relative to this config file's directory (vendored/libclang/).
 config.preprocess.include_paths = { "headers" }
 
--- Paths relative to the config dir. Index.h first sets the output stem
--- (bindings/Index.odin).
+-- Paths relative to the config dir. Per-header layout emits one .odin file
+-- per input (bindings/Index.odin, bindings/CXString.odin, …).
 config.inputs = {
 	"headers/Index.h",
 	"headers/CXString.h",
@@ -64,8 +64,9 @@ config.inputs = {
 }
 
 -- Generated package lives here; hand-written bindings stay at package root
--- until Extraction switches over.
+-- until Extraction switches over. One Odin file per configured input header.
 config.output_folder = "bindings"
+config.output.layout = "per_header"
 
 config.foreign.import_lib = "clang"
 

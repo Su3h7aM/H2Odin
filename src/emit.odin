@@ -18,15 +18,23 @@ Emit_Options :: struct {
 	link_prefix:       string, // foreign.link_prefix; "" = none
 	procedures_at_end: bool, // true: types then foreign; false: source order
 	emit_comments:     bool, // false: suppress doc-comment passthrough
-	// When non-empty, package/import/foreign-import go into a separate
-	// string (imports_text); the main body still has `package` so it is a
-	// valid file, but omits the foreign import / core:c when split.
+	// When non-empty (merged layout only), package/import/foreign-import go
+	// into a separate string (imports_text); the main body still has
+	// `package` so it is a valid file, but omits the foreign import / core:c
+	// when split. Incompatible with per_header (rejected at plan time).
 	imports_file:      string, // path hint only; empty means inline prelude
 }
 
+// One self-contained generated Odin file (package + prelude + decls).
+Generated_File :: struct {
+	filename: string, // relative basename, e.g. "Index.odin"
+	stem:     string, // for footer lookup
+	content:  string,
+}
+
 Emit_Result :: struct {
-	main:    string, // primary generated Odin
-	imports: string, // non-empty when imports_file is set
+	files:   []Generated_File,
+	imports: string, // non-empty when imports_file is set (merged only)
 }
 
 emit_open_foreign :: proc(b: ^strings.Builder, in_foreign: ^bool, link_prefix: string) {
@@ -71,19 +79,58 @@ emit_write_foreign_block :: proc(b: ^strings.Builder, foreign_body: string, link
 	strings.write_string(b, "}\n")
 }
 
-emit :: proc(ir: ^IR, opts: Emit_Options) -> Emit_Result {
-	// Declarations are emitted in ordering-list order so the output reads
-	// like the original header. With procedures_at_end, types and macros
-	// go to a types section and funcs/vars to a foreign block; otherwise
-	// source order is preserved with foreign blocks opened as needed.
+// Serialize each planned output unit. Decl placement is already decided.
+emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
+	files := make([]Generated_File, len(plan.units))
+	result: Emit_Result
+
+	// imports_file only applies to a single merged unit (validated earlier).
+	split_imports := opts.imports_file != "" && len(plan.units) == 1
+
+	for unit, ui in plan.units {
+		content, uses_core_c := emit_unit_body(ir, unit.decls, opts)
+		if split_imports {
+			imports_b: strings.Builder
+			emit_write_prelude(&imports_b, opts, uses_core_c)
+			result.imports = strings.to_string(imports_b)
+
+			// Main file still needs package (shared with imports_file). Foreign
+			// import lives only in the imports file.
+			main_b: strings.Builder
+			fmt.sbprintfln(&main_b, "package %s", opts.package_name)
+			strings.write_string(&main_b, "\n")
+			strings.write_string(&main_b, content)
+			files[ui] = Generated_File {
+				filename = unit.filename,
+				stem     = unit.stem,
+				content  = strings.to_string(main_b),
+			}
+		} else {
+			out: strings.Builder
+			emit_write_prelude(&out, opts, uses_core_c)
+			strings.write_string(&out, content)
+			files[ui] = Generated_File {
+				filename = unit.filename,
+				stem     = unit.stem,
+				content  = strings.to_string(out),
+			}
+		}
+	}
+	result.files = files
+	return result
+}
+
+// Build the declaration body for one unit (no package/prelude). Returns
+// whether the body needs core:c.
+emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body: string, uses_core_c: bool) {
 	types_body: strings.Builder
 	foreign_body: strings.Builder
 	interleaved: strings.Builder
-	uses_core_c := false
+	uses_core_c = false
 	in_foreign := false
 
 	if opts.procedures_at_end {
-		for ref in ir.order {
+		for ref in decls {
 			switch ref.kind {
 			case .Invalid:
 			case .Func:
@@ -102,65 +149,38 @@ emit :: proc(ir: ^IR, opts: Emit_Options) -> Emit_Result {
 				emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], opts.emit_comments, &uses_core_c)
 			}
 		}
-	} else {
-		for ref in ir.order {
-			switch ref.kind {
-			case .Invalid:
-			case .Func:
-				emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
-				emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
-			case .Var:
-				emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
-				emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
-			case .Record:
-				emit_close_foreign(&interleaved, &in_foreign)
-				emit_record(&interleaved, ir, ir.records[ref.index], opts.emit_comments, &uses_core_c)
-			case .Enum:
-				emit_close_foreign(&interleaved, &in_foreign)
-				emit_enum(&interleaved, ir, ir.enums[ref.index], opts.emit_comments, &uses_core_c)
-			case .Typedef:
-				emit_close_foreign(&interleaved, &in_foreign)
-				emit_typedef(&interleaved, ir, ir.typedefs[ref.index], opts.emit_comments, &uses_core_c)
-			case .Macro:
-				emit_close_foreign(&interleaved, &in_foreign)
-				emit_macro(&interleaved, ir.macros[ref.index], opts.emit_comments)
-			case .Bit_Set:
-				emit_close_foreign(&interleaved, &in_foreign)
-				emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], opts.emit_comments, &uses_core_c)
-			}
-		}
-		emit_close_foreign(&interleaved, &in_foreign)
-	}
-
-	result: Emit_Result
-	if opts.imports_file != "" {
-		imports_b: strings.Builder
-		emit_write_prelude(&imports_b, opts, uses_core_c)
-		result.imports = strings.to_string(imports_b)
-
-		// Main file still needs package (shared with imports_file). Foreign
-		// import lives only in the imports file.
-		main_b: strings.Builder
-		fmt.sbprintfln(&main_b, "package %s", opts.package_name)
-		strings.write_string(&main_b, "\n")
-		if opts.procedures_at_end {
-			strings.write_string(&main_b, strings.to_string(types_body))
-			emit_write_foreign_block(&main_b, strings.to_string(foreign_body), opts.link_prefix)
-		} else {
-			strings.write_string(&main_b, strings.to_string(interleaved))
-		}
-		result.main = strings.to_string(main_b)
-		return result
-	}
-
-	out: strings.Builder
-	emit_write_prelude(&out, opts, uses_core_c)
-	if opts.procedures_at_end {
+		out: strings.Builder
 		strings.write_string(&out, strings.to_string(types_body))
 		emit_write_foreign_block(&out, strings.to_string(foreign_body), opts.link_prefix)
-	} else {
-		strings.write_string(&out, strings.to_string(interleaved))
+		return strings.to_string(out), uses_core_c
 	}
-	result.main = strings.to_string(out)
-	return result
+
+	for ref in decls {
+		switch ref.kind {
+		case .Invalid:
+		case .Func:
+			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
+			emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
+		case .Var:
+			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
+			emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
+		case .Record:
+			emit_close_foreign(&interleaved, &in_foreign)
+			emit_record(&interleaved, ir, ir.records[ref.index], opts.emit_comments, &uses_core_c)
+		case .Enum:
+			emit_close_foreign(&interleaved, &in_foreign)
+			emit_enum(&interleaved, ir, ir.enums[ref.index], opts.emit_comments, &uses_core_c)
+		case .Typedef:
+			emit_close_foreign(&interleaved, &in_foreign)
+			emit_typedef(&interleaved, ir, ir.typedefs[ref.index], opts.emit_comments, &uses_core_c)
+		case .Macro:
+			emit_close_foreign(&interleaved, &in_foreign)
+			emit_macro(&interleaved, ir.macros[ref.index], opts.emit_comments)
+		case .Bit_Set:
+			emit_close_foreign(&interleaved, &in_foreign)
+			emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], opts.emit_comments, &uses_core_c)
+		}
+	}
+	emit_close_foreign(&interleaved, &in_foreign)
+	return strings.to_string(interleaved), uses_core_c
 }

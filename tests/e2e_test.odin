@@ -602,3 +602,211 @@ import clang "vendored:libclang"
 		expect_contains(t, override_stderr, `warning[bit_field_layout_fallback]: "H2O_IndexOptions"`)
 	}
 }
+
+@(test)
+test_m14_per_header_writes_partitioned_package :: proc(t: ^testing.T) {
+	out_dir := "/tmp/h2odin-m14-out"
+	_ = os.remove_all(out_dir)
+
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m14_per_header.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	testing.expect_value(t, len(stdout), 0)
+
+	a_data, a_err := os.read_entire_file("/tmp/h2odin-m14-out/m14_a.odin", context.allocator)
+	defer delete(a_data)
+	testing.expect(t, a_err == nil)
+	expect_contains(t, a_data, "package m14")
+	expect_contains(t, a_data, "foreign import lib")
+	expect_contains(t, a_data, "M14_A_Id ::")
+	expect_contains(t, a_data, "m14_from_a :: proc")
+	expect_contains(t, a_data, "M14_A_FLAG")
+	expect_not_contains(t, a_data, "m14_from_b")
+	expect_not_contains(t, a_data, "M14_B_Rec")
+
+	b_data, b_err := os.read_entire_file("/tmp/h2odin-m14-out/m14_b.odin", context.allocator)
+	defer delete(b_data)
+	testing.expect(t, b_err == nil)
+	expect_contains(t, b_data, "package m14")
+	expect_contains(t, b_data, "foreign import lib")
+	expect_contains(t, b_data, "M14_B_Rec ::")
+	expect_contains(t, b_data, "m14_from_b :: proc")
+	expect_not_contains(t, b_data, "m14_from_a")
+
+	empty_data, empty_err := os.read_entire_file("/tmp/h2odin-m14-out/m14_empty.odin", context.allocator)
+	defer delete(empty_data)
+	testing.expect(t, empty_err == nil)
+	expect_contains(t, empty_data, "package m14")
+	// Function-like macros are not emitted; file is still valid Odin.
+	expect_not_contains(t, empty_data, "M14_EMPTY_HELPER")
+
+	check_cmd := [?]string{"odin", "check", out_dir, "-no-entry-point"}
+	check_stdout, check_stderr, check_ok := run_h2odin(t, check_cmd[:])
+	defer delete(check_stdout)
+	defer delete(check_stderr)
+	testing.expect(t, check_ok)
+}
+
+@(test)
+test_m14_per_header_footer_per_unit :: proc(t: ^testing.T) {
+	out_dir := "/tmp/h2odin-m14-footer"
+	_ = os.remove_all(out_dir)
+
+	cwd, cwd_err := os.get_working_directory(context.allocator)
+	testing.expect(t, cwd_err == nil)
+	defer delete(cwd)
+
+	a_h := strings.concatenate({cwd, "/tests/fixtures/m14_a.h"})
+	defer delete(a_h)
+	b_h := strings.concatenate({cwd, "/tests/fixtures/m14_b.h"})
+	defer delete(b_h)
+
+	// Footers live next to the config (config dir search).
+	cfg_dir := "/tmp/h2odin-m14-footer-cfg"
+	_ = os.remove_all(cfg_dir)
+	testing.expect_value(t, os.make_directory_all(cfg_dir), nil)
+	footer_a, fa_err := os.read_entire_file("tests/fixtures/configs/m14_a_footer.odin", context.allocator)
+	defer delete(footer_a)
+	testing.expect(t, fa_err == nil)
+	footer_b, fb_err := os.read_entire_file("tests/fixtures/configs/m14_b_footer.odin", context.allocator)
+	defer delete(footer_b)
+	testing.expect(t, fb_err == nil)
+	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-m14-footer-cfg/m14_a_footer.odin", footer_a), nil)
+	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-m14-footer-cfg/m14_b_footer.odin", footer_b), nil)
+
+	cfg := strings.concatenate(
+		{
+			`local h2o = require "h2odin"
+local config = h2o.config()
+config.package = "m14f"
+config.foreign.import_lib = "m14f"
+config.inputs = { "`,
+			a_h,
+			`", "`,
+			b_h,
+			`" }
+config.output_folder = "/tmp/h2odin-m14-footer"
+config.output.layout = "per_header"
+config.output.footer_per_header = true
+return config
+`,
+		},
+	)
+	defer delete(cfg)
+	cfg_path := "/tmp/h2odin-m14-footer-cfg/config.lua"
+	testing.expect_value(t, os.write_entire_file(cfg_path, cfg), nil)
+
+	config_arg := strings.concatenate({"-config:", cfg_path})
+	defer delete(config_arg)
+	cmd := [?]string{"build/h2odin", config_arg}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	a_data, a_err := os.read_entire_file("/tmp/h2odin-m14-footer/m14_a.odin", context.allocator)
+	defer delete(a_data)
+	testing.expect(t, a_err == nil)
+	expect_contains(t, a_data, "FOOTER_A_MARKER")
+	expect_not_contains(t, a_data, "FOOTER_B_MARKER")
+
+	b_data, b_err := os.read_entire_file("/tmp/h2odin-m14-footer/m14_b.odin", context.allocator)
+	defer delete(b_data)
+	testing.expect(t, b_err == nil)
+	expect_contains(t, b_data, "FOOTER_B_MARKER")
+	expect_not_contains(t, b_data, "FOOTER_A_MARKER")
+}
+
+@(test)
+test_m14_per_header_rejects_imports_file :: proc(t: ^testing.T) {
+	cwd, cwd_err := os.get_working_directory(context.allocator)
+	testing.expect(t, cwd_err == nil)
+	defer delete(cwd)
+
+	header := strings.concatenate({cwd, "/tests/fixtures/m14_a.h"})
+	defer delete(header)
+	cfg := strings.concatenate(
+		{
+			`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "`,
+			header,
+			`" }
+config.output_folder = "/tmp/h2odin-m14-bad"
+config.output.layout = "per_header"
+config.output.imports_file = "imports.odin"
+return config
+`,
+		},
+	)
+	defer delete(cfg)
+	cfg_path := "/tmp/h2odin-m14-imports-reject.lua"
+	testing.expect_value(t, os.write_entire_file(cfg_path, cfg), nil)
+
+	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-m14-imports-reject.lua"}
+	_, stderr, code, ok := run_h2odin_expect_failure(t, cmd[:])
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	testing.expect(t, code != 0)
+	expect_contains(t, stderr, "imports_file")
+	expect_contains(t, stderr, "per_header")
+}
+
+@(test)
+test_m14_per_header_requires_output_folder :: proc(t: ^testing.T) {
+	cwd, cwd_err := os.get_working_directory(context.allocator)
+	testing.expect(t, cwd_err == nil)
+	defer delete(cwd)
+
+	header := strings.concatenate({cwd, "/tests/fixtures/m14_a.h"})
+	defer delete(header)
+	cfg := strings.concatenate(
+		{`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "`, header, `" }
+config.output.layout = "per_header"
+return config
+`},
+	)
+	defer delete(cfg)
+	cfg_path := "/tmp/h2odin-m14-nofolder.lua"
+	testing.expect_value(t, os.write_entire_file(cfg_path, cfg), nil)
+
+	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-m14-nofolder.lua"}
+	_, stderr, code, ok := run_h2odin_expect_failure(t, cmd[:])
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	testing.expect(t, code != 0)
+	expect_contains(t, stderr, "output_folder")
+}
+
+@(test)
+test_m14_unknown_layout_rejected_at_load :: proc(t: ^testing.T) {
+	cfg := `local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "x.h" }
+config.output.layout = "by_category"
+return config
+`
+	cfg_path := "/tmp/h2odin-m14-bad-layout.lua"
+	testing.expect_value(t, os.write_entire_file(cfg_path, cfg), nil)
+
+	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-m14-bad-layout.lua"}
+	_, stderr, code, ok := run_h2odin_expect_failure(t, cmd[:])
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	testing.expect(t, code != 0)
+	expect_contains(t, stderr, "output.layout")
+}

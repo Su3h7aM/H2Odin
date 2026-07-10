@@ -4,82 +4,6 @@ foreign import lib "system:clang"
 
 VERSION_MAJOR :: 0
 VERSION_MINOR :: 64
-Error_Code :: enum u32 {
-	Success           = 0,
-	Failure           = 1,
-	Crashed           = 2,
-	Invalid_Arguments = 3,
-	Ast_Read_Error    = 4,
-}
-
-String :: struct {
-	data:          rawptr,
-	private_flags: u32,
-}
-
-String_Set :: struct {
-	strings: ^String,
-	count:   u32,
-}
-
-Virtual_File_Overlay_Impl :: struct {}
-
-Virtual_File_Overlay :: ^Virtual_File_Overlay_Impl
-
-Module_Map_Descriptor_Impl :: struct {}
-
-Module_Map_Descriptor :: ^Module_Map_Descriptor_Impl
-
-File :: rawptr
-
-File_Unique_Id :: struct {
-	data: [3]u64,
-}
-
-Source_Location :: struct {
-	ptr_data: [2]rawptr,
-	int_data: u32,
-}
-
-Source_Range :: struct {
-	ptr_data:       [2]rawptr,
-	begin_int_data: u32,
-	end_int_data:   u32,
-}
-
-Source_Range_List :: struct {
-	count:  u32,
-	ranges: ^Source_Range,
-}
-
-Diagnostic_Severity :: enum u32 {
-	Ignored = 0,
-	Note    = 1,
-	Warning = 2,
-	Error   = 3,
-	Fatal   = 4,
-}
-
-Diagnostic :: rawptr
-
-Diagnostic_Set :: rawptr
-
-Load_Diag_Error :: enum u32 {
-	None         = 0,
-	Unknown      = 1,
-	Cannot_Load  = 2,
-	Invalid_File = 3,
-}
-
-Diagnostic_Display_Options :: enum u32 {
-	Display_Source_Location = 1,
-	Display_Column          = 2,
-	Display_Source_Ranges   = 4,
-	Display_Option          = 8,
-	Display_Category_Id     = 16,
-	Display_Category_Name   = 32,
-}
-
 Index :: rawptr
 
 Target_Info_Impl :: struct {}
@@ -95,80 +19,80 @@ Client_Data :: rawptr
 Unsaved_File :: struct {
 	filename: cstring,
 	contents: cstring,
-	length:   u64,
+	length: u64,
 }
 
 Availability_Kind :: enum u32 {
-	Available      = 0,
-	Deprecated     = 1,
-	Not_Available  = 2,
+	Available = 0,
+	Deprecated = 1,
+	Not_Available = 2,
 	Not_Accessible = 3,
 }
 
 Version :: struct {
-	major:    i32,
-	minor:    i32,
+	major: i32,
+	minor: i32,
 	subminor: i32,
 }
 
 Cursor_Exception_Specification_Kind :: enum u32 {
-	None              = 0,
-	Dynamic_None      = 1,
-	Dynamic           = 2,
-	Ms_Any            = 3,
-	Basic_Noexcept    = 4,
+	None = 0,
+	Dynamic_None = 1,
+	Dynamic = 2,
+	Ms_Any = 3,
+	Basic_Noexcept = 4,
 	Computed_Noexcept = 5,
-	Unevaluated       = 6,
-	Uninstantiated    = 7,
-	Unparsed          = 8,
-	No_Throw          = 9,
+	Unevaluated = 6,
+	Uninstantiated = 7,
+	Unparsed = 8,
+	No_Throw = 9,
 }
 
 Choice :: enum u32 {
-	Default  = 0,
-	Enabled  = 1,
+	Default = 0,
+	Enabled = 1,
 	Disabled = 2,
 }
 
 Global_Opt_Flags :: enum u32 {
-	None                                    = 0,
+	None = 0,
 	Thread_Background_Priority_For_Indexing = 1,
-	Thread_Background_Priority_For_Editing  = 2,
-	Thread_Background_Priority_For_All      = 3,
+	Thread_Background_Priority_For_Editing = 2,
+	Thread_Background_Priority_For_All = 3,
 }
 
 Index_Options :: struct {
-	size:                                    u32,
+	size: u32,
 	thread_background_priority_for_indexing: u8,
-	thread_background_priority_for_editing:  u8,
-	using _:                                 bit_field u16 {
+	thread_background_priority_for_editing: u8,
+	using _: bit_field u16 {
 		exclude_declarations_from_pch: u16 | 1,
-		display_diagnostics:           u16 | 1,
-		store_preambles_in_memory:     u16 | 1,
-		_:                             u16 | 13,
+		display_diagnostics: u16 | 1,
+		store_preambles_in_memory: u16 | 1,
+		_: u16 | 13,
 	},
-	preamble_storage_path:                   cstring,
-	invocation_emission_path:                cstring,
+	preamble_storage_path: cstring,
+	invocation_emission_path: cstring,
 }
 
 Translation_Unit_Flags :: enum u32 {
-	None                                      = 0,
-	Detailed_Preprocessing_Record             = 1,
-	Incomplete                                = 2,
-	Precompiled_Preamble                      = 4,
-	Cache_Completion_Results                  = 8,
-	For_Serialization                         = 16,
-	Cxx_Chained_Pch                           = 32,
-	Skip_Function_Bodies                      = 64,
+	None = 0,
+	Detailed_Preprocessing_Record = 1,
+	Incomplete = 2,
+	Precompiled_Preamble = 4,
+	Cache_Completion_Results = 8,
+	For_Serialization = 16,
+	Cxx_Chained_Pch = 32,
+	Skip_Function_Bodies = 64,
 	Include_Brief_Comments_In_Code_Completion = 128,
-	Create_Preamble_On_First_Parse            = 256,
-	Keep_Going                                = 512,
-	Single_File_Parse                         = 1024,
-	Limit_Skip_Function_Bodies_To_Preamble    = 2048,
-	Include_Attributed_Types                  = 4096,
-	Visit_Implicit_Attributes                 = 8192,
-	Ignore_Non_Errors_From_Included_Files     = 16384,
-	Retain_Excluded_Conditional_Blocks        = 32768,
+	Create_Preamble_On_First_Parse = 256,
+	Keep_Going = 512,
+	Single_File_Parse = 1024,
+	Limit_Skip_Function_Bodies_To_Preamble = 2048,
+	Include_Attributed_Types = 4096,
+	Visit_Implicit_Attributes = 8192,
+	Ignore_Non_Errors_From_Included_Files = 16384,
+	Retain_Excluded_Conditional_Blocks = 32768,
 }
 
 Save_Translation_Unit_Flags :: enum u32 {
@@ -176,10 +100,10 @@ Save_Translation_Unit_Flags :: enum u32 {
 }
 
 Save_Error :: enum u32 {
-	None               = 0,
-	Unknown            = 1,
+	None = 0,
+	Unknown = 1,
 	Translation_Errors = 2,
-	Invalid_Tu         = 3,
+	Invalid_Tu = 3,
 }
 
 Reparse_Flags :: enum u32 {
@@ -187,389 +111,389 @@ Reparse_Flags :: enum u32 {
 }
 
 Tu_Resource_Usage_Kind :: enum u32 {
-	Ast                                  = 1,
-	Identifiers                          = 2,
-	Selectors                            = 3,
-	Global_Completion_Results            = 4,
-	Source_Manager_Content_Cache         = 5,
-	Ast_Side_Tables                      = 6,
-	Source_Manager_Membuffer_Malloc      = 7,
-	Source_Manager_Membuffer_M_Map       = 8,
+	Ast = 1,
+	Identifiers = 2,
+	Selectors = 3,
+	Global_Completion_Results = 4,
+	Source_Manager_Content_Cache = 5,
+	Ast_Side_Tables = 6,
+	Source_Manager_Membuffer_Malloc = 7,
+	Source_Manager_Membuffer_M_Map = 8,
 	External_Ast_Source_Membuffer_Malloc = 9,
-	External_Ast_Source_Membuffer_M_Map  = 10,
-	Preprocessor                         = 11,
-	Preprocessing_Record                 = 12,
-	Source_Manager_Data_Structures       = 13,
-	Preprocessor_Header_Search           = 14,
-	Memory_In_Bytes_Begin                = 1,
-	Memory_In_Bytes_End                  = 14,
-	First                                = 1,
-	Last                                 = 14,
+	External_Ast_Source_Membuffer_M_Map = 10,
+	Preprocessor = 11,
+	Preprocessing_Record = 12,
+	Source_Manager_Data_Structures = 13,
+	Preprocessor_Header_Search = 14,
+	Memory_In_Bytes_Begin = 1,
+	Memory_In_Bytes_End = 14,
+	First = 1,
+	Last = 14,
 }
 
 Tu_Resource_Usage_Entry :: struct {
-	kind:   Tu_Resource_Usage_Kind,
+	kind: Tu_Resource_Usage_Kind,
 	amount: u64,
 }
 
 Tu_Resource_Usage :: struct {
-	data:        rawptr,
+	data: rawptr,
 	num_entries: u32,
-	entries:     ^Tu_Resource_Usage_Entry,
+	entries: ^Tu_Resource_Usage_Entry,
 }
 
 Cursor_Kind :: enum u32 {
-	Unexposed_Decl                                          = 1,
-	Struct_Decl                                             = 2,
-	Union_Decl                                              = 3,
-	Class_Decl                                              = 4,
-	Enum_Decl                                               = 5,
-	Field_Decl                                              = 6,
-	Enum_Constant_Decl                                      = 7,
-	Function_Decl                                           = 8,
-	Var_Decl                                                = 9,
-	Parm_Decl                                               = 10,
-	Obj_C_Interface_Decl                                    = 11,
-	Obj_C_Category_Decl                                     = 12,
-	Obj_C_Protocol_Decl                                     = 13,
-	Obj_C_Property_Decl                                     = 14,
-	Obj_C_Ivar_Decl                                         = 15,
-	Obj_C_Instance_Method_Decl                              = 16,
-	Obj_C_Class_Method_Decl                                 = 17,
-	Obj_C_Implementation_Decl                               = 18,
-	Obj_C_Category_Impl_Decl                                = 19,
-	Typedef_Decl                                            = 20,
-	Cxx_Method                                              = 21,
-	Namespace                                               = 22,
-	Linkage_Spec                                            = 23,
-	Constructor                                             = 24,
-	Destructor                                              = 25,
-	Conversion_Function                                     = 26,
-	Template_Type_Parameter                                 = 27,
-	Non_Type_Template_Parameter                             = 28,
-	Template_Template_Parameter                             = 29,
-	Function_Template                                       = 30,
-	Class_Template                                          = 31,
-	Class_Template_Partial_Specialization                   = 32,
-	Namespace_Alias                                         = 33,
-	Using_Directive                                         = 34,
-	Using_Declaration                                       = 35,
-	Type_Alias_Decl                                         = 36,
-	Obj_C_Synthesize_Decl                                   = 37,
-	Obj_C_Dynamic_Decl                                      = 38,
-	Cxx_Access_Specifier                                    = 39,
-	First_Decl                                              = 1,
-	Last_Decl                                               = 39,
-	First_Ref                                               = 40,
-	Obj_C_Super_Class_Ref                                   = 40,
-	Obj_C_Protocol_Ref                                      = 41,
-	Obj_C_Class_Ref                                         = 42,
-	Type_Ref                                                = 43,
-	Cxx_Base_Specifier                                      = 44,
-	Template_Ref                                            = 45,
-	Namespace_Ref                                           = 46,
-	Member_Ref                                              = 47,
-	Label_Ref                                               = 48,
-	Overloaded_Decl_Ref                                     = 49,
-	Variable_Ref                                            = 50,
-	Last_Ref                                                = 50,
-	First_Invalid                                           = 70,
-	Invalid_File                                            = 70,
-	No_Decl_Found                                           = 71,
-	Not_Implemented                                         = 72,
-	Invalid_Code                                            = 73,
-	Last_Invalid                                            = 73,
-	First_Expr                                              = 100,
-	Unexposed_Expr                                          = 100,
-	Decl_Ref_Expr                                           = 101,
-	Member_Ref_Expr                                         = 102,
-	Call_Expr                                               = 103,
-	Obj_C_Message_Expr                                      = 104,
-	Block_Expr                                              = 105,
-	Integer_Literal                                         = 106,
-	Floating_Literal                                        = 107,
-	Imaginary_Literal                                       = 108,
-	String_Literal                                          = 109,
-	Character_Literal                                       = 110,
-	Paren_Expr                                              = 111,
-	Unary_Operator                                          = 112,
-	Array_Subscript_Expr                                    = 113,
-	Binary_Operator                                         = 114,
-	Compound_Assign_Operator                                = 115,
-	Conditional_Operator                                    = 116,
-	C_Style_Cast_Expr                                       = 117,
-	Compound_Literal_Expr                                   = 118,
-	Init_List_Expr                                          = 119,
-	Addr_Label_Expr                                         = 120,
-	Stmt_Expr                                               = 121,
-	Generic_Selection_Expr                                  = 122,
-	Gnu_Null_Expr                                           = 123,
-	Cxx_Static_Cast_Expr                                    = 124,
-	Cxx_Dynamic_Cast_Expr                                   = 125,
-	Cxx_Reinterpret_Cast_Expr                               = 126,
-	Cxx_Const_Cast_Expr                                     = 127,
-	Cxx_Functional_Cast_Expr                                = 128,
-	Cxx_Typeid_Expr                                         = 129,
-	Cxx_Bool_Literal_Expr                                   = 130,
-	Cxx_Null_Ptr_Literal_Expr                               = 131,
-	Cxx_This_Expr                                           = 132,
-	Cxx_Throw_Expr                                          = 133,
-	Cxx_New_Expr                                            = 134,
-	Cxx_Delete_Expr                                         = 135,
-	Unary_Expr                                              = 136,
-	Obj_C_String_Literal                                    = 137,
-	Obj_C_Encode_Expr                                       = 138,
-	Obj_C_Selector_Expr                                     = 139,
-	Obj_C_Protocol_Expr                                     = 140,
-	Obj_C_Bridged_Cast_Expr                                 = 141,
-	Pack_Expansion_Expr                                     = 142,
-	Size_Of_Pack_Expr                                       = 143,
-	Lambda_Expr                                             = 144,
-	Obj_C_Bool_Literal_Expr                                 = 145,
-	Obj_C_Self_Expr                                         = 146,
-	Array_Section_Expr                                      = 147,
-	Obj_C_Availability_Check_Expr                           = 148,
-	Fixed_Point_Literal                                     = 149,
-	Omp_Array_Shaping_Expr                                  = 150,
-	Omp_Iterator_Expr                                       = 151,
-	Cxx_Addrspace_Cast_Expr                                 = 152,
-	Concept_Specialization_Expr                             = 153,
-	Requires_Expr                                           = 154,
-	Cxx_Paren_List_Init_Expr                                = 155,
-	Pack_Indexing_Expr                                      = 156,
-	Last_Expr                                               = 156,
-	First_Stmt                                              = 200,
-	Unexposed_Stmt                                          = 200,
-	Label_Stmt                                              = 201,
-	Compound_Stmt                                           = 202,
-	Case_Stmt                                               = 203,
-	Default_Stmt                                            = 204,
-	If_Stmt                                                 = 205,
-	Switch_Stmt                                             = 206,
-	While_Stmt                                              = 207,
-	Do_Stmt                                                 = 208,
-	For_Stmt                                                = 209,
-	Goto_Stmt                                               = 210,
-	Indirect_Goto_Stmt                                      = 211,
-	Continue_Stmt                                           = 212,
-	Break_Stmt                                              = 213,
-	Return_Stmt                                             = 214,
-	Gcc_Asm_Stmt                                            = 215,
-	Asm_Stmt                                                = 215,
-	Obj_C_At_Try_Stmt                                       = 216,
-	Obj_C_At_Catch_Stmt                                     = 217,
-	Obj_C_At_Finally_Stmt                                   = 218,
-	Obj_C_At_Throw_Stmt                                     = 219,
-	Obj_C_At_Synchronized_Stmt                              = 220,
-	Obj_C_Autorelease_Pool_Stmt                             = 221,
-	Obj_C_For_Collection_Stmt                               = 222,
-	Cxx_Catch_Stmt                                          = 223,
-	Cxx_Try_Stmt                                            = 224,
-	Cxx_For_Range_Stmt                                      = 225,
-	Seh_Try_Stmt                                            = 226,
-	Seh_Except_Stmt                                         = 227,
-	Seh_Finally_Stmt                                        = 228,
-	Ms_Asm_Stmt                                             = 229,
-	Null_Stmt                                               = 230,
-	Decl_Stmt                                               = 231,
-	Omp_Parallel_Directive                                  = 232,
-	Omp_Simd_Directive                                      = 233,
-	Omp_For_Directive                                       = 234,
-	Omp_Sections_Directive                                  = 235,
-	Omp_Section_Directive                                   = 236,
-	Omp_Single_Directive                                    = 237,
-	Omp_Parallel_For_Directive                              = 238,
-	Omp_Parallel_Sections_Directive                         = 239,
-	Omp_Task_Directive                                      = 240,
-	Omp_Master_Directive                                    = 241,
-	Omp_Critical_Directive                                  = 242,
-	Omp_Taskyield_Directive                                 = 243,
-	Omp_Barrier_Directive                                   = 244,
-	Omp_Taskwait_Directive                                  = 245,
-	Omp_Flush_Directive                                     = 246,
-	Seh_Leave_Stmt                                          = 247,
-	Omp_Ordered_Directive                                   = 248,
-	Omp_Atomic_Directive                                    = 249,
-	Omp_For_Simd_Directive                                  = 250,
-	Omp_Parallel_For_Simd_Directive                         = 251,
-	Omp_Target_Directive                                    = 252,
-	Omp_Teams_Directive                                     = 253,
-	Omp_Taskgroup_Directive                                 = 254,
-	Omp_Cancellation_Point_Directive                        = 255,
-	Omp_Cancel_Directive                                    = 256,
-	Omp_Target_Data_Directive                               = 257,
-	Omp_Task_Loop_Directive                                 = 258,
-	Omp_Task_Loop_Simd_Directive                            = 259,
-	Omp_Distribute_Directive                                = 260,
-	Omp_Target_Enter_Data_Directive                         = 261,
-	Omp_Target_Exit_Data_Directive                          = 262,
-	Omp_Target_Parallel_Directive                           = 263,
-	Omp_Target_Parallel_For_Directive                       = 264,
-	Omp_Target_Update_Directive                             = 265,
-	Omp_Distribute_Parallel_For_Directive                   = 266,
-	Omp_Distribute_Parallel_For_Simd_Directive              = 267,
-	Omp_Distribute_Simd_Directive                           = 268,
-	Omp_Target_Parallel_For_Simd_Directive                  = 269,
-	Omp_Target_Simd_Directive                               = 270,
-	Omp_Teams_Distribute_Directive                          = 271,
-	Omp_Teams_Distribute_Simd_Directive                     = 272,
-	Omp_Teams_Distribute_Parallel_For_Simd_Directive        = 273,
-	Omp_Teams_Distribute_Parallel_For_Directive             = 274,
-	Omp_Target_Teams_Directive                              = 275,
-	Omp_Target_Teams_Distribute_Directive                   = 276,
-	Omp_Target_Teams_Distribute_Parallel_For_Directive      = 277,
+	Unexposed_Decl = 1,
+	Struct_Decl = 2,
+	Union_Decl = 3,
+	Class_Decl = 4,
+	Enum_Decl = 5,
+	Field_Decl = 6,
+	Enum_Constant_Decl = 7,
+	Function_Decl = 8,
+	Var_Decl = 9,
+	Parm_Decl = 10,
+	Obj_C_Interface_Decl = 11,
+	Obj_C_Category_Decl = 12,
+	Obj_C_Protocol_Decl = 13,
+	Obj_C_Property_Decl = 14,
+	Obj_C_Ivar_Decl = 15,
+	Obj_C_Instance_Method_Decl = 16,
+	Obj_C_Class_Method_Decl = 17,
+	Obj_C_Implementation_Decl = 18,
+	Obj_C_Category_Impl_Decl = 19,
+	Typedef_Decl = 20,
+	Cxx_Method = 21,
+	Namespace = 22,
+	Linkage_Spec = 23,
+	Constructor = 24,
+	Destructor = 25,
+	Conversion_Function = 26,
+	Template_Type_Parameter = 27,
+	Non_Type_Template_Parameter = 28,
+	Template_Template_Parameter = 29,
+	Function_Template = 30,
+	Class_Template = 31,
+	Class_Template_Partial_Specialization = 32,
+	Namespace_Alias = 33,
+	Using_Directive = 34,
+	Using_Declaration = 35,
+	Type_Alias_Decl = 36,
+	Obj_C_Synthesize_Decl = 37,
+	Obj_C_Dynamic_Decl = 38,
+	Cxx_Access_Specifier = 39,
+	First_Decl = 1,
+	Last_Decl = 39,
+	First_Ref = 40,
+	Obj_C_Super_Class_Ref = 40,
+	Obj_C_Protocol_Ref = 41,
+	Obj_C_Class_Ref = 42,
+	Type_Ref = 43,
+	Cxx_Base_Specifier = 44,
+	Template_Ref = 45,
+	Namespace_Ref = 46,
+	Member_Ref = 47,
+	Label_Ref = 48,
+	Overloaded_Decl_Ref = 49,
+	Variable_Ref = 50,
+	Last_Ref = 50,
+	First_Invalid = 70,
+	Invalid_File = 70,
+	No_Decl_Found = 71,
+	Not_Implemented = 72,
+	Invalid_Code = 73,
+	Last_Invalid = 73,
+	First_Expr = 100,
+	Unexposed_Expr = 100,
+	Decl_Ref_Expr = 101,
+	Member_Ref_Expr = 102,
+	Call_Expr = 103,
+	Obj_C_Message_Expr = 104,
+	Block_Expr = 105,
+	Integer_Literal = 106,
+	Floating_Literal = 107,
+	Imaginary_Literal = 108,
+	String_Literal = 109,
+	Character_Literal = 110,
+	Paren_Expr = 111,
+	Unary_Operator = 112,
+	Array_Subscript_Expr = 113,
+	Binary_Operator = 114,
+	Compound_Assign_Operator = 115,
+	Conditional_Operator = 116,
+	C_Style_Cast_Expr = 117,
+	Compound_Literal_Expr = 118,
+	Init_List_Expr = 119,
+	Addr_Label_Expr = 120,
+	Stmt_Expr = 121,
+	Generic_Selection_Expr = 122,
+	Gnu_Null_Expr = 123,
+	Cxx_Static_Cast_Expr = 124,
+	Cxx_Dynamic_Cast_Expr = 125,
+	Cxx_Reinterpret_Cast_Expr = 126,
+	Cxx_Const_Cast_Expr = 127,
+	Cxx_Functional_Cast_Expr = 128,
+	Cxx_Typeid_Expr = 129,
+	Cxx_Bool_Literal_Expr = 130,
+	Cxx_Null_Ptr_Literal_Expr = 131,
+	Cxx_This_Expr = 132,
+	Cxx_Throw_Expr = 133,
+	Cxx_New_Expr = 134,
+	Cxx_Delete_Expr = 135,
+	Unary_Expr = 136,
+	Obj_C_String_Literal = 137,
+	Obj_C_Encode_Expr = 138,
+	Obj_C_Selector_Expr = 139,
+	Obj_C_Protocol_Expr = 140,
+	Obj_C_Bridged_Cast_Expr = 141,
+	Pack_Expansion_Expr = 142,
+	Size_Of_Pack_Expr = 143,
+	Lambda_Expr = 144,
+	Obj_C_Bool_Literal_Expr = 145,
+	Obj_C_Self_Expr = 146,
+	Array_Section_Expr = 147,
+	Obj_C_Availability_Check_Expr = 148,
+	Fixed_Point_Literal = 149,
+	Omp_Array_Shaping_Expr = 150,
+	Omp_Iterator_Expr = 151,
+	Cxx_Addrspace_Cast_Expr = 152,
+	Concept_Specialization_Expr = 153,
+	Requires_Expr = 154,
+	Cxx_Paren_List_Init_Expr = 155,
+	Pack_Indexing_Expr = 156,
+	Last_Expr = 156,
+	First_Stmt = 200,
+	Unexposed_Stmt = 200,
+	Label_Stmt = 201,
+	Compound_Stmt = 202,
+	Case_Stmt = 203,
+	Default_Stmt = 204,
+	If_Stmt = 205,
+	Switch_Stmt = 206,
+	While_Stmt = 207,
+	Do_Stmt = 208,
+	For_Stmt = 209,
+	Goto_Stmt = 210,
+	Indirect_Goto_Stmt = 211,
+	Continue_Stmt = 212,
+	Break_Stmt = 213,
+	Return_Stmt = 214,
+	Gcc_Asm_Stmt = 215,
+	Asm_Stmt = 215,
+	Obj_C_At_Try_Stmt = 216,
+	Obj_C_At_Catch_Stmt = 217,
+	Obj_C_At_Finally_Stmt = 218,
+	Obj_C_At_Throw_Stmt = 219,
+	Obj_C_At_Synchronized_Stmt = 220,
+	Obj_C_Autorelease_Pool_Stmt = 221,
+	Obj_C_For_Collection_Stmt = 222,
+	Cxx_Catch_Stmt = 223,
+	Cxx_Try_Stmt = 224,
+	Cxx_For_Range_Stmt = 225,
+	Seh_Try_Stmt = 226,
+	Seh_Except_Stmt = 227,
+	Seh_Finally_Stmt = 228,
+	Ms_Asm_Stmt = 229,
+	Null_Stmt = 230,
+	Decl_Stmt = 231,
+	Omp_Parallel_Directive = 232,
+	Omp_Simd_Directive = 233,
+	Omp_For_Directive = 234,
+	Omp_Sections_Directive = 235,
+	Omp_Section_Directive = 236,
+	Omp_Single_Directive = 237,
+	Omp_Parallel_For_Directive = 238,
+	Omp_Parallel_Sections_Directive = 239,
+	Omp_Task_Directive = 240,
+	Omp_Master_Directive = 241,
+	Omp_Critical_Directive = 242,
+	Omp_Taskyield_Directive = 243,
+	Omp_Barrier_Directive = 244,
+	Omp_Taskwait_Directive = 245,
+	Omp_Flush_Directive = 246,
+	Seh_Leave_Stmt = 247,
+	Omp_Ordered_Directive = 248,
+	Omp_Atomic_Directive = 249,
+	Omp_For_Simd_Directive = 250,
+	Omp_Parallel_For_Simd_Directive = 251,
+	Omp_Target_Directive = 252,
+	Omp_Teams_Directive = 253,
+	Omp_Taskgroup_Directive = 254,
+	Omp_Cancellation_Point_Directive = 255,
+	Omp_Cancel_Directive = 256,
+	Omp_Target_Data_Directive = 257,
+	Omp_Task_Loop_Directive = 258,
+	Omp_Task_Loop_Simd_Directive = 259,
+	Omp_Distribute_Directive = 260,
+	Omp_Target_Enter_Data_Directive = 261,
+	Omp_Target_Exit_Data_Directive = 262,
+	Omp_Target_Parallel_Directive = 263,
+	Omp_Target_Parallel_For_Directive = 264,
+	Omp_Target_Update_Directive = 265,
+	Omp_Distribute_Parallel_For_Directive = 266,
+	Omp_Distribute_Parallel_For_Simd_Directive = 267,
+	Omp_Distribute_Simd_Directive = 268,
+	Omp_Target_Parallel_For_Simd_Directive = 269,
+	Omp_Target_Simd_Directive = 270,
+	Omp_Teams_Distribute_Directive = 271,
+	Omp_Teams_Distribute_Simd_Directive = 272,
+	Omp_Teams_Distribute_Parallel_For_Simd_Directive = 273,
+	Omp_Teams_Distribute_Parallel_For_Directive = 274,
+	Omp_Target_Teams_Directive = 275,
+	Omp_Target_Teams_Distribute_Directive = 276,
+	Omp_Target_Teams_Distribute_Parallel_For_Directive = 277,
 	Omp_Target_Teams_Distribute_Parallel_For_Simd_Directive = 278,
-	Omp_Target_Teams_Distribute_Simd_Directive              = 279,
-	Builtin_Bit_Cast_Expr                                   = 280,
-	Omp_Master_Task_Loop_Directive                          = 281,
-	Omp_Parallel_Master_Task_Loop_Directive                 = 282,
-	Omp_Master_Task_Loop_Simd_Directive                     = 283,
-	Omp_Parallel_Master_Task_Loop_Simd_Directive            = 284,
-	Omp_Parallel_Master_Directive                           = 285,
-	Omp_Depobj_Directive                                    = 286,
-	Omp_Scan_Directive                                      = 287,
-	Omp_Tile_Directive                                      = 288,
-	Omp_Canonical_Loop                                      = 289,
-	Omp_Interop_Directive                                   = 290,
-	Omp_Dispatch_Directive                                  = 291,
-	Omp_Masked_Directive                                    = 292,
-	Omp_Unroll_Directive                                    = 293,
-	Omp_Meta_Directive                                      = 294,
-	Omp_Generic_Loop_Directive                              = 295,
-	Omp_Teams_Generic_Loop_Directive                        = 296,
-	Omp_Target_Teams_Generic_Loop_Directive                 = 297,
-	Omp_Parallel_Generic_Loop_Directive                     = 298,
-	Omp_Target_Parallel_Generic_Loop_Directive              = 299,
-	Omp_Parallel_Masked_Directive                           = 300,
-	Omp_Masked_Task_Loop_Directive                          = 301,
-	Omp_Masked_Task_Loop_Simd_Directive                     = 302,
-	Omp_Parallel_Masked_Task_Loop_Directive                 = 303,
-	Omp_Parallel_Masked_Task_Loop_Simd_Directive            = 304,
-	Omp_Error_Directive                                     = 305,
-	Omp_Scope_Directive                                     = 306,
-	Omp_Reverse_Directive                                   = 307,
-	Omp_Interchange_Directive                               = 308,
-	Omp_Assume_Directive                                    = 309,
-	Omp_Stripe_Directive                                    = 310,
-	Omp_Fuse_Directive                                      = 311,
-	Open_Acc_Compute_Construct                              = 320,
-	Open_Acc_Loop_Construct                                 = 321,
-	Open_Acc_Combined_Construct                             = 322,
-	Open_Acc_Data_Construct                                 = 323,
-	Open_Acc_Enter_Data_Construct                           = 324,
-	Open_Acc_Exit_Data_Construct                            = 325,
-	Open_Acc_Host_Data_Construct                            = 326,
-	Open_Acc_Wait_Construct                                 = 327,
-	Open_Acc_Init_Construct                                 = 328,
-	Open_Acc_Shutdown_Construct                             = 329,
-	Open_Acc_Set_Construct                                  = 330,
-	Open_Acc_Update_Construct                               = 331,
-	Open_Acc_Atomic_Construct                               = 332,
-	Open_Acc_Cache_Construct                                = 333,
-	Last_Stmt                                               = 333,
-	Translation_Unit                                        = 350,
-	First_Attr                                              = 400,
-	Unexposed_Attr                                          = 400,
-	Ib_Action_Attr                                          = 401,
-	Ib_Outlet_Attr                                          = 402,
-	Ib_Outlet_Collection_Attr                               = 403,
-	Cxx_Final_Attr                                          = 404,
-	Cxx_Override_Attr                                       = 405,
-	Annotate_Attr                                           = 406,
-	Asm_Label_Attr                                          = 407,
-	Packed_Attr                                             = 408,
-	Pure_Attr                                               = 409,
-	Const_Attr                                              = 410,
-	No_Duplicate_Attr                                       = 411,
-	Cuda_Constant_Attr                                      = 412,
-	Cuda_Device_Attr                                        = 413,
-	Cuda_Global_Attr                                        = 414,
-	Cuda_Host_Attr                                          = 415,
-	Cuda_Shared_Attr                                        = 416,
-	Visibility_Attr                                         = 417,
-	Dll_Export                                              = 418,
-	Dll_Import                                              = 419,
-	Ns_Returns_Retained                                     = 420,
-	Ns_Returns_Not_Retained                                 = 421,
-	Ns_Returns_Autoreleased                                 = 422,
-	Ns_Consumes_Self                                        = 423,
-	Ns_Consumed                                             = 424,
-	Obj_C_Exception                                         = 425,
-	Obj_Cns_Object                                          = 426,
-	Obj_C_Independent_Class                                 = 427,
-	Obj_C_Precise_Lifetime                                  = 428,
-	Obj_C_Returns_Inner_Pointer                             = 429,
-	Obj_C_Requires_Super                                    = 430,
-	Obj_C_Root_Class                                        = 431,
-	Obj_C_Subclassing_Restricted                            = 432,
-	Obj_C_Explicit_Protocol_Impl                            = 433,
-	Obj_C_Designated_Initializer                            = 434,
-	Obj_C_Runtime_Visible                                   = 435,
-	Obj_C_Boxable                                           = 436,
-	Flag_Enum                                               = 437,
-	Convergent_Attr                                         = 438,
-	Warn_Unused_Attr                                        = 439,
-	Warn_Unused_Result_Attr                                 = 440,
-	Aligned_Attr                                            = 441,
-	Last_Attr                                               = 441,
-	Preprocessing_Directive                                 = 500,
-	Macro_Definition                                        = 501,
-	Macro_Expansion                                         = 502,
-	Macro_Instantiation                                     = 502,
-	Inclusion_Directive                                     = 503,
-	First_Preprocessing                                     = 500,
-	Last_Preprocessing                                      = 503,
-	Module_Import_Decl                                      = 600,
-	Type_Alias_Template_Decl                                = 601,
-	Static_Assert                                           = 602,
-	Friend_Decl                                             = 603,
-	Concept_Decl                                            = 604,
-	First_Extra_Decl                                        = 600,
-	Last_Extra_Decl                                         = 604,
-	Overload_Candidate                                      = 700,
+	Omp_Target_Teams_Distribute_Simd_Directive = 279,
+	Builtin_Bit_Cast_Expr = 280,
+	Omp_Master_Task_Loop_Directive = 281,
+	Omp_Parallel_Master_Task_Loop_Directive = 282,
+	Omp_Master_Task_Loop_Simd_Directive = 283,
+	Omp_Parallel_Master_Task_Loop_Simd_Directive = 284,
+	Omp_Parallel_Master_Directive = 285,
+	Omp_Depobj_Directive = 286,
+	Omp_Scan_Directive = 287,
+	Omp_Tile_Directive = 288,
+	Omp_Canonical_Loop = 289,
+	Omp_Interop_Directive = 290,
+	Omp_Dispatch_Directive = 291,
+	Omp_Masked_Directive = 292,
+	Omp_Unroll_Directive = 293,
+	Omp_Meta_Directive = 294,
+	Omp_Generic_Loop_Directive = 295,
+	Omp_Teams_Generic_Loop_Directive = 296,
+	Omp_Target_Teams_Generic_Loop_Directive = 297,
+	Omp_Parallel_Generic_Loop_Directive = 298,
+	Omp_Target_Parallel_Generic_Loop_Directive = 299,
+	Omp_Parallel_Masked_Directive = 300,
+	Omp_Masked_Task_Loop_Directive = 301,
+	Omp_Masked_Task_Loop_Simd_Directive = 302,
+	Omp_Parallel_Masked_Task_Loop_Directive = 303,
+	Omp_Parallel_Masked_Task_Loop_Simd_Directive = 304,
+	Omp_Error_Directive = 305,
+	Omp_Scope_Directive = 306,
+	Omp_Reverse_Directive = 307,
+	Omp_Interchange_Directive = 308,
+	Omp_Assume_Directive = 309,
+	Omp_Stripe_Directive = 310,
+	Omp_Fuse_Directive = 311,
+	Open_Acc_Compute_Construct = 320,
+	Open_Acc_Loop_Construct = 321,
+	Open_Acc_Combined_Construct = 322,
+	Open_Acc_Data_Construct = 323,
+	Open_Acc_Enter_Data_Construct = 324,
+	Open_Acc_Exit_Data_Construct = 325,
+	Open_Acc_Host_Data_Construct = 326,
+	Open_Acc_Wait_Construct = 327,
+	Open_Acc_Init_Construct = 328,
+	Open_Acc_Shutdown_Construct = 329,
+	Open_Acc_Set_Construct = 330,
+	Open_Acc_Update_Construct = 331,
+	Open_Acc_Atomic_Construct = 332,
+	Open_Acc_Cache_Construct = 333,
+	Last_Stmt = 333,
+	Translation_Unit = 350,
+	First_Attr = 400,
+	Unexposed_Attr = 400,
+	Ib_Action_Attr = 401,
+	Ib_Outlet_Attr = 402,
+	Ib_Outlet_Collection_Attr = 403,
+	Cxx_Final_Attr = 404,
+	Cxx_Override_Attr = 405,
+	Annotate_Attr = 406,
+	Asm_Label_Attr = 407,
+	Packed_Attr = 408,
+	Pure_Attr = 409,
+	Const_Attr = 410,
+	No_Duplicate_Attr = 411,
+	Cuda_Constant_Attr = 412,
+	Cuda_Device_Attr = 413,
+	Cuda_Global_Attr = 414,
+	Cuda_Host_Attr = 415,
+	Cuda_Shared_Attr = 416,
+	Visibility_Attr = 417,
+	Dll_Export = 418,
+	Dll_Import = 419,
+	Ns_Returns_Retained = 420,
+	Ns_Returns_Not_Retained = 421,
+	Ns_Returns_Autoreleased = 422,
+	Ns_Consumes_Self = 423,
+	Ns_Consumed = 424,
+	Obj_C_Exception = 425,
+	Obj_Cns_Object = 426,
+	Obj_C_Independent_Class = 427,
+	Obj_C_Precise_Lifetime = 428,
+	Obj_C_Returns_Inner_Pointer = 429,
+	Obj_C_Requires_Super = 430,
+	Obj_C_Root_Class = 431,
+	Obj_C_Subclassing_Restricted = 432,
+	Obj_C_Explicit_Protocol_Impl = 433,
+	Obj_C_Designated_Initializer = 434,
+	Obj_C_Runtime_Visible = 435,
+	Obj_C_Boxable = 436,
+	Flag_Enum = 437,
+	Convergent_Attr = 438,
+	Warn_Unused_Attr = 439,
+	Warn_Unused_Result_Attr = 440,
+	Aligned_Attr = 441,
+	Last_Attr = 441,
+	Preprocessing_Directive = 500,
+	Macro_Definition = 501,
+	Macro_Expansion = 502,
+	Macro_Instantiation = 502,
+	Inclusion_Directive = 503,
+	First_Preprocessing = 500,
+	Last_Preprocessing = 503,
+	Module_Import_Decl = 600,
+	Type_Alias_Template_Decl = 601,
+	Static_Assert = 602,
+	Friend_Decl = 603,
+	Concept_Decl = 604,
+	First_Extra_Decl = 600,
+	Last_Extra_Decl = 604,
+	Overload_Candidate = 700,
 }
 
 Cursor :: struct {
-	kind:  Cursor_Kind,
+	kind: Cursor_Kind,
 	xdata: i32,
-	data:  [3]rawptr,
+	data: [3]rawptr,
 }
 
 Linkage_Kind :: enum u32 {
-	Invalid         = 0,
-	No_Linkage      = 1,
-	Internal        = 2,
+	Invalid = 0,
+	No_Linkage = 1,
+	Internal = 2,
 	Unique_External = 3,
-	External        = 4,
+	External = 4,
 }
 
 Visibility_Kind :: enum u32 {
-	Invalid   = 0,
-	Hidden    = 1,
+	Invalid = 0,
+	Hidden = 1,
 	Protected = 2,
-	Default   = 3,
+	Default = 3,
 }
 
 Platform_Availability :: struct {
-	platform:    String,
-	introduced:  Version,
-	deprecated:  Version,
-	obsoleted:   Version,
+	platform: String,
+	introduced: Version,
+	deprecated: Version,
+	obsoleted: Version,
 	unavailable: i32,
-	message:     String,
+	message: String,
 }
 
 Language_Kind :: enum u32 {
-	Invalid     = 0,
-	C           = 1,
-	Obj_C       = 2,
+	Invalid = 0,
+	C = 1,
+	Obj_C = 2,
 	C_Plus_Plus = 3,
 }
 
 Tls_Kind :: enum u32 {
-	None    = 0,
+	None = 0,
 	Dynamic = 1,
-	Static  = 2,
+	Static = 2,
 }
 
 Cursor_Set_Impl :: struct {}
@@ -577,175 +501,175 @@ Cursor_Set_Impl :: struct {}
 Cursor_Set :: ^Cursor_Set_Impl
 
 Type_Kind :: enum u32 {
-	Invalid                                                      = 0,
-	Unexposed                                                    = 1,
-	Void                                                         = 2,
-	Bool                                                         = 3,
-	Char_U                                                       = 4,
-	U_Char                                                       = 5,
-	Char16                                                       = 6,
-	Char32                                                       = 7,
-	U_Short                                                      = 8,
-	U_Int                                                        = 9,
-	U_Long                                                       = 10,
-	U_Long_Long                                                  = 11,
-	U_Int128                                                     = 12,
-	Char_S                                                       = 13,
-	S_Char                                                       = 14,
-	W_Char                                                       = 15,
-	Short                                                        = 16,
-	Int                                                          = 17,
-	Long                                                         = 18,
-	Long_Long                                                    = 19,
-	Int128                                                       = 20,
-	Float                                                        = 21,
-	Double                                                       = 22,
-	Long_Double                                                  = 23,
-	Null_Ptr                                                     = 24,
-	Overload                                                     = 25,
-	Dependent                                                    = 26,
-	Obj_C_Id                                                     = 27,
-	Obj_C_Class                                                  = 28,
-	Obj_C_Sel                                                    = 29,
-	Float128                                                     = 30,
-	Half                                                         = 31,
-	Float16                                                      = 32,
-	Short_Accum                                                  = 33,
-	Accum                                                        = 34,
-	Long_Accum                                                   = 35,
-	U_Short_Accum                                                = 36,
-	U_Accum                                                      = 37,
-	U_Long_Accum                                                 = 38,
-	B_Float16                                                    = 39,
-	Ibm128                                                       = 40,
-	First_Builtin                                                = 2,
-	Last_Builtin                                                 = 40,
-	Complex                                                      = 100,
-	Pointer                                                      = 101,
-	Block_Pointer                                                = 102,
-	L_Value_Reference                                            = 103,
-	R_Value_Reference                                            = 104,
-	Record                                                       = 105,
-	Enum                                                         = 106,
-	Typedef                                                      = 107,
-	Obj_C_Interface                                              = 108,
-	Obj_C_Object_Pointer                                         = 109,
-	Function_No_Proto                                            = 110,
-	Function_Proto                                               = 111,
-	Constant_Array                                               = 112,
-	Vector                                                       = 113,
-	Incomplete_Array                                             = 114,
-	Variable_Array                                               = 115,
-	Dependent_Sized_Array                                        = 116,
-	Member_Pointer                                               = 117,
-	Auto                                                         = 118,
-	Elaborated                                                   = 119,
-	Pipe                                                         = 120,
-	Ocl_Image1d_Ro                                               = 121,
-	Ocl_Image1d_Array_Ro                                         = 122,
-	Ocl_Image1d_Buffer_Ro                                        = 123,
-	Ocl_Image2d_Ro                                               = 124,
-	Ocl_Image2d_Array_Ro                                         = 125,
-	Ocl_Image2d_Depth_Ro                                         = 126,
-	Ocl_Image2d_Array_Depth_Ro                                   = 127,
-	Ocl_Image2d_Msaaro                                           = 128,
-	Ocl_Image2d_Array_Msaaro                                     = 129,
-	Ocl_Image2d_Msaa_Depth_Ro                                    = 130,
-	Ocl_Image2d_Array_Msaa_Depth_Ro                              = 131,
-	Ocl_Image3d_Ro                                               = 132,
-	Ocl_Image1d_Wo                                               = 133,
-	Ocl_Image1d_Array_Wo                                         = 134,
-	Ocl_Image1d_Buffer_Wo                                        = 135,
-	Ocl_Image2d_Wo                                               = 136,
-	Ocl_Image2d_Array_Wo                                         = 137,
-	Ocl_Image2d_Depth_Wo                                         = 138,
-	Ocl_Image2d_Array_Depth_Wo                                   = 139,
-	Ocl_Image2d_Msaawo                                           = 140,
-	Ocl_Image2d_Array_Msaawo                                     = 141,
-	Ocl_Image2d_Msaa_Depth_Wo                                    = 142,
-	Ocl_Image2d_Array_Msaa_Depth_Wo                              = 143,
-	Ocl_Image3d_Wo                                               = 144,
-	Ocl_Image1d_Rw                                               = 145,
-	Ocl_Image1d_Array_Rw                                         = 146,
-	Ocl_Image1d_Buffer_Rw                                        = 147,
-	Ocl_Image2d_Rw                                               = 148,
-	Ocl_Image2d_Array_Rw                                         = 149,
-	Ocl_Image2d_Depth_Rw                                         = 150,
-	Ocl_Image2d_Array_Depth_Rw                                   = 151,
-	Ocl_Image2d_Msaarw                                           = 152,
-	Ocl_Image2d_Array_Msaarw                                     = 153,
-	Ocl_Image2d_Msaa_Depth_Rw                                    = 154,
-	Ocl_Image2d_Array_Msaa_Depth_Rw                              = 155,
-	Ocl_Image3d_Rw                                               = 156,
-	Ocl_Sampler                                                  = 157,
-	Ocl_Event                                                    = 158,
-	Ocl_Queue                                                    = 159,
-	Ocl_Reserve_Id                                               = 160,
-	Obj_C_Object                                                 = 161,
-	Obj_C_Type_Param                                             = 162,
-	Attributed                                                   = 163,
-	Ocl_Intel_Subgroup_Avc_Mce_Payload                           = 164,
-	Ocl_Intel_Subgroup_Avc_Ime_Payload                           = 165,
-	Ocl_Intel_Subgroup_Avc_Ref_Payload                           = 166,
-	Ocl_Intel_Subgroup_Avc_Sic_Payload                           = 167,
-	Ocl_Intel_Subgroup_Avc_Mce_Result                            = 168,
-	Ocl_Intel_Subgroup_Avc_Ime_Result                            = 169,
-	Ocl_Intel_Subgroup_Avc_Ref_Result                            = 170,
-	Ocl_Intel_Subgroup_Avc_Sic_Result                            = 171,
+	Invalid = 0,
+	Unexposed = 1,
+	Void = 2,
+	Bool = 3,
+	Char_U = 4,
+	U_Char = 5,
+	Char16 = 6,
+	Char32 = 7,
+	U_Short = 8,
+	U_Int = 9,
+	U_Long = 10,
+	U_Long_Long = 11,
+	U_Int128 = 12,
+	Char_S = 13,
+	S_Char = 14,
+	W_Char = 15,
+	Short = 16,
+	Int = 17,
+	Long = 18,
+	Long_Long = 19,
+	Int128 = 20,
+	Float = 21,
+	Double = 22,
+	Long_Double = 23,
+	Null_Ptr = 24,
+	Overload = 25,
+	Dependent = 26,
+	Obj_C_Id = 27,
+	Obj_C_Class = 28,
+	Obj_C_Sel = 29,
+	Float128 = 30,
+	Half = 31,
+	Float16 = 32,
+	Short_Accum = 33,
+	Accum = 34,
+	Long_Accum = 35,
+	U_Short_Accum = 36,
+	U_Accum = 37,
+	U_Long_Accum = 38,
+	B_Float16 = 39,
+	Ibm128 = 40,
+	First_Builtin = 2,
+	Last_Builtin = 40,
+	Complex = 100,
+	Pointer = 101,
+	Block_Pointer = 102,
+	L_Value_Reference = 103,
+	R_Value_Reference = 104,
+	Record = 105,
+	Enum = 106,
+	Typedef = 107,
+	Obj_C_Interface = 108,
+	Obj_C_Object_Pointer = 109,
+	Function_No_Proto = 110,
+	Function_Proto = 111,
+	Constant_Array = 112,
+	Vector = 113,
+	Incomplete_Array = 114,
+	Variable_Array = 115,
+	Dependent_Sized_Array = 116,
+	Member_Pointer = 117,
+	Auto = 118,
+	Elaborated = 119,
+	Pipe = 120,
+	Ocl_Image1d_Ro = 121,
+	Ocl_Image1d_Array_Ro = 122,
+	Ocl_Image1d_Buffer_Ro = 123,
+	Ocl_Image2d_Ro = 124,
+	Ocl_Image2d_Array_Ro = 125,
+	Ocl_Image2d_Depth_Ro = 126,
+	Ocl_Image2d_Array_Depth_Ro = 127,
+	Ocl_Image2d_Msaaro = 128,
+	Ocl_Image2d_Array_Msaaro = 129,
+	Ocl_Image2d_Msaa_Depth_Ro = 130,
+	Ocl_Image2d_Array_Msaa_Depth_Ro = 131,
+	Ocl_Image3d_Ro = 132,
+	Ocl_Image1d_Wo = 133,
+	Ocl_Image1d_Array_Wo = 134,
+	Ocl_Image1d_Buffer_Wo = 135,
+	Ocl_Image2d_Wo = 136,
+	Ocl_Image2d_Array_Wo = 137,
+	Ocl_Image2d_Depth_Wo = 138,
+	Ocl_Image2d_Array_Depth_Wo = 139,
+	Ocl_Image2d_Msaawo = 140,
+	Ocl_Image2d_Array_Msaawo = 141,
+	Ocl_Image2d_Msaa_Depth_Wo = 142,
+	Ocl_Image2d_Array_Msaa_Depth_Wo = 143,
+	Ocl_Image3d_Wo = 144,
+	Ocl_Image1d_Rw = 145,
+	Ocl_Image1d_Array_Rw = 146,
+	Ocl_Image1d_Buffer_Rw = 147,
+	Ocl_Image2d_Rw = 148,
+	Ocl_Image2d_Array_Rw = 149,
+	Ocl_Image2d_Depth_Rw = 150,
+	Ocl_Image2d_Array_Depth_Rw = 151,
+	Ocl_Image2d_Msaarw = 152,
+	Ocl_Image2d_Array_Msaarw = 153,
+	Ocl_Image2d_Msaa_Depth_Rw = 154,
+	Ocl_Image2d_Array_Msaa_Depth_Rw = 155,
+	Ocl_Image3d_Rw = 156,
+	Ocl_Sampler = 157,
+	Ocl_Event = 158,
+	Ocl_Queue = 159,
+	Ocl_Reserve_Id = 160,
+	Obj_C_Object = 161,
+	Obj_C_Type_Param = 162,
+	Attributed = 163,
+	Ocl_Intel_Subgroup_Avc_Mce_Payload = 164,
+	Ocl_Intel_Subgroup_Avc_Ime_Payload = 165,
+	Ocl_Intel_Subgroup_Avc_Ref_Payload = 166,
+	Ocl_Intel_Subgroup_Avc_Sic_Payload = 167,
+	Ocl_Intel_Subgroup_Avc_Mce_Result = 168,
+	Ocl_Intel_Subgroup_Avc_Ime_Result = 169,
+	Ocl_Intel_Subgroup_Avc_Ref_Result = 170,
+	Ocl_Intel_Subgroup_Avc_Sic_Result = 171,
 	Ocl_Intel_Subgroup_Avc_Ime_Result_Single_Reference_Streamout = 172,
-	Ocl_Intel_Subgroup_Avc_Ime_Result_Dual_Reference_Streamout   = 173,
-	Ocl_Intel_Subgroup_Avc_Ime_Single_Reference_Streamin         = 174,
-	Ocl_Intel_Subgroup_Avc_Ime_Dual_Reference_Streamin           = 175,
-	Ocl_Intel_Subgroup_Avc_Ime_Result_Single_Ref_Streamout       = 172,
-	Ocl_Intel_Subgroup_Avc_Ime_Result_Dual_Ref_Streamout         = 173,
-	Ocl_Intel_Subgroup_Avc_Ime_Single_Ref_Streamin               = 174,
-	Ocl_Intel_Subgroup_Avc_Ime_Dual_Ref_Streamin                 = 175,
-	Ext_Vector                                                   = 176,
-	Atomic                                                       = 177,
-	Btf_Tag_Attributed                                           = 178,
-	Hlsl_Resource                                                = 179,
-	Hlsl_Attributed_Resource                                     = 180,
-	Hlsl_Inline_Spirv                                            = 181,
+	Ocl_Intel_Subgroup_Avc_Ime_Result_Dual_Reference_Streamout = 173,
+	Ocl_Intel_Subgroup_Avc_Ime_Single_Reference_Streamin = 174,
+	Ocl_Intel_Subgroup_Avc_Ime_Dual_Reference_Streamin = 175,
+	Ocl_Intel_Subgroup_Avc_Ime_Result_Single_Ref_Streamout = 172,
+	Ocl_Intel_Subgroup_Avc_Ime_Result_Dual_Ref_Streamout = 173,
+	Ocl_Intel_Subgroup_Avc_Ime_Single_Ref_Streamin = 174,
+	Ocl_Intel_Subgroup_Avc_Ime_Dual_Ref_Streamin = 175,
+	Ext_Vector = 176,
+	Atomic = 177,
+	Btf_Tag_Attributed = 178,
+	Hlsl_Resource = 179,
+	Hlsl_Attributed_Resource = 180,
+	Hlsl_Inline_Spirv = 181,
 }
 
 Calling_Conv :: enum u32 {
-	Default              = 0,
-	C                    = 1,
-	X86_Std_Call         = 2,
-	X86_Fast_Call        = 3,
-	X86_This_Call        = 4,
-	X86_Pascal           = 5,
-	Aapcs                = 6,
-	Aapcs_Vfp            = 7,
-	X86_Reg_Call         = 8,
-	Intel_Ocl_Bicc       = 9,
-	Win64                = 10,
-	X86_64_Win64         = 10,
-	X86_64_Sys_V         = 11,
-	X86_Vector_Call      = 12,
-	Swift                = 13,
-	Preserve_Most        = 14,
-	Preserve_All         = 15,
+	Default = 0,
+	C = 1,
+	X86_Std_Call = 2,
+	X86_Fast_Call = 3,
+	X86_This_Call = 4,
+	X86_Pascal = 5,
+	Aapcs = 6,
+	Aapcs_Vfp = 7,
+	X86_Reg_Call = 8,
+	Intel_Ocl_Bicc = 9,
+	Win64 = 10,
+	X86_64_Win64 = 10,
+	X86_64_Sys_V = 11,
+	X86_Vector_Call = 12,
+	Swift = 13,
+	Preserve_Most = 14,
+	Preserve_All = 15,
 	A_Arch64_Vector_Call = 16,
-	Swift_Async          = 17,
-	A_Arch64_Svepcs      = 18,
-	M68k_Rtd             = 19,
-	Preserve_None        = 20,
-	Riscv_Vector_Call    = 21,
-	Riscvvls_Call_32     = 22,
-	Riscvvls_Call_64     = 23,
-	Riscvvls_Call_128    = 24,
-	Riscvvls_Call_256    = 25,
-	Riscvvls_Call_512    = 26,
-	Riscvvls_Call_1024   = 27,
-	Riscvvls_Call_2048   = 28,
-	Riscvvls_Call_4096   = 29,
-	Riscvvls_Call_8192   = 30,
-	Riscvvls_Call_16384  = 31,
-	Riscvvls_Call_32768  = 32,
-	Riscvvls_Call_65536  = 33,
-	Invalid              = 100,
-	Unexposed            = 200,
+	Swift_Async = 17,
+	A_Arch64_Svepcs = 18,
+	M68k_Rtd = 19,
+	Preserve_None = 20,
+	Riscv_Vector_Call = 21,
+	Riscvvls_Call_32 = 22,
+	Riscvvls_Call_64 = 23,
+	Riscvvls_Call_128 = 24,
+	Riscvvls_Call_256 = 25,
+	Riscvvls_Call_512 = 26,
+	Riscvvls_Call_1024 = 27,
+	Riscvvls_Call_2048 = 28,
+	Riscvvls_Call_4096 = 29,
+	Riscvvls_Call_8192 = 30,
+	Riscvvls_Call_16384 = 31,
+	Riscvvls_Call_32768 = 32,
+	Riscvvls_Call_65536 = 33,
+	Invalid = 100,
+	Unexposed = 200,
 }
 
 Type :: struct {
@@ -754,83 +678,83 @@ Type :: struct {
 }
 
 Template_Argument_Kind :: enum u32 {
-	Null               = 0,
-	Type               = 1,
-	Declaration        = 2,
-	Null_Ptr           = 3,
-	Integral           = 4,
-	Template           = 5,
+	Null = 0,
+	Type = 1,
+	Declaration = 2,
+	Null_Ptr = 3,
+	Integral = 4,
+	Template = 5,
 	Template_Expansion = 6,
-	Expression         = 7,
-	Pack               = 8,
-	Invalid            = 9,
+	Expression = 7,
+	Pack = 8,
+	Invalid = 9,
 }
 
 Type_Nullability_Kind :: enum u32 {
-	Non_Null        = 0,
-	Nullable        = 1,
-	Unspecified     = 2,
-	Invalid         = 3,
+	Non_Null = 0,
+	Nullable = 1,
+	Unspecified = 2,
+	Invalid = 3,
 	Nullable_Result = 4,
 }
 
 Type_Layout_Error :: enum i32 {
-	Invalid            = -1,
-	Incomplete         = -2,
-	Dependent          = -3,
-	Not_Constant_Size  = -4,
+	Invalid = -1,
+	Incomplete = -2,
+	Dependent = -3,
+	Not_Constant_Size = -4,
 	Invalid_Field_Name = -5,
-	Undeduced          = -6,
+	Undeduced = -6,
 }
 
 Ref_Qualifier_Kind :: enum u32 {
-	None    = 0,
+	None = 0,
 	L_Value = 1,
 	R_Value = 2,
 }
 
 Cxx_Access_Specifier :: enum u32 {
 	Cxx_Invalid_Access_Specifier = 0,
-	Cxx_Public                   = 1,
-	Cxx_Protected                = 2,
-	Cxx_Private                  = 3,
+	Cxx_Public = 1,
+	Cxx_Protected = 2,
+	Cxx_Private = 3,
 }
 
 Storage_Class :: enum u32 {
-	Invalid                  = 0,
-	None                     = 1,
-	Extern                   = 2,
-	Static                   = 3,
-	Private_Extern           = 4,
+	Invalid = 0,
+	None = 1,
+	Extern = 2,
+	Static = 3,
+	Private_Extern = 4,
 	Open_Cl_Work_Group_Local = 5,
-	Auto                     = 6,
-	Register                 = 7,
+	Auto = 6,
+	Register = 7,
 }
 
 Legacy_Binary_Operator_Kind :: enum u32 {
-	Invalid    = 0,
-	Ptr_Mem_D  = 1,
-	Ptr_Mem_I  = 2,
-	Mul        = 3,
-	Div        = 4,
-	Rem        = 5,
-	Add        = 6,
-	Sub        = 7,
-	Shl        = 8,
-	Shr        = 9,
-	Cmp        = 10,
-	Lt         = 11,
-	Gt         = 12,
-	Le         = 13,
-	Ge         = 14,
-	Eq         = 15,
-	Ne         = 16,
-	And        = 17,
-	Xor        = 18,
-	Or         = 19,
-	L_And      = 20,
-	L_Or       = 21,
-	Assign     = 22,
+	Invalid = 0,
+	Ptr_Mem_D = 1,
+	Ptr_Mem_I = 2,
+	Mul = 3,
+	Div = 4,
+	Rem = 5,
+	Add = 6,
+	Sub = 7,
+	Shl = 8,
+	Shr = 9,
+	Cmp = 10,
+	Lt = 11,
+	Gt = 12,
+	Le = 13,
+	Ge = 14,
+	Eq = 15,
+	Ne = 16,
+	And = 17,
+	Xor = 18,
+	Or = 19,
+	L_And = 20,
+	L_Or = 21,
+	Assign = 22,
 	Mul_Assign = 23,
 	Div_Assign = 24,
 	Rem_Assign = 25,
@@ -840,15 +764,15 @@ Legacy_Binary_Operator_Kind :: enum u32 {
 	Shr_Assign = 29,
 	And_Assign = 30,
 	Xor_Assign = 31,
-	Or_Assign  = 32,
-	Comma      = 33,
-	Last       = 33,
+	Or_Assign = 32,
+	Comma = 33,
+	Last = 33,
 }
 
 Child_Visit_Result :: enum u32 {
-	Break    = 0,
+	Break = 0,
 	Continue = 1,
-	Recurse  = 2,
+	Recurse = 2,
 }
 
 Cursor_Visitor :: proc "c" (_: Cursor, _: Cursor, _: Client_Data) -> Child_Visit_Result
@@ -860,76 +784,76 @@ Cursor_Visitor_Block :: ^Cx_Child_Visit_Result
 Printing_Policy :: rawptr
 
 Printing_Policy_Property :: enum u32 {
-	Indentation                                = 0,
-	Suppress_Specifiers                        = 1,
-	Suppress_Tag_Keyword                       = 2,
-	Include_Tag_Definition                     = 3,
-	Suppress_Scope                             = 4,
-	Suppress_Unwritten_Scope                   = 5,
-	Suppress_Initializers                      = 6,
-	Constant_Array_Size_As_Written             = 7,
-	Anonymous_Tag_Locations                    = 8,
-	Suppress_Strong_Lifetime                   = 9,
-	Suppress_Lifetime_Qualifiers               = 10,
+	Indentation = 0,
+	Suppress_Specifiers = 1,
+	Suppress_Tag_Keyword = 2,
+	Include_Tag_Definition = 3,
+	Suppress_Scope = 4,
+	Suppress_Unwritten_Scope = 5,
+	Suppress_Initializers = 6,
+	Constant_Array_Size_As_Written = 7,
+	Anonymous_Tag_Locations = 8,
+	Suppress_Strong_Lifetime = 9,
+	Suppress_Lifetime_Qualifiers = 10,
 	Suppress_Template_Args_In_Cxx_Constructors = 11,
-	Bool                                       = 12,
-	Restrict                                   = 13,
-	Alignof                                    = 14,
-	Underscore_Alignof                         = 15,
-	Use_Void_For_Zero_Params                   = 16,
-	Terse_Output                               = 17,
-	Polish_For_Declaration                     = 18,
-	Half                                       = 19,
-	Msw_Char                                   = 20,
-	Include_Newlines                           = 21,
-	Msvc_Formatting                            = 22,
-	Constants_As_Written                       = 23,
-	Suppress_Implicit_Base                     = 24,
-	Fully_Qualified_Name                       = 25,
-	Last_Property                              = 25,
+	Bool = 12,
+	Restrict = 13,
+	Alignof = 14,
+	Underscore_Alignof = 15,
+	Use_Void_For_Zero_Params = 16,
+	Terse_Output = 17,
+	Polish_For_Declaration = 18,
+	Half = 19,
+	Msw_Char = 20,
+	Include_Newlines = 21,
+	Msvc_Formatting = 22,
+	Constants_As_Written = 23,
+	Suppress_Implicit_Base = 24,
+	Fully_Qualified_Name = 25,
+	Last_Property = 25,
 }
 
 Obj_C_Property_Attr_Kind :: enum u32 {
-	Noattr            = 0,
-	Readonly          = 1,
-	Getter            = 2,
-	Assign            = 4,
-	Readwrite         = 8,
-	Retain            = 16,
-	Copy              = 32,
-	Nonatomic         = 64,
-	Setter            = 128,
-	Atomic            = 256,
-	Weak              = 512,
-	Strong            = 1024,
+	Noattr = 0,
+	Readonly = 1,
+	Getter = 2,
+	Assign = 4,
+	Readwrite = 8,
+	Retain = 16,
+	Copy = 32,
+	Nonatomic = 64,
+	Setter = 128,
+	Atomic = 256,
+	Weak = 512,
+	Strong = 1024,
 	Unsafe_Unretained = 2048,
-	Class             = 4096,
+	Class = 4096,
 }
 
 Obj_C_Decl_Qualifier_Kind :: enum u32 {
-	None   = 0,
-	In     = 1,
-	Inout  = 2,
-	Out    = 4,
+	None = 0,
+	In = 1,
+	Inout = 2,
+	Out = 4,
 	Bycopy = 8,
-	Byref  = 16,
+	Byref = 16,
 	Oneway = 32,
 }
 
 Module :: rawptr
 
 Name_Ref_Flags :: enum u32 {
-	Want_Qualifier     = 1,
+	Want_Qualifier = 1,
 	Want_Template_Args = 2,
-	Want_Single_Piece  = 4,
+	Want_Single_Piece = 4,
 }
 
 Token_Kind :: enum u32 {
 	Punctuation = 0,
-	Keyword     = 1,
-	Identifier  = 2,
-	Literal     = 3,
-	Comment     = 4,
+	Keyword = 1,
+	Identifier = 2,
+	Literal = 3,
+	Comment = 4,
 }
 
 Token :: struct {
@@ -940,102 +864,102 @@ Token :: struct {
 Completion_String :: rawptr
 
 Completion_Result :: struct {
-	cursor_kind:       Cursor_Kind,
+	cursor_kind: Cursor_Kind,
 	completion_string: Completion_String,
 }
 
 Completion_Chunk_Kind :: enum u32 {
-	Optional          = 0,
-	Typed_Text        = 1,
-	Text              = 2,
-	Placeholder       = 3,
-	Informative       = 4,
+	Optional = 0,
+	Typed_Text = 1,
+	Text = 2,
+	Placeholder = 3,
+	Informative = 4,
 	Current_Parameter = 5,
-	Left_Paren        = 6,
-	Right_Paren       = 7,
-	Left_Bracket      = 8,
-	Right_Bracket     = 9,
-	Left_Brace        = 10,
-	Right_Brace       = 11,
-	Left_Angle        = 12,
-	Right_Angle       = 13,
-	Comma             = 14,
-	Result_Type       = 15,
-	Colon             = 16,
-	Semi_Colon        = 17,
-	Equal             = 18,
-	Horizontal_Space  = 19,
-	Vertical_Space    = 20,
+	Left_Paren = 6,
+	Right_Paren = 7,
+	Left_Bracket = 8,
+	Right_Bracket = 9,
+	Left_Brace = 10,
+	Right_Brace = 11,
+	Left_Angle = 12,
+	Right_Angle = 13,
+	Comma = 14,
+	Result_Type = 15,
+	Colon = 16,
+	Semi_Colon = 17,
+	Equal = 18,
+	Horizontal_Space = 19,
+	Vertical_Space = 20,
 }
 
 Code_Complete_Results :: struct {
-	results:     ^Completion_Result,
+	results: ^Completion_Result,
 	num_results: u32,
 }
 
 Code_Complete_Flags :: enum u32 {
-	Include_Macros                   = 1,
-	Include_Code_Patterns            = 2,
-	Include_Brief_Comments           = 4,
-	Skip_Preamble                    = 8,
+	Include_Macros = 1,
+	Include_Code_Patterns = 2,
+	Include_Brief_Comments = 4,
+	Skip_Preamble = 8,
 	Include_Completions_With_Fix_Its = 16,
 }
 
 Completion_Context :: enum u32 {
-	Unexposed              = 0,
-	Any_Type               = 1,
-	Any_Value              = 2,
-	Obj_C_Object_Value     = 4,
-	Obj_C_Selector_Value   = 8,
-	Cxx_Class_Type_Value   = 16,
-	Dot_Member_Access      = 32,
-	Arrow_Member_Access    = 64,
-	Obj_C_Property_Access  = 128,
-	Enum_Tag               = 256,
-	Union_Tag              = 512,
-	Struct_Tag             = 1024,
-	Class_Tag              = 2048,
-	Namespace              = 4096,
-	Nested_Name_Specifier  = 8192,
-	Obj_C_Interface        = 16384,
-	Obj_C_Protocol         = 32768,
-	Obj_C_Category         = 65536,
+	Unexposed = 0,
+	Any_Type = 1,
+	Any_Value = 2,
+	Obj_C_Object_Value = 4,
+	Obj_C_Selector_Value = 8,
+	Cxx_Class_Type_Value = 16,
+	Dot_Member_Access = 32,
+	Arrow_Member_Access = 64,
+	Obj_C_Property_Access = 128,
+	Enum_Tag = 256,
+	Union_Tag = 512,
+	Struct_Tag = 1024,
+	Class_Tag = 2048,
+	Namespace = 4096,
+	Nested_Name_Specifier = 8192,
+	Obj_C_Interface = 16384,
+	Obj_C_Protocol = 32768,
+	Obj_C_Category = 65536,
 	Obj_C_Instance_Message = 131072,
-	Obj_C_Class_Message    = 262144,
-	Obj_C_Selector_Name    = 524288,
-	Macro_Name             = 1048576,
-	Natural_Language       = 2097152,
-	Included_File          = 4194304,
-	Unknown                = 8388607,
+	Obj_C_Class_Message = 262144,
+	Obj_C_Selector_Name = 524288,
+	Macro_Name = 1048576,
+	Natural_Language = 2097152,
+	Included_File = 4194304,
+	Unknown = 8388607,
 }
 
 Inclusion_Visitor :: proc "c" (_: File, _: ^Source_Location, _: u32, _: Client_Data)
 
 Eval_Result_Kind :: enum u32 {
-	Int               = 1,
-	Float             = 2,
+	Int = 1,
+	Float = 2,
 	Obj_C_Str_Literal = 3,
-	Str_Literal       = 4,
-	Cf_Str            = 5,
-	Other             = 6,
-	Un_Exposed        = 0,
+	Str_Literal = 4,
+	Cf_Str = 5,
+	Other = 6,
+	Un_Exposed = 0,
 }
 
 Eval_Result :: rawptr
 
 Visitor_Result :: enum u32 {
-	Break    = 0,
+	Break = 0,
 	Continue = 1,
 }
 
 Cursor_And_Range_Visitor :: struct {
 	context_: rawptr,
-	visit:    proc "c" (_: rawptr, _: Cursor, _: Source_Range) -> Visitor_Result,
+	visit: proc "c" (_: rawptr, _: Cursor, _: Source_Range) -> Visitor_Result,
 }
 
 Result :: enum u32 {
-	Success     = 0,
-	Invalid     = 1,
+	Success = 0,
+	Invalid = 1,
 	Visit_Break = 2,
 }
 
@@ -1057,88 +981,88 @@ Idx_Loc :: struct {
 }
 
 Idx_Included_File_Info :: struct {
-	hash_loc:         Idx_Loc,
-	filename:         cstring,
-	file:             File,
-	is_import:        i32,
-	is_angled:        i32,
+	hash_loc: Idx_Loc,
+	filename: cstring,
+	file: File,
+	is_import: i32,
+	is_angled: i32,
 	is_module_import: i32,
 }
 
 Idx_Imported_Ast_File_Info :: struct {
-	file:        File,
-	module:      Module,
-	loc:         Idx_Loc,
+	file: File,
+	module: Module,
+	loc: Idx_Loc,
 	is_implicit: i32,
 }
 
 Idx_Entity_Kind :: enum u32 {
-	Unexposed               = 0,
-	Typedef                 = 1,
-	Function                = 2,
-	Variable                = 3,
-	Field                   = 4,
-	Enum_Constant           = 5,
-	Obj_C_Class             = 6,
-	Obj_C_Protocol          = 7,
-	Obj_C_Category          = 8,
-	Obj_C_Instance_Method   = 9,
-	Obj_C_Class_Method      = 10,
-	Obj_C_Property          = 11,
-	Obj_C_Ivar              = 12,
-	Enum                    = 13,
-	Struct                  = 14,
-	Union                   = 15,
-	Cxx_Class               = 16,
-	Cxx_Namespace           = 17,
-	Cxx_Namespace_Alias     = 18,
-	Cxx_Static_Variable     = 19,
-	Cxx_Static_Method       = 20,
-	Cxx_Instance_Method     = 21,
-	Cxx_Constructor         = 22,
-	Cxx_Destructor          = 23,
+	Unexposed = 0,
+	Typedef = 1,
+	Function = 2,
+	Variable = 3,
+	Field = 4,
+	Enum_Constant = 5,
+	Obj_C_Class = 6,
+	Obj_C_Protocol = 7,
+	Obj_C_Category = 8,
+	Obj_C_Instance_Method = 9,
+	Obj_C_Class_Method = 10,
+	Obj_C_Property = 11,
+	Obj_C_Ivar = 12,
+	Enum = 13,
+	Struct = 14,
+	Union = 15,
+	Cxx_Class = 16,
+	Cxx_Namespace = 17,
+	Cxx_Namespace_Alias = 18,
+	Cxx_Static_Variable = 19,
+	Cxx_Static_Method = 20,
+	Cxx_Instance_Method = 21,
+	Cxx_Constructor = 22,
+	Cxx_Destructor = 23,
 	Cxx_Conversion_Function = 24,
-	Cxx_Type_Alias          = 25,
-	Cxx_Interface           = 26,
-	Cxx_Concept             = 27,
+	Cxx_Type_Alias = 25,
+	Cxx_Interface = 26,
+	Cxx_Concept = 27,
 }
 
 Idx_Entity_Language :: enum u32 {
-	None  = 0,
-	C     = 1,
+	None = 0,
+	C = 1,
 	Obj_C = 2,
-	Cxx   = 3,
+	Cxx = 3,
 	Swift = 4,
 }
 
 Idx_Entity_Cxx_Template_Kind :: enum u32 {
-	Non_Template                    = 0,
-	Template                        = 1,
+	Non_Template = 0,
+	Template = 1,
 	Template_Partial_Specialization = 2,
-	Template_Specialization         = 3,
+	Template_Specialization = 3,
 }
 
 Idx_Attr_Kind :: enum u32 {
-	Unexposed            = 0,
-	Ib_Action            = 1,
-	Ib_Outlet            = 2,
+	Unexposed = 0,
+	Ib_Action = 1,
+	Ib_Outlet = 2,
 	Ib_Outlet_Collection = 3,
 }
 
 Idx_Attr_Info :: struct {
-	kind:   Idx_Attr_Kind,
+	kind: Idx_Attr_Kind,
 	cursor: Cursor,
-	loc:    Idx_Loc,
+	loc: Idx_Loc,
 }
 
 Idx_Entity_Info :: struct {
-	kind:           Idx_Entity_Kind,
-	template_kind:  Idx_Entity_Cxx_Template_Kind,
-	lang:           Idx_Entity_Language,
-	name:           cstring,
-	usr:            cstring,
-	cursor:         Cursor,
-	attributes:     ^^Idx_Attr_Info,
+	kind: Idx_Entity_Kind,
+	template_kind: Idx_Entity_Cxx_Template_Kind,
+	lang: Idx_Entity_Language,
+	name: cstring,
+	usr: cstring,
+	cursor: Cursor,
+	attributes: ^^Idx_Attr_Info,
 	num_attributes: u32,
 }
 
@@ -1147,10 +1071,10 @@ Idx_Container_Info :: struct {
 }
 
 Idx_Ib_Outlet_Collection_Attr_Info :: struct {
-	attr_info:    ^Idx_Attr_Info,
-	objc_class:   ^Idx_Entity_Info,
+	attr_info: ^Idx_Attr_Info,
+	objc_class: ^Idx_Entity_Info,
 	class_cursor: Cursor,
-	class_loc:    Idx_Loc,
+	class_loc: Idx_Loc,
 }
 
 Idx_Decl_Info_Flags :: enum u32 {
@@ -1158,151 +1082,151 @@ Idx_Decl_Info_Flags :: enum u32 {
 }
 
 Idx_Decl_Info :: struct {
-	entity_info:        ^Idx_Entity_Info,
-	cursor:             Cursor,
-	loc:                Idx_Loc,
+	entity_info: ^Idx_Entity_Info,
+	cursor: Cursor,
+	loc: Idx_Loc,
 	semantic_container: ^Idx_Container_Info,
-	lexical_container:  ^Idx_Container_Info,
-	is_redeclaration:   i32,
-	is_definition:      i32,
-	is_container:       i32,
-	decl_as_container:  ^Idx_Container_Info,
-	is_implicit:        i32,
-	attributes:         ^^Idx_Attr_Info,
-	num_attributes:     u32,
-	flags:              u32,
+	lexical_container: ^Idx_Container_Info,
+	is_redeclaration: i32,
+	is_definition: i32,
+	is_container: i32,
+	decl_as_container: ^Idx_Container_Info,
+	is_implicit: i32,
+	attributes: ^^Idx_Attr_Info,
+	num_attributes: u32,
+	flags: u32,
 }
 
 Idx_Obj_C_Container_Kind :: enum u32 {
-	Forward_Ref    = 0,
-	Interface      = 1,
+	Forward_Ref = 0,
+	Interface = 1,
 	Implementation = 2,
 }
 
 Idx_Obj_C_Container_Decl_Info :: struct {
 	decl_info: ^Idx_Decl_Info,
-	kind:      Idx_Obj_C_Container_Kind,
+	kind: Idx_Obj_C_Container_Kind,
 }
 
 Idx_Base_Class_Info :: struct {
-	base:   ^Idx_Entity_Info,
+	base: ^Idx_Entity_Info,
 	cursor: Cursor,
-	loc:    Idx_Loc,
+	loc: Idx_Loc,
 }
 
 Idx_Obj_C_Protocol_Ref_Info :: struct {
 	protocol: ^Idx_Entity_Info,
-	cursor:   Cursor,
-	loc:      Idx_Loc,
+	cursor: Cursor,
+	loc: Idx_Loc,
 }
 
 Idx_Obj_C_Protocol_Ref_List_Info :: struct {
-	protocols:     ^^Idx_Obj_C_Protocol_Ref_Info,
+	protocols: ^^Idx_Obj_C_Protocol_Ref_Info,
 	num_protocols: u32,
 }
 
 Idx_Obj_C_Interface_Decl_Info :: struct {
 	container_info: ^Idx_Obj_C_Container_Decl_Info,
-	super_info:     ^Idx_Base_Class_Info,
-	protocols:      ^Idx_Obj_C_Protocol_Ref_List_Info,
+	super_info: ^Idx_Base_Class_Info,
+	protocols: ^Idx_Obj_C_Protocol_Ref_List_Info,
 }
 
 Idx_Obj_C_Category_Decl_Info :: struct {
 	container_info: ^Idx_Obj_C_Container_Decl_Info,
-	objc_class:     ^Idx_Entity_Info,
-	class_cursor:   Cursor,
-	class_loc:      Idx_Loc,
-	protocols:      ^Idx_Obj_C_Protocol_Ref_List_Info,
+	objc_class: ^Idx_Entity_Info,
+	class_cursor: Cursor,
+	class_loc: Idx_Loc,
+	protocols: ^Idx_Obj_C_Protocol_Ref_List_Info,
 }
 
 Idx_Obj_C_Property_Decl_Info :: struct {
 	decl_info: ^Idx_Decl_Info,
-	getter:    ^Idx_Entity_Info,
-	setter:    ^Idx_Entity_Info,
+	getter: ^Idx_Entity_Info,
+	setter: ^Idx_Entity_Info,
 }
 
 Idx_Cxx_Class_Decl_Info :: struct {
 	decl_info: ^Idx_Decl_Info,
-	bases:     ^^Idx_Base_Class_Info,
+	bases: ^^Idx_Base_Class_Info,
 	num_bases: u32,
 }
 
 Idx_Entity_Ref_Kind :: enum u32 {
-	Direct   = 1,
+	Direct = 1,
 	Implicit = 2,
 }
 
 Symbol_Role :: enum u32 {
-	None        = 0,
+	None = 0,
 	Declaration = 1,
-	Definition  = 2,
-	Reference   = 4,
-	Read        = 8,
-	Write       = 16,
-	Call        = 32,
-	Dynamic     = 64,
-	Address_Of  = 128,
-	Implicit    = 256,
+	Definition = 2,
+	Reference = 4,
+	Read = 8,
+	Write = 16,
+	Call = 32,
+	Dynamic = 64,
+	Address_Of = 128,
+	Implicit = 256,
 }
 
 Idx_Entity_Ref_Info :: struct {
-	kind:              Idx_Entity_Ref_Kind,
-	cursor:            Cursor,
-	loc:               Idx_Loc,
+	kind: Idx_Entity_Ref_Kind,
+	cursor: Cursor,
+	loc: Idx_Loc,
 	referenced_entity: ^Idx_Entity_Info,
-	parent_entity:     ^Idx_Entity_Info,
-	container:         ^Idx_Container_Info,
-	role:              Symbol_Role,
+	parent_entity: ^Idx_Entity_Info,
+	container: ^Idx_Container_Info,
+	role: Symbol_Role,
 }
 
 Indexer_Callbacks :: struct {
-	abort_query:              proc "c" (_: Client_Data, _: rawptr) -> i32,
-	diagnostic:               proc "c" (_: Client_Data, _: Diagnostic_Set, _: rawptr),
-	entered_main_file:        proc "c" (_: Client_Data, _: File, _: rawptr) -> Idx_Client_File,
-	pp_included_file:         proc "c" (_: Client_Data, _: ^Idx_Included_File_Info) -> Idx_Client_File,
-	imported_ast_file:        proc "c" (_: Client_Data, _: ^Idx_Imported_Ast_File_Info) -> Idx_Client_Ast_File,
+	abort_query: proc "c" (_: Client_Data, _: rawptr) -> i32,
+	diagnostic: proc "c" (_: Client_Data, _: Diagnostic_Set, _: rawptr),
+	entered_main_file: proc "c" (_: Client_Data, _: File, _: rawptr) -> Idx_Client_File,
+	pp_included_file: proc "c" (_: Client_Data, _: ^Idx_Included_File_Info) -> Idx_Client_File,
+	imported_ast_file: proc "c" (_: Client_Data, _: ^Idx_Imported_Ast_File_Info) -> Idx_Client_Ast_File,
 	started_translation_unit: proc "c" (_: Client_Data, _: rawptr) -> Idx_Client_Container,
-	index_declaration:        proc "c" (_: Client_Data, _: ^Idx_Decl_Info),
-	index_entity_reference:   proc "c" (_: Client_Data, _: ^Idx_Entity_Ref_Info),
+	index_declaration: proc "c" (_: Client_Data, _: ^Idx_Decl_Info),
+	index_entity_reference: proc "c" (_: Client_Data, _: ^Idx_Entity_Ref_Info),
 }
 
 Index_Action :: rawptr
 
 Index_Opt_Flags :: enum u32 {
-	None                                   = 0,
-	Suppress_Redundant_Refs                = 1,
-	Index_Function_Local_Symbols           = 2,
+	None = 0,
+	Suppress_Redundant_Refs = 1,
+	Index_Function_Local_Symbols = 2,
 	Index_Implicit_Template_Instantiations = 4,
-	Suppress_Warnings                      = 8,
-	Skip_Parsed_Bodies_In_Session          = 16,
+	Suppress_Warnings = 8,
+	Skip_Parsed_Bodies_In_Session = 16,
 }
 
 Field_Visitor :: proc "c" (_: Cursor, _: Client_Data) -> Visitor_Result
 
 Binary_Operator_Kind :: enum u32 {
-	Invalid    = 0,
-	Ptr_Mem_D  = 1,
-	Ptr_Mem_I  = 2,
-	Mul        = 3,
-	Div        = 4,
-	Rem        = 5,
-	Add        = 6,
-	Sub        = 7,
-	Shl        = 8,
-	Shr        = 9,
-	Cmp        = 10,
-	Lt         = 11,
-	Gt         = 12,
-	Le         = 13,
-	Ge         = 14,
-	Eq         = 15,
-	Ne         = 16,
-	And        = 17,
-	Xor        = 18,
-	Or         = 19,
-	L_And      = 20,
-	L_Or       = 21,
-	Assign     = 22,
+	Invalid = 0,
+	Ptr_Mem_D = 1,
+	Ptr_Mem_I = 2,
+	Mul = 3,
+	Div = 4,
+	Rem = 5,
+	Add = 6,
+	Sub = 7,
+	Shl = 8,
+	Shr = 9,
+	Cmp = 10,
+	Lt = 11,
+	Gt = 12,
+	Le = 13,
+	Ge = 14,
+	Eq = 15,
+	Ne = 16,
+	And = 17,
+	Xor = 18,
+	Or = 19,
+	L_And = 20,
+	L_Or = 21,
+	Assign = 22,
 	Mul_Assign = 23,
 	Div_Assign = 24,
 	Rem_Assign = 25,
@@ -1312,196 +1236,32 @@ Binary_Operator_Kind :: enum u32 {
 	Shr_Assign = 29,
 	And_Assign = 30,
 	Xor_Assign = 31,
-	Or_Assign  = 32,
-	Comma      = 33,
-	Last       = 33,
+	Or_Assign = 32,
+	Comma = 33,
+	Last = 33,
 }
 
 Unary_Operator_Kind :: enum u32 {
-	Invalid   = 0,
-	Post_Inc  = 1,
-	Post_Dec  = 2,
-	Pre_Inc   = 3,
-	Pre_Dec   = 4,
-	Addr_Of   = 5,
-	Deref     = 6,
-	Plus      = 7,
-	Minus     = 8,
-	Not       = 9,
-	L_Not     = 10,
-	Real      = 11,
-	Imag      = 12,
+	Invalid = 0,
+	Post_Inc = 1,
+	Post_Dec = 2,
+	Pre_Inc = 3,
+	Pre_Dec = 4,
+	Addr_Of = 5,
+	Deref = 6,
+	Plus = 7,
+	Minus = 8,
+	Not = 9,
+	L_Not = 10,
+	Real = 11,
+	Imag = 12,
 	Extension = 13,
-	Coawait   = 14,
+	Coawait = 14,
 }
 
 Remapping :: rawptr
 
-Comment :: struct {
-	ast_node:         rawptr,
-	translation_unit: Translation_Unit,
-}
-
-Comment_Kind :: enum u32 {
-	Cx_Comment_Null                   = 0,
-	Cx_Comment_Text                   = 1,
-	Cx_Comment_Inline_Command         = 2,
-	Cx_Comment_Html_Start_Tag         = 3,
-	Cx_Comment_Html_End_Tag           = 4,
-	Cx_Comment_Paragraph              = 5,
-	Cx_Comment_Block_Command          = 6,
-	Cx_Comment_Param_Command          = 7,
-	Cx_Comment_T_Param_Command        = 8,
-	Cx_Comment_Verbatim_Block_Command = 9,
-	Cx_Comment_Verbatim_Block_Line    = 10,
-	Cx_Comment_Verbatim_Line          = 11,
-	Cx_Comment_Full_Comment           = 12,
-}
-
-Comment_Inline_Command_Render_Kind :: enum u32 {
-	Cx_Comment_Inline_Command_Render_Kind_Normal     = 0,
-	Cx_Comment_Inline_Command_Render_Kind_Bold       = 1,
-	Cx_Comment_Inline_Command_Render_Kind_Monospaced = 2,
-	Cx_Comment_Inline_Command_Render_Kind_Emphasized = 3,
-	Cx_Comment_Inline_Command_Render_Kind_Anchor     = 4,
-}
-
-Comment_Param_Pass_Direction :: enum u32 {
-	Cx_Comment_Param_Pass_Direction_In     = 0,
-	Cx_Comment_Param_Pass_Direction_Out    = 1,
-	Cx_Comment_Param_Pass_Direction_In_Out = 2,
-}
-
-Api_Set_Impl :: struct {}
-
-Api_Set :: ^Api_Set_Impl
-
-Rewriter :: rawptr
-
-Compilation_Database :: rawptr
-
-Compile_Commands :: rawptr
-
-Compile_Command :: rawptr
-
-Compilation_Database_Error :: enum u32 {
-	Cx_Compilation_Database_No_Error              = 0,
-	Cx_Compilation_Database_Can_Not_Load_Database = 1,
-}
-
 foreign lib {
-	@(link_name = "clang_getCString")
-	get_c_string :: proc(string: String) -> cstring ---
-	@(link_name = "clang_disposeString")
-	dispose_string :: proc(string: String) ---
-	@(link_name = "clang_disposeStringSet")
-	dispose_string_set :: proc(set: ^String_Set) ---
-	@(link_name = "clang_getBuildSessionTimestamp")
-	get_build_session_timestamp :: proc() -> u64 ---
-	@(link_name = "clang_VirtualFileOverlay_create")
-	virtual_file_overlay_create :: proc(options: u32) -> Virtual_File_Overlay ---
-	@(link_name = "clang_VirtualFileOverlay_addFileMapping")
-	virtual_file_overlay_add_file_mapping :: proc(_: Virtual_File_Overlay, virtual_path: cstring, real_path: cstring) -> Error_Code ---
-	@(link_name = "clang_VirtualFileOverlay_setCaseSensitivity")
-	virtual_file_overlay_set_case_sensitivity :: proc(_: Virtual_File_Overlay, case_sensitive: i32) -> Error_Code ---
-	@(link_name = "clang_VirtualFileOverlay_writeToBuffer")
-	virtual_file_overlay_write_to_buffer :: proc(_: Virtual_File_Overlay, options: u32, out_buffer_ptr: ^^u8, out_buffer_size: ^u32) -> Error_Code ---
-	@(link_name = "clang_free")
-	free :: proc(buffer: rawptr) ---
-	@(link_name = "clang_VirtualFileOverlay_dispose")
-	virtual_file_overlay_dispose :: proc(_: Virtual_File_Overlay) ---
-	@(link_name = "clang_ModuleMapDescriptor_create")
-	module_map_descriptor_create :: proc(options: u32) -> Module_Map_Descriptor ---
-	@(link_name = "clang_ModuleMapDescriptor_setFrameworkModuleName")
-	module_map_descriptor_set_framework_module_name :: proc(_: Module_Map_Descriptor, name: cstring) -> Error_Code ---
-	@(link_name = "clang_ModuleMapDescriptor_setUmbrellaHeader")
-	module_map_descriptor_set_umbrella_header :: proc(_: Module_Map_Descriptor, name: cstring) -> Error_Code ---
-	@(link_name = "clang_ModuleMapDescriptor_writeToBuffer")
-	module_map_descriptor_write_to_buffer :: proc(_: Module_Map_Descriptor, options: u32, out_buffer_ptr: ^^u8, out_buffer_size: ^u32) -> Error_Code ---
-	@(link_name = "clang_ModuleMapDescriptor_dispose")
-	module_map_descriptor_dispose :: proc(_: Module_Map_Descriptor) ---
-	@(link_name = "clang_getFileName")
-	get_file_name :: proc(s_file: File) -> String ---
-	@(link_name = "clang_getFileTime")
-	get_file_time :: proc(s_file: File) -> i64 ---
-	@(link_name = "clang_getFileUniqueID")
-	get_file_unique_id :: proc(file: File, out_id: ^File_Unique_Id) -> i32 ---
-	@(link_name = "clang_File_isEqual")
-	file_is_equal :: proc(file1: File, file2: File) -> i32 ---
-	@(link_name = "clang_File_tryGetRealPathName")
-	file_try_get_real_path_name :: proc(file: File) -> String ---
-	@(link_name = "clang_getNullLocation")
-	get_null_location :: proc() -> Source_Location ---
-	@(link_name = "clang_equalLocations")
-	equal_locations :: proc(loc1: Source_Location, loc2: Source_Location) -> u32 ---
-	@(link_name = "clang_isBeforeInTranslationUnit")
-	is_before_in_translation_unit :: proc(loc1: Source_Location, loc2: Source_Location) -> u32 ---
-	@(link_name = "clang_Location_isInSystemHeader")
-	location_is_in_system_header :: proc(location: Source_Location) -> i32 ---
-	@(link_name = "clang_Location_isFromMainFile")
-	location_is_from_main_file :: proc(location: Source_Location) -> i32 ---
-	@(link_name = "clang_getNullRange")
-	get_null_range :: proc() -> Source_Range ---
-	@(link_name = "clang_getRange")
-	get_range :: proc(begin: Source_Location, end: Source_Location) -> Source_Range ---
-	@(link_name = "clang_equalRanges")
-	equal_ranges :: proc(range1: Source_Range, range2: Source_Range) -> u32 ---
-	@(link_name = "clang_Range_isNull")
-	range_is_null :: proc(range: Source_Range) -> i32 ---
-	@(link_name = "clang_getExpansionLocation")
-	get_expansion_location :: proc(location: Source_Location, file: ^File, line: ^u32, column: ^u32, offset: ^u32) ---
-	@(link_name = "clang_getPresumedLocation")
-	get_presumed_location :: proc(location: Source_Location, filename: ^String, line: ^u32, column: ^u32) ---
-	@(link_name = "clang_getInstantiationLocation")
-	get_instantiation_location :: proc(location: Source_Location, file: ^File, line: ^u32, column: ^u32, offset: ^u32) ---
-	@(link_name = "clang_getSpellingLocation")
-	get_spelling_location :: proc(location: Source_Location, file: ^File, line: ^u32, column: ^u32, offset: ^u32) ---
-	@(link_name = "clang_getFileLocation")
-	get_file_location :: proc(location: Source_Location, file: ^File, line: ^u32, column: ^u32, offset: ^u32) ---
-	@(link_name = "clang_getRangeStart")
-	get_range_start :: proc(range: Source_Range) -> Source_Location ---
-	@(link_name = "clang_getRangeEnd")
-	get_range_end :: proc(range: Source_Range) -> Source_Location ---
-	@(link_name = "clang_disposeSourceRangeList")
-	dispose_source_range_list :: proc(ranges: ^Source_Range_List) ---
-	@(link_name = "clang_getNumDiagnosticsInSet")
-	get_num_diagnostics_in_set :: proc(diags: Diagnostic_Set) -> u32 ---
-	@(link_name = "clang_getDiagnosticInSet")
-	get_diagnostic_in_set :: proc(diags: Diagnostic_Set, index: u32) -> Diagnostic ---
-	@(link_name = "clang_loadDiagnostics")
-	load_diagnostics :: proc(file: cstring, error: ^Load_Diag_Error, error_string: ^String) -> Diagnostic_Set ---
-	@(link_name = "clang_disposeDiagnosticSet")
-	dispose_diagnostic_set :: proc(diags: Diagnostic_Set) ---
-	@(link_name = "clang_getChildDiagnostics")
-	get_child_diagnostics :: proc(d: Diagnostic) -> Diagnostic_Set ---
-	@(link_name = "clang_disposeDiagnostic")
-	dispose_diagnostic :: proc(diagnostic: Diagnostic) ---
-	@(link_name = "clang_formatDiagnostic")
-	format_diagnostic :: proc(diagnostic: Diagnostic, options: u32) -> String ---
-	@(link_name = "clang_defaultDiagnosticDisplayOptions")
-	default_diagnostic_display_options :: proc() -> u32 ---
-	@(link_name = "clang_getDiagnosticSeverity")
-	get_diagnostic_severity :: proc(_: Diagnostic) -> Diagnostic_Severity ---
-	@(link_name = "clang_getDiagnosticLocation")
-	get_diagnostic_location :: proc(_: Diagnostic) -> Source_Location ---
-	@(link_name = "clang_getDiagnosticSpelling")
-	get_diagnostic_spelling :: proc(_: Diagnostic) -> String ---
-	@(link_name = "clang_getDiagnosticOption")
-	get_diagnostic_option :: proc(diag: Diagnostic, disable: ^String) -> String ---
-	@(link_name = "clang_getDiagnosticCategory")
-	get_diagnostic_category :: proc(_: Diagnostic) -> u32 ---
-	@(link_name = "clang_getDiagnosticCategoryName")
-	get_diagnostic_category_name :: proc(category: u32) -> String ---
-	@(link_name = "clang_getDiagnosticCategoryText")
-	get_diagnostic_category_text :: proc(_: Diagnostic) -> String ---
-	@(link_name = "clang_getDiagnosticNumRanges")
-	get_diagnostic_num_ranges :: proc(_: Diagnostic) -> u32 ---
-	@(link_name = "clang_getDiagnosticRange")
-	get_diagnostic_range :: proc(diagnostic: Diagnostic, range: u32) -> Source_Range ---
-	@(link_name = "clang_getDiagnosticNumFixIts")
-	get_diagnostic_num_fix_its :: proc(diagnostic: Diagnostic) -> u32 ---
-	@(link_name = "clang_getDiagnosticFixIt")
-	get_diagnostic_fix_it :: proc(diagnostic: Diagnostic, fix_it: u32, replacement_range: ^Source_Range) -> String ---
 	@(link_name = "clang_createIndex")
 	create_index :: proc(exclude_declarations_from_pch: i32, display_diagnostics: i32) -> Index ---
 	@(link_name = "clang_disposeIndex")
@@ -2122,126 +1882,4 @@ foreign lib {
 	remap_get_filenames :: proc(_: Remapping, _: u32, _: ^String, _: ^String) ---
 	@(link_name = "clang_remap_dispose")
 	remap_dispose :: proc(_: Remapping) ---
-	@(link_name = "clang_Cursor_getParsedComment")
-	cursor_get_parsed_comment :: proc(c: Cursor) -> Comment ---
-	@(link_name = "clang_Comment_getKind")
-	comment_get_kind :: proc(comment: Comment) -> Comment_Kind ---
-	@(link_name = "clang_Comment_getNumChildren")
-	comment_get_num_children :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_Comment_getChild")
-	comment_get_child :: proc(comment: Comment, child_idx: u32) -> Comment ---
-	@(link_name = "clang_Comment_isWhitespace")
-	comment_is_whitespace :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_InlineContentComment_hasTrailingNewline")
-	inline_content_comment_has_trailing_newline :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_TextComment_getText")
-	text_comment_get_text :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_InlineCommandComment_getCommandName")
-	inline_command_comment_get_command_name :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_InlineCommandComment_getRenderKind")
-	inline_command_comment_get_render_kind :: proc(comment: Comment) -> Comment_Inline_Command_Render_Kind ---
-	@(link_name = "clang_InlineCommandComment_getNumArgs")
-	inline_command_comment_get_num_args :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_InlineCommandComment_getArgText")
-	inline_command_comment_get_arg_text :: proc(comment: Comment, arg_idx: u32) -> String ---
-	@(link_name = "clang_HTMLTagComment_getTagName")
-	html_tag_comment_get_tag_name :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_HTMLStartTagComment_isSelfClosing")
-	html_start_tag_comment_is_self_closing :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_HTMLStartTag_getNumAttrs")
-	html_start_tag_get_num_attrs :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_HTMLStartTag_getAttrName")
-	html_start_tag_get_attr_name :: proc(comment: Comment, attr_idx: u32) -> String ---
-	@(link_name = "clang_HTMLStartTag_getAttrValue")
-	html_start_tag_get_attr_value :: proc(comment: Comment, attr_idx: u32) -> String ---
-	@(link_name = "clang_BlockCommandComment_getCommandName")
-	block_command_comment_get_command_name :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_BlockCommandComment_getNumArgs")
-	block_command_comment_get_num_args :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_BlockCommandComment_getArgText")
-	block_command_comment_get_arg_text :: proc(comment: Comment, arg_idx: u32) -> String ---
-	@(link_name = "clang_BlockCommandComment_getParagraph")
-	block_command_comment_get_paragraph :: proc(comment: Comment) -> Comment ---
-	@(link_name = "clang_ParamCommandComment_getParamName")
-	param_command_comment_get_param_name :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_ParamCommandComment_isParamIndexValid")
-	param_command_comment_is_param_index_valid :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_ParamCommandComment_getParamIndex")
-	param_command_comment_get_param_index :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_ParamCommandComment_isDirectionExplicit")
-	param_command_comment_is_direction_explicit :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_ParamCommandComment_getDirection")
-	param_command_comment_get_direction :: proc(comment: Comment) -> Comment_Param_Pass_Direction ---
-	@(link_name = "clang_TParamCommandComment_getParamName")
-	t_param_command_comment_get_param_name :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_TParamCommandComment_isParamPositionValid")
-	t_param_command_comment_is_param_position_valid :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_TParamCommandComment_getDepth")
-	t_param_command_comment_get_depth :: proc(comment: Comment) -> u32 ---
-	@(link_name = "clang_TParamCommandComment_getIndex")
-	t_param_command_comment_get_index :: proc(comment: Comment, depth: u32) -> u32 ---
-	@(link_name = "clang_VerbatimBlockLineComment_getText")
-	verbatim_block_line_comment_get_text :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_VerbatimLineComment_getText")
-	verbatim_line_comment_get_text :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_HTMLTagComment_getAsString")
-	html_tag_comment_get_as_string :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_FullComment_getAsHTML")
-	full_comment_get_as_html :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_FullComment_getAsXML")
-	full_comment_get_as_xml :: proc(comment: Comment) -> String ---
-	@(link_name = "clang_createAPISet")
-	create_api_set :: proc(tu: Translation_Unit, out_api: ^Api_Set) -> Error_Code ---
-	@(link_name = "clang_disposeAPISet")
-	dispose_api_set :: proc(api: Api_Set) ---
-	@(link_name = "clang_getSymbolGraphForUSR")
-	get_symbol_graph_for_usr :: proc(usr: cstring, api: Api_Set) -> String ---
-	@(link_name = "clang_getSymbolGraphForCursor")
-	get_symbol_graph_for_cursor :: proc(cursor: Cursor) -> String ---
-	@(link_name = "clang_CXRewriter_create")
-	cx_rewriter_create :: proc(tu: Translation_Unit) -> Rewriter ---
-	@(link_name = "clang_CXRewriter_insertTextBefore")
-	cx_rewriter_insert_text_before :: proc(rew: Rewriter, loc: Source_Location, insert: cstring) ---
-	@(link_name = "clang_CXRewriter_replaceText")
-	cx_rewriter_replace_text :: proc(rew: Rewriter, to_be_replaced: Source_Range, replacement: cstring) ---
-	@(link_name = "clang_CXRewriter_removeText")
-	cx_rewriter_remove_text :: proc(rew: Rewriter, to_be_removed: Source_Range) ---
-	@(link_name = "clang_CXRewriter_overwriteChangedFiles")
-	cx_rewriter_overwrite_changed_files :: proc(rew: Rewriter) -> i32 ---
-	@(link_name = "clang_CXRewriter_writeMainFileToStdOut")
-	cx_rewriter_write_main_file_to_std_out :: proc(rew: Rewriter) ---
-	@(link_name = "clang_CXRewriter_dispose")
-	cx_rewriter_dispose :: proc(rew: Rewriter) ---
-	@(link_name = "clang_CompilationDatabase_fromDirectory")
-	compilation_database_from_directory :: proc(build_dir: cstring, error_code: ^Compilation_Database_Error) -> Compilation_Database ---
-	@(link_name = "clang_CompilationDatabase_dispose")
-	compilation_database_dispose :: proc(_: Compilation_Database) ---
-	@(link_name = "clang_CompilationDatabase_getCompileCommands")
-	compilation_database_get_compile_commands :: proc(_: Compilation_Database, complete_file_name: cstring) -> Compile_Commands ---
-	@(link_name = "clang_CompilationDatabase_getAllCompileCommands")
-	compilation_database_get_all_compile_commands :: proc(_: Compilation_Database) -> Compile_Commands ---
-	@(link_name = "clang_CompileCommands_dispose")
-	compile_commands_dispose :: proc(_: Compile_Commands) ---
-	@(link_name = "clang_CompileCommands_getSize")
-	compile_commands_get_size :: proc(_: Compile_Commands) -> u32 ---
-	@(link_name = "clang_CompileCommands_getCommand")
-	compile_commands_get_command :: proc(_: Compile_Commands, i: u32) -> Compile_Command ---
-	@(link_name = "clang_CompileCommand_getDirectory")
-	compile_command_get_directory :: proc(_: Compile_Command) -> String ---
-	@(link_name = "clang_CompileCommand_getFilename")
-	compile_command_get_filename :: proc(_: Compile_Command) -> String ---
-	@(link_name = "clang_CompileCommand_getNumArgs")
-	compile_command_get_num_args :: proc(_: Compile_Command) -> u32 ---
-	@(link_name = "clang_CompileCommand_getArg")
-	compile_command_get_arg :: proc(_: Compile_Command, i: u32) -> String ---
-	@(link_name = "clang_CompileCommand_getNumMappedSources")
-	compile_command_get_num_mapped_sources :: proc(_: Compile_Command) -> u32 ---
-	@(link_name = "clang_CompileCommand_getMappedSourcePath")
-	compile_command_get_mapped_source_path :: proc(_: Compile_Command, i: u32) -> String ---
-	@(link_name = "clang_CompileCommand_getMappedSourceContent")
-	compile_command_get_mapped_source_content :: proc(_: Compile_Command, i: u32) -> String ---
-	@(link_name = "clang_install_aborting_llvm_fatal_error_handler")
-	install_aborting_llvm_fatal_error_handler :: proc() ---
-	@(link_name = "clang_uninstall_llvm_fatal_error_handler")
-	uninstall_llvm_fatal_error_handler :: proc() ---
 }

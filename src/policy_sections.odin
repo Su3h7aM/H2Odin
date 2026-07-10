@@ -851,7 +851,30 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "output", []cstring{"procedures_at_end", "imports_file", "footer_per_header"}) {
+	if !policy_reject_unknown_subkeys(L, "output", []cstring{"layout", "procedures_at_end", "imports_file", "footer_per_header"}) {
+		return false
+	}
+
+	// layout defaults to "merged" when absent.
+	layout_type := lua.getfield(L, -1, "layout")
+	#partial switch lua.Type(layout_type) {
+	case .NIL:
+		lua.pop(L, 1)
+	case .STRING:
+		layout_str := string(lua.tostring(L, -1))
+		lua.pop(L, 1)
+		switch layout_str {
+		case "merged":
+			policy.output_layout = .Merged
+		case "per_header":
+			policy.output_layout = .Per_Header
+		case:
+			fmt.eprintfln("h2odin: config: output.layout must be \"merged\" or \"per_header\", got %q", layout_str)
+			return false
+		}
+	case:
+		fmt.eprintln("h2odin: config: output.layout must be a string")
+		lua.pop(L, 1)
 		return false
 	}
 

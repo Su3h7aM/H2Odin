@@ -22,6 +22,10 @@ Type_Handle :: distinct u32
 // and so on).
 Decl_Handle :: distinct u32
 
+// Handle into IR.input_headers. Slot 0 is empty (no home); real input headers
+// are 1-based. Extraction records provenance; Transformation places decls.
+Input_Header_Handle :: distinct u32
+
 // The C builtin types the IR knows.
 Builtin_Kind :: enum {
 	Void,
@@ -234,6 +238,8 @@ Func_Decl :: struct {
 	params:               []Param,
 	is_variadic:          bool,
 	doc:                  string,
+	// Configured input header that owns this declaration for output placement.
+	home:                 Input_Header_Handle,
 }
 
 Field :: struct {
@@ -274,6 +280,8 @@ Record_Decl :: struct {
 	has_unrepresentable_fields: bool,
 	is_typedef_named:           bool, // anonymous tag that a typedef gives a name to
 	doc:                        string,
+	// Definition site wins over an earlier placeholder's home (see fill_record).
+	home:                       Input_Header_Handle,
 }
 
 Enum_Member :: struct {
@@ -288,6 +296,8 @@ Enum_Decl :: struct {
 	members:          []Enum_Member,
 	is_typedef_named: bool,
 	doc:              string,
+	// Definition site wins over an earlier placeholder's home (see fill_enum).
+	home:             Input_Header_Handle,
 }
 
 Typedef_Decl :: struct {
@@ -299,6 +309,7 @@ Typedef_Decl :: struct {
 	// the failure into the generated code.
 	is_unresolvable: bool,
 	doc:             string,
+	home:            Input_Header_Handle,
 }
 
 Var_Decl :: struct {
@@ -306,6 +317,7 @@ Var_Decl :: struct {
 	link_name: string, // as in Func_Decl
 	type:      Type_Handle,
 	doc:       string,
+	home:      Input_Header_Handle,
 }
 
 Macro_Token_Kind :: enum {
@@ -328,6 +340,7 @@ Macro_Decl :: struct {
 	tokens:           []Macro_Token, // raw replacement-list tokens after the name
 	is_function_like: bool,
 	doc:              string,
+	home:             Input_Header_Handle,
 }
 
 // A named `Name :: bit_set[Enum]` produced by enums.bit_sets. Stored as its
@@ -336,41 +349,115 @@ Bit_Set_Decl :: struct {
 	name: string,
 	elem: Type_Handle, // Type_Enum_Ref
 	doc:  string,
+	// Inherits the backing enum's home (set in Transformation).
+	home: Input_Header_Handle,
 }
 
 IR :: struct {
-	types:       [dynamic]Type_Info,
-	funcs:       [dynamic]Func_Decl,
-	records:     [dynamic]Record_Decl,
-	enums:       [dynamic]Enum_Decl,
-	typedefs:    [dynamic]Typedef_Decl,
-	vars:        [dynamic]Var_Decl,
-	macros:      [dynamic]Macro_Decl,
-	bit_sets:    [dynamic]Bit_Set_Decl,
-	order:       [dynamic]Decl_Ref,
+	types:         [dynamic]Type_Info,
+	funcs:         [dynamic]Func_Decl,
+	records:       [dynamic]Record_Decl,
+	enums:         [dynamic]Enum_Decl,
+	typedefs:      [dynamic]Typedef_Decl,
+	vars:          [dynamic]Var_Decl,
+	macros:        [dynamic]Macro_Decl,
+	bit_sets:      [dynamic]Bit_Set_Decl,
+	order:         [dynamic]Decl_Ref,
+
+	// Configured input headers in config.inputs order. Slot 0 is empty so a
+	// zero Input_Header_Handle means "no home". Paths are as passed to
+	// extract (resolved absolute or relative); matching uses normalize_source_path.
+	input_headers: [dynamic]string,
 
 	// Non-certain decisions and honesty notes collected during the run.
 	// Messages are arena-owned; main prints them as a single report after
 	// the pipeline so stdout stays pure generated code. Each entry carries
 	// a named category; severity is resolved at report time from policy
 	// (and any local constructor override stored on the entry).
-	diagnostics: [dynamic]Diagnostic,
+	diagnostics:   [dynamic]Diagnostic,
 
 	// Interning table for the pre-seeded, unqualified builtin types.
-	builtins:    [Builtin_Kind]Type_Handle,
+	builtins:      [Builtin_Kind]Type_Handle,
 }
 
 // -------------------------------------------------------------- Helpers
 
 // Pre-seed the type pool: slot 0 is the invalid type, then one entry per
-// builtin so extraction can intern them by lookup.
+// builtin so extraction can intern them by lookup. Slot 0 of input_headers is
+// empty so a zero home handle means "no home".
 ir_init :: proc(ir: ^IR) {
 	append(&ir.types, Type_Info{}) // slot 0: invalid
+	append(&ir.input_headers, "") // slot 0: no home
 	for kind in Builtin_Kind {
 		// Sizes start unknown (-1); extraction fills each shared entry the
 		// first time it measures that kind. One entry per kind stays sound
 		// because a builtin's size cannot vary within a single target.
 		ir.builtins[kind] = ir_add_type(ir, Type_Info{variant = Type_Builtin{kind = kind, size = -1}})
+	}
+}
+
+// Register config.inputs paths on the IR and return a normalized-path → handle
+// map for Extraction's location checks. Paths are stored as given (for stems).
+ir_register_input_headers :: proc(ir: ^IR, header_paths: []string) -> map[string]Input_Header_Handle {
+	files := make(map[string]Input_Header_Handle)
+	for path in header_paths {
+		handle := Input_Header_Handle(len(ir.input_headers))
+		append(&ir.input_headers, path)
+		if key := normalize_source_path(path); key != "" {
+			files[key] = handle
+		}
+	}
+	return files
+}
+
+ir_input_header_path :: proc(ir: ^IR, home: Input_Header_Handle) -> string {
+	i := int(home)
+	if i <= 0 || i >= len(ir.input_headers) {
+		return ""
+	}
+	return ir.input_headers[i]
+}
+
+// Home header of a live declaration; 0 when unset (internal error in per_header).
+ir_decl_home :: proc(ir: ^IR, ref: Decl_Ref) -> Input_Header_Handle {
+	switch ref.kind {
+	case .Invalid:
+		return 0
+	case .Func:
+		return ir.funcs[ref.index].home
+	case .Record:
+		return ir.records[ref.index].home
+	case .Enum:
+		return ir.enums[ref.index].home
+	case .Typedef:
+		return ir.typedefs[ref.index].home
+	case .Var:
+		return ir.vars[ref.index].home
+	case .Macro:
+		return ir.macros[ref.index].home
+	case .Bit_Set:
+		return ir.bit_sets[ref.index].home
+	}
+	return 0
+}
+
+ir_set_decl_home :: proc(ir: ^IR, ref: Decl_Ref, home: Input_Header_Handle) {
+	switch ref.kind {
+	case .Invalid:
+	case .Func:
+		ir.funcs[ref.index].home = home
+	case .Record:
+		ir.records[ref.index].home = home
+	case .Enum:
+		ir.enums[ref.index].home = home
+	case .Typedef:
+		ir.typedefs[ref.index].home = home
+	case .Var:
+		ir.vars[ref.index].home = home
+	case .Macro:
+		ir.macros[ref.index].home = home
+	case .Bit_Set:
+		ir.bit_sets[ref.index].home = home
 	}
 }
 

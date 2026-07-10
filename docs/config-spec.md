@@ -445,12 +445,15 @@ Until then, `config.procs` adjusts signatures and nothing more.
 config.foreign.import_lib  = "sqlite3.lib"
 config.foreign.link_prefix = "sqlite3_"
 
+config.output.layout            = "merged" -- or "per_header"
 config.output.procedures_at_end = true
-config.output.imports_file      = "imports.odin"
+config.output.imports_file      = "imports.odin" -- merged only
 config.output.footer_per_header = true
 ```
 
 **Why `link_prefix` is under `foreign`, not `naming`.** `link_prefix` is the *external C symbol* name — what the linker resolves — not the Odin-facing procedure name. Putting it under `foreign` keeps the "Odin name vs. C symbol" distinction clear; it is the counterpart to renaming, not a form of it.
+
+`output.layout = "per_header"` emits one Odin file per `config.inputs` header into `output_folder` (required). Placement follows each declaration's home input header; synthesized macro-group enums and bit sets inherit documented placement rules. Each file carries its own prelude because Odin `import` / `foreign import` names are file-local. `imports_file` is rejected with `per_header`. Full rules: [spec 0003](specs/0003-multi-file-odin-emission.md).
 
 `footer_per_header` supports the hand-written-layer philosophy: a `raylib.h` binding can have a `raylib_footer.odin` appended, giving users a clean place for their own Odin on top of the raw output — the sanctioned alternative to generator-authored wrappers.
 

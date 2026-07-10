@@ -43,6 +43,7 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 			tokens = replacement,
 			is_function_like = clang.Cursor_isMacroFunctionLike(cursor) != 0,
 			doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+			home = cursor_home(state, cursor),
 		},
 	)
 	remember_captured(state, cursor, .Macro, u32(len(state.ir.macros) - 1))
@@ -88,7 +89,10 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		ir_diag(state.ir, .Incomplete_Extern_Array, "extern array %q has unknown size; emitted as [0]T", name)
 	}
 
-	ir_add_var(state.ir, Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))})
+	ir_add_var(
+		state.ir,
+		Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)), home = cursor_home(state, cursor)},
+	)
 	remember_captured(state, cursor, .Var, u32(len(state.ir.vars) - 1))
 }
 
@@ -105,6 +109,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 	decl := Typedef_Decl {
 		name = clone_clang_string(clang.getCursorSpelling(cursor)),
 		doc  = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+		home = cursor_home(state, cursor),
 	}
 	handle := ir_add_typedef(state.ir, decl)
 	if usr != "" {
@@ -148,6 +153,10 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 			state.ir.enums[int(handle)].doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
 		}
 		if clang.isCursorDefinition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
+			// Definition becomes home when it lands in a configured input.
+			if home := cursor_home(state, cursor); home != 0 {
+				state.ir.enums[int(handle)].home = home
+			}
 			fill_enum(state, handle, cursor)
 		}
 		return handle
@@ -158,6 +167,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 		decl.name = clone_clang_string(clang.getCursorSpelling(cursor))
 	}
 	decl.doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
+	decl.home = cursor_home(state, cursor)
 	// The backing integer type is known for any enum cursor — clang answers
 	// with the target's ABI choice — so capture it even for a declaration
 	// that never gets a definition in this header.
@@ -218,6 +228,10 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 			state.ir.records[int(handle)].doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
 		}
 		if clang.isCursorDefinition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
+			// Definition becomes home when it lands in a configured input.
+			if home := cursor_home(state, cursor); home != 0 {
+				state.ir.records[int(handle)].home = home
+			}
 			fill_record(state, handle, cursor)
 		}
 		return handle
@@ -225,6 +239,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 
 	record := Record_Decl {
 		is_union = clang.getCursorKind(cursor) == .UnionDecl,
+		home     = cursor_home(state, cursor),
 	}
 	// Anonymous records keep "" as their name: recent libclang spells them
 	// as "struct (unnamed at file:line)", which is a description, not a name.
@@ -421,6 +436,7 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		params      = params,
 		is_variadic = clang.Cursor_isVariadic(cursor) != 0,
 		doc         = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+		home        = cursor_home(state, cursor),
 	}
 	ir_add_func(state.ir, func)
 	remember_captured(state, cursor, .Func, u32(len(state.ir.funcs) - 1))

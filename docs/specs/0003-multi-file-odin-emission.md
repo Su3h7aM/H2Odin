@@ -1,6 +1,6 @@
 # Spec 0003 — Multi-file Odin emission by input header
 
-**Status:** proposed (planned — Milestone 14, not yet implemented)
+**Status:** accepted (implemented — Milestone 14)
 **Date:** 2026-07-10
 
 ## Context

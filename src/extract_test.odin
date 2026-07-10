@@ -115,6 +115,52 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	a := "tests/fixtures/m13_sibling_a.h"
+	b := "tests/fixtures/m13_sibling_b.h"
+	ok := extract({a, b}, &ir)
+	testing.expect(t, ok)
+	if !ok {
+		return
+	}
+
+	// Two real input headers after the empty sentinel slot.
+	testing.expect_value(t, len(ir.input_headers), 3)
+	home_a := Input_Header_Handle(1)
+	home_b := Input_Header_Handle(2)
+
+	for func in ir.funcs {
+		if func.name == "m13_use_sibling" {
+			testing.expect_value(t, func.home, home_a)
+		}
+		if func.name == "m13_make_sibling" {
+			testing.expect_value(t, func.home, home_b)
+		}
+	}
+	for td in ir.typedefs {
+		if td.name == "Sibling_Id" {
+			testing.expect_value(t, td.home, home_b)
+		}
+	}
+	for m in ir.macros {
+		if m.name == "M13_SIBLING_FLAG" {
+			testing.expect_value(t, m.home, home_b)
+		}
+	}
+}
+
+@(test)
 test_extract_peels_typedef_from_non_input_include :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

@@ -210,20 +210,20 @@ mirrors each configured input header as one Odin file in the same package.
 Decisions and edge cases are recorded in
 [`docs/specs/0003-multi-file-odin-emission.md`](docs/specs/0003-multi-file-odin-emission.md).
 
-- [ ] Extraction records each declaration's home input header as an IR fact;
+- [x] Extraction records each declaration's home input header as an IR fact;
       record/enum definitions replace placeholder ownership without leaking a
       libclang handle past Extraction.
-- [ ] `config.output.layout = "merged" | "per_header"` (default `merged`);
+- [x] `config.output.layout = "merged" | "per_header"` (default `merged`);
       per-header layout requires `output_folder` and rejects
       `output.imports_file`.
-- [ ] Transformation produces an explicit output plan, inherits placement for
+- [x] Transformation produces an explicit output plan, inherits placement for
       synthesized macro enums / bit sets, preserves per-header relative order,
       and fails before writes on duplicate stems or missing placement.
-- [ ] Emission serializes named output units with their own file-local Odin
+- [x] Emission serializes named output units with their own file-local Odin
       prelude; merged output remains byte-identical.
-- [ ] `footer_per_header` appends the matching footer to each per-header unit;
+- [x] `footer_per_header` appends the matching footer to each per-header unit;
       e2e fixtures `odin check` the whole generated directory.
-- [ ] The libclang self-host config opts into `per_header`; regenerate and check
+- [x] The libclang self-host config opts into `per_header`; regenerate and check
       `Index.odin`, `CXString.odin`, and the rest of the pinned input family.
 
 ## Code health (ongoing)
@@ -258,8 +258,8 @@ opportunistically or alongside the milestone that touches the same area.
 
 ### Start here
 
-Milestones 0–5 and 7–12 are complete. **The next goal is self-hosted libclang
-bindings (Milestone 13)**; its **bit-field emission prerequisite (Milestone 12)**
-is complete. **Multi-file Odin emission (Milestone 14)** is planned as an
-opt-in organization layer over the shared multi-header IR. **Milestone 6
-(wrappers)** remains deferred and independent.
+Milestones 0–5, 7–12, and **14 (multi-file Odin emission)** are complete.
+**The next goal is self-hosted libclang bindings (Milestone 13)**; its
+bit-field emission prerequisite (Milestone 12) is complete, and the libclang
+config already uses `output.layout = "per_header"`. **Milestone 6 (wrappers)**
+remains deferred and independent.

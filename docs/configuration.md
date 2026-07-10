@@ -76,9 +76,10 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `procs.param` | `function(param) → nil\|{type?,default?}` | same, as a callback |
 | `procs.results` | `"Proc"` → `{ type? }` | return type spelling |
 | `procs.result` | `function(result) → nil\|{type?}` | same, as a callback |
+| `output.layout` | `"merged"` \| `"per_header"` | default `merged`: one Odin file; `per_header`: one file per `config.inputs` header (requires `output_folder`) |
 | `output.procedures_at_end` | bool | default `true`: types then foreign block; `false`: source order |
-| `output.imports_file` | string | put package / `import` / `foreign import` in this file |
-| `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output |
+| `output.imports_file` | string | put package / `import` / `foreign import` in this file (merged layout only; rejected with `per_header`) |
+| `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output (each unit in `per_header`) |
 | `comments` | bool | default `true`: emit C doc comments; `false` suppresses them |
 | `diagnostics` | category → `"warn"` \| `"error"` | per-category severity; default posture is `warn` |
 
@@ -90,7 +91,7 @@ Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migratio
 
 Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dirs`, `defines`, `wrappers`.
 
-**Inputs / output.** `config.inputs` is required (list at least one header). Relative `inputs`, `preprocess.include_paths`, and `output_folder` resolve against the config file's directory. Without `output_folder`, generated code goes to stdout.
+**Inputs / output.** `config.inputs` is required (list at least one header). Relative `inputs`, `preprocess.include_paths`, and `output_folder` resolve against the config file's directory. Without `output_folder`, generated code goes to stdout. `output.layout = "per_header"` writes one `.odin` file per input under `output_folder` (same package); each file repeats the imports and `foreign import` it needs because those names are file-local. See [spec 0003](specs/0003-multi-file-odin-emission.md).
 
 **CLI.** The only generation entry point is `-config:file.lua`. Process knobs: `-quiet` / `-q` (suppress the diagnostics report), `-help` / `-h`. Type mode, package name, headers, and all other policy are config fields — not flags.
 
@@ -294,13 +295,14 @@ config.inputs = { "include/sqlite3.h" }
 config.preprocess.include_paths = { "include" }
 config.preprocess.defines = { SQLITE_ENABLE_FTS5 = "1" }
 config.output_folder = "generated"
+config.output.layout = "merged" -- or "per_header"
 config.output.procedures_at_end = true
-config.output.imports_file = "imports.odin"
+config.output.imports_file = "imports.odin" -- merged only
 config.output.footer_per_header = true
 config.comments = false
 ```
 
-`footer_per_header` looks for `{stem}_footer.odin` next to the output folder, then next to the config file, then in the process CWD, and appends it unchanged — the sanctioned place for hand-written Odin on top of raw bindings.
+`footer_per_header` looks for `{stem}_footer.odin` next to the output folder, then next to the config file, then in the process CWD, and appends it unchanged — the sanctioned place for hand-written Odin on top of raw bindings. With `per_header`, each unit uses its own input stem.
 
 `comments` (default `true`) controls doc-comment passthrough. Extraction still captures comments when they are present; `false` only skips writing them at emission.
 

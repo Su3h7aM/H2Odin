@@ -53,6 +53,7 @@ Each pass gets a file, aligned with the config section it serves:
 | `transform_macros.odin` | `apply_macro_groups`. |
 | `transform_enums.odin` | Anonymous-enum naming, member policy, `bit_set` transform. |
 | `transform_members.odin` | `structs.fields` / `structs.field` / `structs.align`, `procs.params` / `.results` adjustments. |
+| `transform_output.odin` | `plan_outputs` — partition live decls into output units by layout. |
 
 ### `extract.odin` — done
 
@@ -66,7 +67,7 @@ Each pass gets a file, aligned with the config section it serves:
 
 | File | Scope |
 |------|-------|
-| `emit.odin` | `Emit_Options`, output assembly, prelude, foreign-block plumbing. |
+| `emit.odin` | `Emit_Options`, serialize planned output units, prelude, foreign-block plumbing. |
 | `emit_decls.odin` | Per-declaration emitters (record, enum, typedef, var, func, macro, bit_set) and doc/indent helpers. |
 | `emit_types.odin` | `write_type`, `write_params`, spelling dispatch. |
 | `emit_bit_field.odin` | Bit-field run grouping and the layout proof — the one decision-adjacent computation in Emission, kept visibly separate. |

@@ -19,6 +19,8 @@ apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
 
 	for group in policy.macro_groups {
 		members := make([dynamic]Enum_Member, context.temp_allocator)
+		// Placement: first matched macro in IR pool order (final input/order).
+		first_home: Input_Header_Handle
 		for macro, mi in ir.macros {
 			if macro.is_function_like {
 				continue
@@ -56,6 +58,9 @@ apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
 				continue
 			}
 			claimed[u32(mi)] = true
+			if first_home == 0 {
+				first_home = macro.home
+			}
 
 			member_name := macro.name
 			if group.member_strip_prefix != "" {
@@ -75,7 +80,7 @@ apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
 		for m, i in members {
 			arena_members[i] = m
 		}
-		_ = ir_add_enum(ir, Enum_Decl{name = strings.clone(group.name), backing = ir_builtin_type(ir, .Int), members = arena_members})
+		_ = ir_add_enum(ir, Enum_Decl{name = strings.clone(group.name), backing = ir_builtin_type(ir, .Int), members = arena_members, home = first_home})
 	}
 
 	if len(drop_macros) == 0 {

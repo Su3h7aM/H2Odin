@@ -32,12 +32,12 @@ Extract_State :: struct {
 	// twice when both appear as config.inputs.
 	decl_map:    map[string]Decl_Ref,
 
-	// Absolute, cleaned paths of every header in config.inputs. A declaration
-	// is "ours" when its source file is in this set — not merely when it is
-	// the current TU's main file. That keeps typedef names declared in a
-	// sibling input (clang-c/CXString.h used from Index.h) instead of peeling
-	// them to the underlying type at use sites.
-	input_files: map[string]struct{},
+	// Absolute, cleaned paths of every header in config.inputs → home handle.
+	// A declaration is "ours" when its source file is in this map — not merely
+	// when it is the current TU's main file. That keeps typedef names declared
+	// in a sibling input (clang-c/CXString.h used from Index.h) instead of
+	// peeling them to the underlying type at use sites.
+	input_files: map[string]Input_Header_Handle,
 }
 
 // Preprocess knobs passed into libclang as -I / -D. Paths and define values
@@ -61,7 +61,7 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 		ctx         = context,
 		ir          = ir,
 		decl_map    = make(map[string]Decl_Ref),
-		input_files = make_input_file_set(header_paths),
+		input_files = ir_register_input_headers(ir, header_paths),
 	}
 
 	// Build the shared clang args once: comments, resource dir, -I, -D.
@@ -101,17 +101,6 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 	return true
 }
 
-// Build the set of normalized absolute paths for every input header.
-make_input_file_set :: proc(header_paths: []string) -> map[string]struct{} {
-	files := make(map[string]struct{})
-	for path in header_paths {
-		if key := normalize_source_path(path); key != "" {
-			files[key] = {}
-		}
-	}
-	return files
-}
-
 // Absolute + cleaned form used as the input-set key. Falls back to a cleaned
 // relative path when abs is unavailable so matching still works in tests that
 // open headers by a stable relative spelling.
@@ -133,12 +122,25 @@ normalize_source_path :: proc(path: string, allocator := context.allocator) -> s
 
 // True when the source location sits in a file listed in config.inputs.
 location_is_ours :: proc(state: ^Extract_State, location: clang.Source_Location) -> bool {
+	return location_home(state, location) != 0
+}
+
+// Input-header handle for a source location, or 0 when not a configured input.
+location_home :: proc(state: ^Extract_State, location: clang.Source_Location) -> Input_Header_Handle {
 	path := location_source_path(location, context.temp_allocator)
 	if path == "" {
-		return false
+		return 0
 	}
-	_, found := state.input_files[path]
-	return found
+	home, found := state.input_files[path]
+	if !found {
+		return 0
+	}
+	return home
+}
+
+// Home for a cursor's primary source location.
+cursor_home :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Input_Header_Handle {
+	return location_home(state, clang.getCursorLocation(cursor))
 }
 
 // Path clang reports for a source location, normalized like input_files keys.

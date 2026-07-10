@@ -102,7 +102,7 @@ return config
 | `naming.override` | rename callback |
 | `types.map` / `types.overrides` | type spellings (refs only vs also drop the decl) |
 | `structs.*` / `procs.*` | field tags/align; param/result spellings and defaults |
-| `output.*` / `output_folder` | layout, imports file, footers |
+| `output.*` / `output_folder` | `layout` (`merged`/`per_header`), imports file, footers |
 | `symbols.remove.where` | **true drops** a top-level declaration |
 
 Unknown keys and not-yet-supported sections (`diagnostics`) fail the run with a clear error. Pre-M8 flat keys (`keep`, `rename`, `type_map`, …) are rejected with migration messages.

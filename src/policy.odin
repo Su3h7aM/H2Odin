@@ -104,6 +104,12 @@ Member_Action :: struct {
 	default: string, // procs only
 }
 
+// config.output.layout — closed enum; unknown strings fail config loading.
+Output_Layout :: enum {
+	Merged, // one Odin file (default; preserves pre-M14 behavior)
+	Per_Header, // one Odin file per config.inputs header
+}
+
 Policy :: struct {
 	// Private to the policy_* procedures. nil when no config was given.
 	state:               ^lua.State,
@@ -126,6 +132,7 @@ Policy :: struct {
 
 	// Output layout.
 	output_folder:       string,
+	output_layout:       Output_Layout, // config.output.layout; default .Merged
 	procedures_at_end:   bool, // default true when output section absent
 	imports_file:        string,
 	footer_per_header:   bool,

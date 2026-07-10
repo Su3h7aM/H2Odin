@@ -91,7 +91,8 @@ apply_enum_bit_sets :: proc(ir: ^IR, policy: ^Policy) {
 		// Type handle for the enum (reuse an existing Type_Enum_Ref if any,
 		// otherwise add one).
 		enum_type := ir_add_type(ir, Type_Info{variant = Type_Enum_Ref{decl = Decl_Handle(enum_index)}})
-		ir_add_bit_set(ir, Bit_Set_Decl{name = strings.clone(rule.name), elem = enum_type})
+		// Place the bit_set with its backing enum.
+		ir_add_bit_set(ir, Bit_Set_Decl{name = strings.clone(rule.name), elem = enum_type, home = decl.home})
 	}
 }
 

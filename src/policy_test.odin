@@ -169,6 +169,7 @@ config.procs.results = { foo = { type = "c.int" } }
 config.output.procedures_at_end = false
 config.output.imports_file = "imports.odin"
 config.output.footer_per_header = true
+config.output.layout = "merged"
 config.comments = false
 return config
 `,
@@ -195,7 +196,54 @@ return config
 	testing.expect(t, !policy.procedures_at_end)
 	testing.expect_value(t, policy.imports_file, "imports.odin")
 	testing.expect(t, policy.footer_per_header)
+	testing.expect_value(t, policy.output_layout, Output_Layout.Merged)
 	testing.expect(t, !policy.emit_comments)
+}
+
+@(test)
+test_policy_load_output_layout_per_header :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"layout-per-header",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.output.layout = "per_header"
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.output_layout, Output_Layout.Per_Header)
+}
+
+@(test)
+test_policy_load_rejects_unknown_output_layout :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"layout-bad",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.output.layout = "by_category"
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, !ok)
 }
 
 @(test)
