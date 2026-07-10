@@ -8,13 +8,13 @@ Source_Location :: struct {
 }
 
 Source_Range :: struct {
-	ptr_data: [2]rawptr,
+	ptr_data:       [2]rawptr,
 	begin_int_data: u32,
-	end_int_data: u32,
+	end_int_data:   u32,
 }
 
 Source_Range_List :: struct {
-	count: u32,
+	count:  u32,
 	ranges: ^Source_Range,
 }
 

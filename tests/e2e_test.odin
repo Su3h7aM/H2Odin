@@ -290,11 +290,14 @@ test_m9_macro_groups_synthesize_enum :: proc(t: ^testing.T) {
 		return
 	}
 
-	// Grouped integer macros become an explicit-valued enum; originals dropped.
+	// Grouped integer macros become an enum; contiguous 0..n omit `= N`,
+	// non-default values stay explicit. Originals dropped.
 	expect_contains(t, stdout, "Result_Code :: enum")
-	expect_contains(t, stdout, "OK = 0")
-	expect_contains(t, stdout, "ERR = 1")
+	expect_contains(t, stdout, "OK")
+	expect_contains(t, stdout, "ERR")
 	expect_contains(t, stdout, "ROW = 100")
+	expect_not_contains(t, stdout, "OK = 0")
+	expect_not_contains(t, stdout, "ERR = 1")
 	expect_not_contains(t, stdout, "LIB_OK ::")
 	// Excluded prefix stays as standalone consts; non-integers are not enum members.
 	expect_contains(t, stdout, "LIB_OPEN_RO ::")
@@ -312,12 +315,17 @@ test_m9_enum_policies_anonymous_member_bit_set :: proc(t: ^testing.T) {
 	}
 
 	expect_contains(t, stdout, "Keyboard_Key :: enum")
-	expect_contains(t, stdout, "NULL = 0")
-	// FLAG_COUNT removed by enums.member; remaining flags log2'd.
+	expect_contains(t, stdout, "NULL")
+	// Sequential 0..n: no explicit values.
+	expect_not_contains(t, stdout, "NULL = 0")
+	// FLAG_COUNT removed by enums.member; remaining flags log2'd to 0,1,2.
 	expect_contains(t, stdout, "Config_Flag :: enum")
-	expect_contains(t, stdout, "VSYNC = 0")
-	expect_contains(t, stdout, "FULLSCREEN = 1")
-	expect_contains(t, stdout, "MSAA = 2")
+	expect_contains(t, stdout, "VSYNC")
+	expect_contains(t, stdout, "FULLSCREEN")
+	expect_contains(t, stdout, "MSAA")
+	expect_not_contains(t, stdout, "VSYNC = 0")
+	expect_not_contains(t, stdout, "FULLSCREEN = 1")
+	expect_not_contains(t, stdout, "MSAA = 2")
 	expect_not_contains(t, stdout, "COUNT")
 	expect_contains(t, stdout, "Config_Flags :: bit_set[Config_Flag; u32]")
 }

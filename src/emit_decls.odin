@@ -131,12 +131,21 @@ write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: i
 	strings.write_string(b, "enum ")
 	write_type(b, ir, decl.backing, indent, emit_comments, uses_core_c)
 	strings.write_string(b, " {\n")
+	// Odin defaults the first member to 0 and each following to previous+1.
+	// Emit `= N` only when the C value differs from that sequence so dense
+	// sequential enums stay clean while gaps, non-zero starts, and mid-list
+	// removals keep their explicit values (ABI-safe).
+	expected: i64 = 0
 	for member in decl.members {
 		write_doc(b, member.doc, indent + 1, emit_comments)
 		write_indent(b, indent + 1)
-		fmt.sbprintf(b, "%s = ", member.name)
-		write_enum_value(b, ir, decl.backing, member.value)
+		strings.write_string(b, member.name)
+		if member.value != expected {
+			strings.write_string(b, " = ")
+			write_enum_value(b, ir, decl.backing, member.value)
+		}
 		strings.write_string(b, ",\n")
+		expected = member.value + 1
 	}
 	write_indent(b, indent)
 	strings.write_string(b, "}")

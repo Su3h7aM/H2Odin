@@ -3,13 +3,13 @@ package clang
 foreign import lib "system:clang"
 
 String :: struct {
-	data: rawptr,
+	data:          rawptr,
 	private_flags: u32,
 }
 
 String_Set :: struct {
 	strings: ^String,
-	count: u32,
+	count:   u32,
 }
 
 foreign lib {

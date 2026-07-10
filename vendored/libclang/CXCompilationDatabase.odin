@@ -9,8 +9,8 @@ Compile_Commands :: rawptr
 Compile_Command :: rawptr
 
 Compilation_Database_Error :: enum u32 {
-	Cx_Compilation_Database_No_Error = 0,
-	Cx_Compilation_Database_Can_Not_Load_Database = 1,
+	Cx_Compilation_Database_No_Error,
+	Cx_Compilation_Database_Can_Not_Load_Database,
 }
 
 foreign lib {

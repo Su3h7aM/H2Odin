@@ -69,6 +69,8 @@ format:
 	@if find $(TEST_DIR) -maxdepth 1 -name "*.odin" 2>/dev/null | grep -q .; then \
 		$(ODINFMT) $(TEST_DIR)/*.odin -config:odinfmt.json -w; \
 	fi
+	$(ODINFMT) vendored/libclang -config:odinfmt.json -w
+	$(ODINFMT) examples -config:odinfmt.json -w
 
 clean:
 	rm -rf $(BUILD_DIR)

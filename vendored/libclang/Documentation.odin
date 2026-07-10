@@ -3,38 +3,38 @@ package clang
 foreign import lib "system:clang"
 
 Comment :: struct {
-	ast_node: rawptr,
+	ast_node:         rawptr,
 	translation_unit: Translation_Unit,
 }
 
 Comment_Kind :: enum u32 {
-	Cx_Comment_Null = 0,
-	Cx_Comment_Text = 1,
-	Cx_Comment_Inline_Command = 2,
-	Cx_Comment_Html_Start_Tag = 3,
-	Cx_Comment_Html_End_Tag = 4,
-	Cx_Comment_Paragraph = 5,
-	Cx_Comment_Block_Command = 6,
-	Cx_Comment_Param_Command = 7,
-	Cx_Comment_T_Param_Command = 8,
-	Cx_Comment_Verbatim_Block_Command = 9,
-	Cx_Comment_Verbatim_Block_Line = 10,
-	Cx_Comment_Verbatim_Line = 11,
-	Cx_Comment_Full_Comment = 12,
+	Cx_Comment_Null,
+	Cx_Comment_Text,
+	Cx_Comment_Inline_Command,
+	Cx_Comment_Html_Start_Tag,
+	Cx_Comment_Html_End_Tag,
+	Cx_Comment_Paragraph,
+	Cx_Comment_Block_Command,
+	Cx_Comment_Param_Command,
+	Cx_Comment_T_Param_Command,
+	Cx_Comment_Verbatim_Block_Command,
+	Cx_Comment_Verbatim_Block_Line,
+	Cx_Comment_Verbatim_Line,
+	Cx_Comment_Full_Comment,
 }
 
 Comment_Inline_Command_Render_Kind :: enum u32 {
-	Cx_Comment_Inline_Command_Render_Kind_Normal = 0,
-	Cx_Comment_Inline_Command_Render_Kind_Bold = 1,
-	Cx_Comment_Inline_Command_Render_Kind_Monospaced = 2,
-	Cx_Comment_Inline_Command_Render_Kind_Emphasized = 3,
-	Cx_Comment_Inline_Command_Render_Kind_Anchor = 4,
+	Cx_Comment_Inline_Command_Render_Kind_Normal,
+	Cx_Comment_Inline_Command_Render_Kind_Bold,
+	Cx_Comment_Inline_Command_Render_Kind_Monospaced,
+	Cx_Comment_Inline_Command_Render_Kind_Emphasized,
+	Cx_Comment_Inline_Command_Render_Kind_Anchor,
 }
 
 Comment_Param_Pass_Direction :: enum u32 {
-	Cx_Comment_Param_Pass_Direction_In = 0,
-	Cx_Comment_Param_Pass_Direction_Out = 1,
-	Cx_Comment_Param_Pass_Direction_In_Out = 2,
+	Cx_Comment_Param_Pass_Direction_In,
+	Cx_Comment_Param_Pass_Direction_Out,
+	Cx_Comment_Param_Pass_Direction_In_Out,
 }
 
 Api_Set :: distinct rawptr

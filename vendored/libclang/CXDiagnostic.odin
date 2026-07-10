@@ -3,11 +3,11 @@ package clang
 foreign import lib "system:clang"
 
 Diagnostic_Severity :: enum u32 {
-	Ignored = 0,
-	Note = 1,
-	Warning = 2,
-	Error = 3,
-	Fatal = 4,
+	Ignored,
+	Note,
+	Warning,
+	Error,
+	Fatal,
 }
 
 Diagnostic :: rawptr
@@ -15,15 +15,15 @@ Diagnostic :: rawptr
 Diagnostic_Set :: rawptr
 
 Load_Diag_Error :: enum u32 {
-	None = 0,
-	Unknown = 1,
-	Cannot_Load = 2,
-	Invalid_File = 3,
+	None,
+	Unknown,
+	Cannot_Load,
+	Invalid_File,
 }
 
 Diagnostic_Display_Options :: enum u32 {
 	Display_Source_Location = 1,
-	Display_Column = 2,
+	Display_Column,
 	Display_Source_Ranges = 4,
 	Display_Option = 8,
 	Display_Category_Id = 16,
