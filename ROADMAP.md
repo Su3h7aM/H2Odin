@@ -212,8 +212,8 @@ opportunistically or alongside the milestone that touches the same area.
 - [x] **CLI is config-only**: drop `-mode:` and positional headers; require
       `-config:` with `config.inputs`. Keep process knobs (`-help`, `-quiet`).
 - [ ] **Split oversized source files** into files with one well-defined scope
-      each — `policy.odin` (~2,300 lines) first, then `transform.odin`,
-      `extract.odin`, `emit.odin`. Target layout and rules in
+      each — `policy.odin` done (→ `policy_*.odin`); remaining:
+      `transform.odin`, `extract.odin`, `emit.odin`. Target layout and rules in
       [`docs/source-layout.md`](docs/source-layout.md).
 
 ## Later

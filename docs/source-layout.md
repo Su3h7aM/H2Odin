@@ -24,12 +24,12 @@ their subject (`x.odin` → `x_test.odin`).
 
 ## Planned splits
 
-### `policy.odin` (~2,300 lines) — first priority
+### `policy.odin` — done
 
-Today it mixes six concerns. Target:
+Split along the six concerns (verbatim move; behavior unchanged):
 
-| New file | Scope (moves from `policy.odin`) |
-|----------|----------------------------------|
+| File | Scope |
+|------|-------|
 | `policy.odin` | `Policy` struct, feature-rule structs, `policy_load` / `policy_destroy`, top-level orchestration. |
 | `policy_sandbox.odin` | The sandboxed VM: allowed libs, `require` searcher/loader, `path_is_under`. |
 | `policy_helpers.odin` | The `proc "c"` shims registering `h2o.str.*` / `h2o.naming.*` / macro-view methods into the VM. |
