@@ -154,7 +154,8 @@ Policy :: struct {
 	// naming.overrides: C name → Odin name (absolute).
 	naming_overrides:    map[string]string,
 
-	// types.map rewrites references; types.overrides also drops the decl.
+	// types.map rewrites references; types.overrides rewrites the declaration
+	// (typedef → named alias; record/enum → drop + inline spelling).
 	type_map:            map[string]string,
 	type_overrides:      map[string]string,
 

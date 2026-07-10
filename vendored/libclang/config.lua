@@ -70,6 +70,27 @@ config.output.layout = "per_header"
 
 config.foreign.import_lib = "clang"
 
+-- Opaque handles spelled `typedef struct CXFooImpl *CXFoo` in the headers.
+-- Faithful emission is `Foo_Impl :: struct {}` + `Foo :: ^Foo_Impl`. Collapse
+-- to named `rawptr` aliases (Karl / hand-binding style). Incomplete *Impl
+-- records are removed so they are not left as empty structs.
+config.types.overrides = {
+	CXTargetInfo = "rawptr",
+	CXTranslationUnit = "rawptr",
+	CXCursorSet = "rawptr",
+	CXVirtualFileOverlay = "rawptr",
+	CXModuleMapDescriptor = "rawptr",
+	CXAPISet = "rawptr",
+}
+config.symbols.remove.names = {
+	"CXTargetInfoImpl",
+	"CXTranslationUnitImpl",
+	"CXCursorSetImpl",
+	"CXVirtualFileOverlayImpl",
+	"CXModuleMapDescriptorImpl",
+	"CXAPISetImpl",
+}
+
 config.naming = h2o.naming.odin {
 	strip_prefixes = {
 		proc = "clang_",

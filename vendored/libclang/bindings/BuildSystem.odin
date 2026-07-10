@@ -2,13 +2,9 @@ package clang
 
 foreign import lib "system:clang"
 
-Virtual_File_Overlay_Impl :: struct {}
+Virtual_File_Overlay :: rawptr
 
-Virtual_File_Overlay :: ^Virtual_File_Overlay_Impl
-
-Module_Map_Descriptor_Impl :: struct {}
-
-Module_Map_Descriptor :: ^Module_Map_Descriptor_Impl
+Module_Map_Descriptor :: rawptr
 
 foreign lib {
 	@(link_name = "clang_getBuildSessionTimestamp")

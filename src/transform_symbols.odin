@@ -2,10 +2,33 @@ package h2odin
 
 import "core:path/slashpath"
 
+// types.map rewrites references only. types.overrides also rewrites the
+// declaration:
+//
+//   - typedef Name: keep the decl as `Name :: <spelling>` and leave use sites
+//     as the typedef name (Karl-style `Target_Info :: rawptr`).
+//   - named record/enum: drop the decl and inline the spelling at use sites
+//     (Vector2 → [2]f32 by value).
+//
+// Keys are C names; this pass runs before apply_renames.
 apply_type_rewrites :: proc(ir: ^IR, type_spelling: map[string]string, drop_decls: bool) {
 	if type_spelling == nil {
 		return
 	}
+
+	// Typedefs named in an overrides pass: retarget their body, keep the name.
+	typedef_kept := make(map[string]bool, context.temp_allocator)
+	if drop_decls {
+		for &td in ir.typedefs {
+			spelling, mapped := type_spelling[td.name]
+			if !mapped || td.name == "" {
+				continue
+			}
+			td.aliased = ir_add_type(ir, Type_Info{variant = Type_Idiomatic_Leaf{original = td.aliased, spelling = spelling, reason = .Config_Override}})
+			typedef_kept[td.name] = true
+		}
+	}
+
 	count := len(ir.types) // don't revisit slots appended below
 	for i in 0 ..< count {
 		info := ir.types[i]
@@ -17,6 +40,10 @@ apply_type_rewrites :: proc(ir: ^IR, type_spelling: map[string]string, drop_decl
 			name = ir.enums[variant.decl].name
 		case Type_Typedef_Ref:
 			name = ir.typedefs[variant.decl].name
+			// Overrides kept the typedef as a named alias — use sites keep the name.
+			if drop_decls && typedef_kept[name] {
+				continue
+			}
 		case Type_Std:
 			name = variant.name
 		case:
@@ -36,6 +63,9 @@ apply_type_rewrites :: proc(ir: ^IR, type_spelling: map[string]string, drop_decl
 	if !drop_decls {
 		return
 	}
+	// Drop overridden records/enums. Keep overridden typedefs (body already
+	// rewritten). Dropping a typedef that was only in type_spelling via a
+	// record path still drops when it is not in typedef_kept.
 	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
 	for ref in ir.order {
 		name: string
@@ -46,6 +76,10 @@ apply_type_rewrites :: proc(ir: ^IR, type_spelling: map[string]string, drop_decl
 			name = ir.enums[ref.index].name
 		case .Typedef:
 			name = ir.typedefs[ref.index].name
+			if typedef_kept[name] {
+				append(&kept, ref)
+				continue
+			}
 		}
 		if _, mapped := type_spelling[name]; name != "" && mapped {
 			continue

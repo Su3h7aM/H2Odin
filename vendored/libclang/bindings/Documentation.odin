@@ -37,9 +37,7 @@ Comment_Param_Pass_Direction :: enum u32 {
 	Cx_Comment_Param_Pass_Direction_In_Out = 2,
 }
 
-Api_Set_Impl :: struct {}
-
-Api_Set :: ^Api_Set_Impl
+Api_Set :: rawptr
 
 foreign lib {
 	@(link_name = "clang_Cursor_getParsedComment")

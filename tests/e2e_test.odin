@@ -138,9 +138,11 @@ test_declarative_config_applies_prefixes_and_type_map :: proc(t: ^testing.T) {
 
 	expect_contains(t, stdout, "MAX_POINTS :: 64")
 	expect_contains(t, stdout, "@(link_name = \"gl_Distance\")")
-	expect_contains(t, stdout, "Distance :: proc(a: [2]f32, b: [2]f32) -> c.int ---")
+	// types.overrides on a typedef emits a named alias; use sites keep the name.
+	expect_contains(t, stdout, "Vector2 :: [2]f32")
+	expect_contains(t, stdout, "Distance :: proc(a: Vector2, b: Vector2) -> c.int ---")
 	expect_not_contains(t, stdout, "gl_Vector2 :: struct")
-	expect_not_contains(t, stdout, "Vector2 ::")
+	expect_not_contains(t, stdout, "Vector2 :: struct")
 }
 
 @(test)

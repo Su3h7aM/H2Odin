@@ -287,7 +287,8 @@ config.types.map = {
 
 -- Declaration override: replace the emitted representation of a type.
 config.types.overrides = {
-    Vector2 = "[2]f32",
+    Vector2 = "[2]f32",           -- typedef/record → Vector2 :: [2]f32 (uses keep the name)
+    CXTargetInfo = "rawptr",      -- opaque handle → Target_Info :: rawptr
 }
 
 -- Programmatic: a stable type view in, an action out.
@@ -299,7 +300,7 @@ config.types.override = function(t)
 end
 ```
 
-**Why separate `map` and `overrides`.** `map` changes *references* to a type (every `sqlite3_int64` in a signature becomes `i64`) without creating a declaration. `overrides` replaces the *declaration itself* (`Vector2` is emitted as `[2]f32`). They're different operations — one rewrites uses, the other rewrites the definition — and conflating them would make it ambiguous whether a new type gets declared.
+**Why separate `map` and `overrides`.** `map` changes *references* to a type (every `sqlite3_int64` in a signature becomes `i64`) without changing the declaration. `overrides` rewrites the declaration: a typedef becomes `Name :: <spelling>` with use sites still naming `Name`; a named record/enum is dropped and the spelling is inlined at use sites.
 
 ---
 

@@ -6,13 +6,9 @@ VERSION_MAJOR :: 0
 VERSION_MINOR :: 64
 Index :: rawptr
 
-Target_Info_Impl :: struct {}
+Target_Info :: rawptr
 
-Target_Info :: ^Target_Info_Impl
-
-Translation_Unit_Impl :: struct {}
-
-Translation_Unit :: ^Translation_Unit_Impl
+Translation_Unit :: rawptr
 
 Client_Data :: rawptr
 
@@ -496,9 +492,7 @@ Tls_Kind :: enum u32 {
 	Static = 2,
 }
 
-Cursor_Set_Impl :: struct {}
-
-Cursor_Set :: ^Cursor_Set_Impl
+Cursor_Set :: rawptr
 
 Type_Kind :: enum u32 {
 	Invalid = 0,

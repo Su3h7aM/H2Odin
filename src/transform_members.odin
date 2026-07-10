@@ -131,7 +131,6 @@ type_name_for_view :: proc(ir: ^IR, handle: Type_Handle) -> string {
 // so it applies in both type modes and can override an idiomatic
 // substitution already made. Anything not named is untouched.
 //
-// types.map rewrites references only. types.overrides also drops the named
-// record/enum/typedef from the ordering list: the user supplied its Odin
-// spelling directly, so emitting the generator's own declaration would be
-// redundant (and for "typedef struct { … } Name;" would emit the name twice).
+// types.map rewrites references only. types.overrides rewrites the declaration:
+// typedefs become `Name :: <spelling>` (use sites keep the name); named
+// records/enums are dropped and the spelling is inlined at use sites.
