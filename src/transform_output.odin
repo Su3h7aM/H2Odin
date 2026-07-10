@@ -58,10 +58,6 @@ plan_per_header :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: boo
 		fmt.eprintln("h2odin: output.layout = \"per_header\" requires config.output_folder")
 		return {}, false
 	}
-	if policy.imports_file != "" {
-		fmt.eprintln("h2odin: output.imports_file is incompatible with output.layout = \"per_header\" (Odin import/foreign names are file-local)")
-		return {}, false
-	}
 	// Real headers: slots 1..n-1 of input_headers.
 	n := len(ir.input_headers) - 1
 	if n < 1 {

@@ -522,7 +522,6 @@ config.inputs = { "`,
 			header,
 			`" }
 config.output_folder = "/tmp/h2odin-m10-out"
-config.output.imports_file = "imports.odin"
 return config
 `,
 		},
@@ -545,14 +544,8 @@ return config
 	testing.expect(t, main_err == nil)
 	expect_contains(t, main_data, "package m10f")
 	expect_contains(t, main_data, "add :: proc")
-	// imports_file holds the foreign import; main omits it.
-	expect_not_contains(t, main_data, "foreign import")
-
-	imports_data, imports_err := os.read_entire_file("/tmp/h2odin-m10-out/imports.odin", context.allocator)
-	defer delete(imports_data)
-	testing.expect(t, imports_err == nil)
-	expect_contains(t, imports_data, "foreign import lib")
-	expect_contains(t, imports_data, "package m10f")
+	// Prelude (package + foreign import) lives in the same file.
+	expect_contains(t, main_data, "foreign import lib")
 }
 
 @(test)
@@ -727,40 +720,25 @@ return config
 }
 
 @(test)
-test_m14_per_header_rejects_imports_file :: proc(t: ^testing.T) {
-	cwd, cwd_err := os.get_working_directory(context.allocator)
-	testing.expect(t, cwd_err == nil)
-	defer delete(cwd)
-
-	header := strings.concatenate({cwd, "/tests/fixtures/m14_a.h"})
-	defer delete(header)
-	cfg := strings.concatenate(
-		{
-			`local h2o = require "h2odin"
+test_rejects_imports_file :: proc(t: ^testing.T) {
+	cfg := `local h2o = require "h2odin"
 local config = h2o.config()
-config.inputs = { "`,
-			header,
-			`" }
-config.output_folder = "/tmp/h2odin-m14-bad"
-config.output.layout = "per_header"
+config.inputs = { "tests/fixtures/add.h" }
 config.output.imports_file = "imports.odin"
 return config
-`,
-		},
-	)
-	defer delete(cfg)
-	cfg_path := "/tmp/h2odin-m14-imports-reject.lua"
+`
+	cfg_path := "/tmp/h2odin-imports-file-reject.lua"
 	testing.expect_value(t, os.write_entire_file(cfg_path, cfg), nil)
 
-	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-m14-imports-reject.lua"}
+	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-imports-file-reject.lua"}
 	_, stderr, code, ok := run_h2odin_expect_failure(t, cmd[:])
 	defer delete(stderr)
 	if !ok {
 		return
 	}
 	testing.expect(t, code != 0)
-	expect_contains(t, stderr, "imports_file")
-	expect_contains(t, stderr, "per_header")
+	expect_contains(t, stderr, "output.imports_file")
+	expect_contains(t, stderr, "was removed")
 }
 
 @(test)

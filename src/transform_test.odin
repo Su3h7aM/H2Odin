@@ -359,26 +359,6 @@ test_plan_outputs_per_header_rejects_missing_home :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_plan_outputs_per_header_rejects_imports_file :: proc(t: ^testing.T) {
-	arena: vmem.Arena
-	err := vmem.arena_init_growing(&arena)
-	testing.expect_value(t, err, nil)
-	defer vmem.arena_destroy(&arena)
-
-	old_allocator := context.allocator
-	context.allocator = vmem.arena_allocator(&arena)
-	defer context.allocator = old_allocator
-
-	ir: IR
-	ir_init(&ir)
-	_ = ir_register_input_headers(&ir, {"a.h"})
-
-	plan, ok := plan_outputs(&ir, &Policy{output_layout = .Per_Header, output_folder = "out", imports_file = "imports.odin"})
-	testing.expect(t, !ok)
-	testing.expect_value(t, len(plan.units), 0)
-}
-
-@(test)
 test_macro_group_and_bit_set_inherit_home :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

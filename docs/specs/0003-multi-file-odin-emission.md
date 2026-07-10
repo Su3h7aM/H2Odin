@@ -114,11 +114,9 @@ Odin import aliases and foreign-library names are file-local. A separate
 files. Each output unit must emit its own required `import "core:c"`,
 `foreign import lib`, and foreign block.
 
-Consequently, `output.imports_file` is incompatible with `layout =
-"per_header"`; config validation rejects the combination. It is not silently
-ignored. The existing merged-layout behavior remains a separate compatibility
-concern, although it needs its own correctness fix because a merged body split
-from its imports file has the same Odin file-local-name problem.
+Consequently, `output.imports_file` is incompatible with any multi-file
+layout. Spec 0006 removes the option entirely (rejected by name with a
+migration message); it is not silently ignored.
 
 `output.footer_per_header` gains its literal meaning in per-header layout: each
 unit looks for `{stem}_footer.odin` using the existing output-folder,
@@ -175,7 +173,7 @@ Land the feature as focused, independently checkable changes:
    explicit declaration slice per unit and return named generated files; prove
    merged output is byte-identical with golden/regression tests.
 4. **Write per-header packages.** Require `output_folder`, emit file-local
-   preludes, apply per-unit footers, reject `imports_file`, and add e2e fixtures
+   preludes, apply per-unit footers, and add e2e fixtures
    that `odin check` the whole generated directory.
 5. **Dogfood and document.** Set the libclang self-host config to `per_header`,
    regenerate the checked-in package, update the configuration docs/examples,
@@ -193,8 +191,8 @@ Land the feature as focused, independently checkable changes:
 4. A macro-group enum and a configured bit set follow their documented inherited
    placement rules.
 5. Empty/macro-only input headers still receive valid Odin files.
-6. Duplicate output stems, missing `output_folder`, unknown layouts, unplaced
-   live declarations, and `per_header + imports_file` all fail before writes.
+6. Duplicate output stems, missing `output_folder`, unknown layouts, and
+   unplaced live declarations all fail before writes.
 7. Per-header footer lookup appends the matching footer only.
 8. The generated multi-file fixture and libclang package pass `odin check`; the
    full `make format && make check && make test && make build` gate passes.

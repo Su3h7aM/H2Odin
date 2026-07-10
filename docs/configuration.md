@@ -78,7 +78,6 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `procs.result` | `function(result) → nil\|{type?}` | same, as a callback |
 | `output.layout` | `"merged"` \| `"per_header"` | default `merged`: one Odin file; `per_header`: one file per `config.inputs` header (requires `output_folder`) |
 | `output.procedures_at_end` | bool | default `true`: types then foreign block; `false`: source order |
-| `output.imports_file` | string | **removal decided** ([spec 0006](specs/0006-remove-imports-file.md)): Odin imports are file-local, so the split output never compiled; do not use |
 | `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output (each unit in `per_header`) |
 | `comments` | bool | default `true`: emit C doc comments; `false` suppresses them |
 | `diagnostics` | category → `"warn"` \| `"error"` | per-category severity; default posture is `warn` |
@@ -88,6 +87,8 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migration message:
 
 `foreign_lib`, `strip_prefixes`, `type_map`, `rename`, `keep`
+
+Removed nested keys are also rejected by name: `output.imports_file` (spec 0006 — Odin import/foreign names are file-local).
 
 Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dirs`, `defines`, `wrappers`.
 
@@ -298,7 +299,6 @@ config.preprocess.defines = { SQLITE_ENABLE_FTS5 = "1" }
 config.output_folder = "generated"
 config.output.layout = "merged" -- or "per_header"
 config.output.procedures_at_end = true
--- output.imports_file: removal decided (spec 0006) — do not use
 config.output.footer_per_header = true
 config.comments = false
 ```

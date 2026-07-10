@@ -18,11 +18,6 @@ Emit_Options :: struct {
 	link_prefix:       string, // foreign.link_prefix; "" = none
 	procedures_at_end: bool, // true: types then foreign; false: source order
 	emit_comments:     bool, // false: suppress doc-comment passthrough
-	// When non-empty (merged layout only), package/import/foreign-import go
-	// into a separate string (imports_text); the main body still has
-	// `package` so it is a valid file, but omits the foreign import / core:c
-	// when split. Incompatible with per_header (rejected at plan time).
-	imports_file:      string, // path hint only; empty means inline prelude
 }
 
 // One self-contained generated Odin file (package + prelude + decls).
@@ -33,8 +28,7 @@ Generated_File :: struct {
 }
 
 Emit_Result :: struct {
-	files:   []Generated_File,
-	imports: string, // non-empty when imports_file is set (merged only)
+	files: []Generated_File,
 }
 
 emit_open_foreign :: proc(b: ^strings.Builder, in_foreign: ^bool, link_prefix: string) {
@@ -87,43 +81,18 @@ emit_write_foreign_block :: proc(b: ^strings.Builder, foreign_body: string, link
 // Serialize each planned output unit. Decl placement is already decided.
 emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
 	files := make([]Generated_File, len(plan.units))
-	result: Emit_Result
-
-	// imports_file only applies to a single merged unit (validated earlier).
-	split_imports := opts.imports_file != "" && len(plan.units) == 1
-
 	for unit, ui in plan.units {
 		content, uses_core_c, needs_foreign := emit_unit_body(ir, unit.decls, opts)
-		if split_imports {
-			imports_b: strings.Builder
-			// Foreign import lives only in the imports file (when needed).
-			emit_write_prelude(&imports_b, opts, uses_core_c, needs_foreign)
-			result.imports = strings.to_string(imports_b)
-
-			// Main file still needs package (shared with imports_file). Foreign
-			// import lives only in the imports file.
-			main_b: strings.Builder
-			fmt.sbprintfln(&main_b, "package %s", opts.package_name)
-			strings.write_string(&main_b, "\n")
-			strings.write_string(&main_b, content)
-			files[ui] = Generated_File {
-				filename = unit.filename,
-				stem     = unit.stem,
-				content  = strings.to_string(main_b),
-			}
-		} else {
-			out: strings.Builder
-			emit_write_prelude(&out, opts, uses_core_c, needs_foreign)
-			strings.write_string(&out, content)
-			files[ui] = Generated_File {
-				filename = unit.filename,
-				stem     = unit.stem,
-				content  = strings.to_string(out),
-			}
+		out: strings.Builder
+		emit_write_prelude(&out, opts, uses_core_c, needs_foreign)
+		strings.write_string(&out, content)
+		files[ui] = Generated_File {
+			filename = unit.filename,
+			stem     = unit.stem,
+			content  = strings.to_string(out),
 		}
 	}
-	result.files = files
-	return result
+	return Emit_Result{files = files}
 }
 
 // Build the declaration body for one unit (no package/prelude). Returns

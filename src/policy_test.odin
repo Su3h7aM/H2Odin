@@ -29,9 +29,6 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 	if policy.output_folder != "" {
 		delete(policy.output_folder)
 	}
-	if policy.imports_file != "" {
-		delete(policy.imports_file)
-	}
 	delete_string_slice(policy.inputs)
 	delete_string_slice(policy.include_paths)
 	delete_string_map(&policy.defines)
@@ -167,7 +164,6 @@ config.structs.align = { Mesh = 16 }
 config.procs.params = { ["foo.x"] = { type = "i32", default = "0" } }
 config.procs.results = { foo = { type = "c.int" } }
 config.output.procedures_at_end = false
-config.output.imports_file = "imports.odin"
 config.output.footer_per_header = true
 config.output.layout = "merged"
 config.comments = false
@@ -194,10 +190,31 @@ return config
 	testing.expect_value(t, policy.proc_params["foo.x"].default, "0")
 	testing.expect_value(t, policy.proc_results["foo"].type, "c.int")
 	testing.expect(t, !policy.procedures_at_end)
-	testing.expect_value(t, policy.imports_file, "imports.odin")
 	testing.expect(t, policy.footer_per_header)
 	testing.expect_value(t, policy.output_layout, Output_Layout.Merged)
 	testing.expect(t, !policy.emit_comments)
+}
+
+@(test)
+test_policy_load_rejects_imports_file :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"imports-file-removed",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.output.imports_file = "imports.odin"
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, !ok)
 }
 
 @(test)

@@ -19,9 +19,9 @@ deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
 Known correctness debt lives in ROADMAP's **Code health** section; the open
-items — removing `output.imports_file` (spec 0006) and `distinct` opaque
-handles (spec 0005) — are decided and ready to implement. See
-[`ROADMAP.md`](ROADMAP.md) and [`docs/specs/`](docs/specs/).
+item is `distinct` opaque handles (spec 0005). Spec 0006
+(`output.imports_file` removal) is done. See [`ROADMAP.md`](ROADMAP.md) and
+[`docs/specs/`](docs/specs/).
 
 ---
 

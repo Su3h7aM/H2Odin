@@ -134,7 +134,6 @@ Policy :: struct {
 	output_folder:       string,
 	output_layout:       Output_Layout, // config.output.layout; default .Merged
 	procedures_at_end:   bool, // default true when output section absent
-	imports_file:        string,
 	footer_per_header:   bool,
 	emit_comments:       bool, // config.comments; default true
 

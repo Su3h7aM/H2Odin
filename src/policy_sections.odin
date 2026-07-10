@@ -851,7 +851,19 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "output", []cstring{"layout", "procedures_at_end", "imports_file", "footer_per_header"}) {
+	// Reject removed nested keys with a migration message (spec 0006) before
+	// the generic unknown-key check.
+	removed_type := lua.getfield(L, -1, "imports_file")
+	if removed_type != c.int(lua.Type.NIL) {
+		fmt.eprintln(
+			`h2odin: config: "output.imports_file" was removed; Odin import and foreign import names are file-local, so a split imports file never compiled`,
+		)
+		lua.pop(L, 1)
+		return false
+	}
+	lua.pop(L, 1)
+
+	if !policy_reject_unknown_subkeys(L, "output", []cstring{"layout", "procedures_at_end", "footer_per_header"}) {
 		return false
 	}
 
@@ -904,10 +916,5 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 
-	imports, imports_ok := policy_optional_string_field(L, "output", "imports_file")
-	if !imports_ok {
-		return false
-	}
-	policy.imports_file = imports
 	return true
 }

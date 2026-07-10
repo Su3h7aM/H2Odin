@@ -120,7 +120,8 @@ boundary.
 - [x] `structs.fields` / `structs.field` (`type`, `tag`), `structs.align`.
 - [x] `procs.params` / `procs.param`, `procs.results` / `procs.result` — signature spellings and defaults only, no wrappers.
 - [x] `config.inputs` (multi-header) and `preprocess.include_paths` / `.defines`.
-- [x] `output_folder`, `output.procedures_at_end`, `output.imports_file`, `output.footer_per_header`.
+- [x] `output_folder`, `output.procedures_at_end`, `output.footer_per_header`
+      (`output.imports_file` removed in Code health; see spec 0006).
 - [x] `foreign.link_prefix` — the external C symbol, not the Odin name.
 
 ## Milestone 11 — Diagnostics as a system
@@ -213,8 +214,7 @@ Decisions and edge cases are recorded in
       record/enum definitions replace placeholder ownership without leaking a
       libclang handle past Extraction.
 - [x] `config.output.layout = "merged" | "per_header"` (default `merged`);
-      per-header layout requires `output_folder` and rejects
-      `output.imports_file`.
+      per-header layout requires `output_folder`.
 - [x] Transformation produces an explicit output plan, inherits placement for
       synthesized macro enums / bit sets, preserves per-header relative order,
       and fails before writes on duplicate stems or missing placement.
@@ -240,15 +240,14 @@ opportunistically or alongside the milestone that touches the same area.
 - [x] **Split oversized source files** into files with one well-defined scope
       each — `policy_*`, `transform_*`, `extract_*`, `emit_*` per
       [`docs/source-layout.md`](docs/source-layout.md).
-- [ ] **Remove `output.imports_file`** — decided in
+- [x] **Remove `output.imports_file`** — decided in
       [`docs/specs/0006-remove-imports-file.md`](docs/specs/0006-remove-imports-file.md).
-      The option is unsound by Odin's scoping rules (`import` aliases and the
+      The option was unsound by Odin's scoping rules (`import` aliases and the
       `foreign import` lib name are file-local, so the main file's body cannot
-      compile), and its output never compiled, so nothing can depend on it.
-      Reject the key by name with a migration message (legacy-key pattern),
-      delete the split branch in `emit` and the text-level e2e assertions.
-      The hand-editable-foreign-import desire behind it becomes a future
-      per-OS `foreign.import_lib` spec (see Later, Windows parity).
+      compile), and its output never compiled. Key rejected by name with a
+      migration message; split branch in `emit` and text-level e2e assertions
+      deleted. The hand-editable-foreign-import desire behind it becomes a
+      future per-OS `foreign.import_lib` spec (see Later, Windows parity).
 - [x] **Bug (ABI) — generated `bit_set`s have no explicit backing width.**
       `enums.bit_sets` emitted `Name :: bit_set[Enum]`; Odin sized it from the
       highest flag bit, not from the C type it replaces.
@@ -297,6 +296,6 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-The next correctness work is in **Code health**, both decided and ready to
-implement: remove `output.imports_file` (spec 0006) and emit opaque handle
-typedefs as `distinct rawptr` (spec 0005).
+The next correctness work is in **Code health**: emit opaque handle typedefs
+as `distinct rawptr` (spec 0005). Spec 0006 (`output.imports_file` removal)
+is done.
