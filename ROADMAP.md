@@ -130,10 +130,95 @@ boundary.
 - [x] Local overrides on a feature constructor beat the global block.
 - [x] Name the categories that already exist: `pointer_lowering_guess`, `unresolved_idiomatic_leaf`, `opaque_layout_fallback`.
 
+## Milestone 12 — C bit-fields → Odin `bit_field`
+
+The hard correctness gap blocking self-host: any struct containing a bit-field
+is emitted as an opaque `struct {}` today (`opaque_layout_fallback`), which
+makes by-value construction — required for e.g. libclang's `CXIndexOptions` —
+impossible. Design decisions are recorded in
+[`docs/specs/0001-bit-field-emission.md`](docs/specs/0001-bit-field-emission.md).
+
+- [ ] Extraction: stop dropping bit-field members. Capture per-field facts:
+      `is_bitfield` (`clang_Cursor_isBitField`), `bit_width`
+      (`clang_getFieldDeclBitWidth`), and the measured bit offset
+      (`clang_Cursor_getOffsetOfField`) — facts, decided nothing.
+- [ ] IR: extend `Field` with the bit-field facts;
+      `has_unrepresentable_fields` remains only for genuine failures (unknown
+      width, unsupported field type) — a representable bit-field no longer
+      forces opacity. Fix the current inconsistency where a record marked
+      unrepresentable still carries a partial `fields` slice.
+- [ ] Emission: group runs of adjacent bit-fields into
+      `using _: bit_field uN { Name: uN | width, ... }` regions with the
+      backing type and placement *proven* from the measured offsets and record
+      size; anonymous/reserved members emit as `_` with their width.
+- [ ] Fail closed: when the measured layout cannot be reproduced with an Odin
+      `bit_field` region, keep the opaque fallback and emit the new
+      `bit_field_layout_fallback` diagnostic category (registered
+      Milestone-11-style, `warn` by default).
+- [ ] Stop emitting `pointer_lowering_guess` diagnostics for fields of records
+      that emit opaque — today they reference fields that never appear in the
+      output.
+- [ ] Tests: unit fixtures for width/offset capture; a golden
+      `CXIndexOptions`-shaped fixture whose emitted layout matches the
+      known-good hand binding (`size_of` equality is the hard acceptance bar —
+      "looks right but wrong size" is a fail); regression coverage that
+      bit-field-free structs are unchanged; e2e through `odin check`.
+
+## Milestone 13 — Self-hosted libclang bindings
+
+H2Odin generates the libclang bindings its own Extraction stage imports,
+replacing the vendored hand-written package. The generated package uses the
+**Odin naming convention** (Ada_Case types, snake_case procs, SCREAMING_SNAKE
+constants, library prefixes stripped), and `src/extract.odin` migrates to the
+new names. Decisions and bootstrap plan in
+[`docs/specs/0002-self-hosted-libclang.md`](docs/specs/0002-self-hosted-libclang.md).
+Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaque.
+
+- [ ] Multi-header input correctness: treat every header in `config.inputs` as
+      "ours" during capture, not just the current TU's main file — today a
+      typedef declared in a sibling input header is resolved transparently at
+      use sites (its name is lost), which breaks the `clang-c/*.h` family
+      (`Index.h` includes `CXString.h`, …).
+- [ ] A checked-in `config.lua` for the pinned headers under
+      `vendored/libclang/headers/`: multi-header inputs, include paths,
+      Odin-convention naming (strip `clang_`/`CX*`, recase via
+      `h2o.naming.snake_case` / `ada_case` as in the sqlite3 example),
+      curation of macro groups / enums as needed.
+- [ ] Quality pass on the generated output: pointer out-params
+      (`pointer_lowering_guess`) resolved via config where the hand binding
+      proves the intent; flag enums grouped where applicable.
+- [ ] Regenerate into the `vendored:libclang` import path (replacing the hand
+      package) and migrate `src/extract.odin` to the generated names
+      (`clang.create_index`, `clang.get_cursor_kind`, …).
+- [ ] Bootstrap explicitly: generation N is produced by a binary built against
+      the checked-in bindings from generation N−1; the generated package is
+      checked in, so the cycle never needs the old hand binding again after
+      the switch.
+- [ ] `make test` / examples stay green against the generated package; a
+      `make regen-libclang` (or similar) target documents the regeneration
+      workflow; the clang-c header version stays pinned in
+      `vendored/libclang/headers/`.
+
+## Code health (ongoing)
+
+Not a milestone — a running list of known defects and structural debt. Fix
+opportunistically or alongside the milestone that touches the same area.
+
+- [ ] **Bug — macro token use-after-free** (`src/extract.odin`,
+      `extract_macro`): `defer clang.disposeTokens(...)` sits inside the
+      `if num_tokens > 0 { }` block, and Odin's `defer` runs at the end of the
+      *enclosing block* — the token array is disposed before the loop below
+      reads it. Works today only by libclang allocator luck.
+- [ ] **CLI/config input conflict is silent**: a CLI header argument is
+      ignored without a note when `config.inputs` is set.
+- [ ] **Split oversized source files** into files with one well-defined scope
+      each — `policy.odin` (~2,300 lines) first, then `transform.odin`,
+      `extract.odin`, `emit.odin`. Target layout and rules in
+      [`docs/source-layout.md`](docs/source-layout.md).
+
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
-- [ ] Self-hosted libclang bindings — H2Odin generates the bindings it uses.
 - [ ] Multi-target runs (generate per target, merge).
 - [ ] A license.
 
@@ -141,5 +226,7 @@ boundary.
 
 ### Start here
 
-Milestones 0–5 and 7–11 are complete. **Milestone 6 (wrappers)** remains
-deferred and is independent of the diagnostics work.
+Milestones 0–5 and 7–11 are complete. **The next goal is self-hosted libclang
+bindings (Milestone 13)**, with **bit-field emission (Milestone 12)** as its
+prerequisite — start with Milestone 12. **Milestone 6 (wrappers)** remains
+deferred and independent.

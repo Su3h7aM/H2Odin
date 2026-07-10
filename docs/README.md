@@ -10,3 +10,5 @@ Start here:
 - [Configuration](configuration.md) — the Lua policy layer as it exists today, and how it steers the generator.
 - [Config Spec](config-spec.md) — the north-star configuration model everything grows toward.
 - [Memory](memory.md) — how the generator owns its memory.
+- [Source Layout](source-layout.md) — what each `src/` file is for, and the planned splits.
+- [`specs/`](specs/) — numbered design specs for major decisions (bit-field emission, self-hosted libclang bindings).
