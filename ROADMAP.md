@@ -209,8 +209,8 @@ opportunistically or alongside the milestone that touches the same area.
       `if num_tokens > 0 { }` block, and Odin's `defer` runs at the end of the
       *enclosing block* — the token array is disposed before the loop below
       reads it. Works today only by libclang allocator luck.
-- [ ] **CLI/config input conflict is silent**: a CLI header argument is
-      ignored without a note when `config.inputs` is set.
+- [x] **CLI is config-only**: drop `-mode:` and positional headers; require
+      `-config:` with `config.inputs`. Keep process knobs (`-help`, `-quiet`).
 - [ ] **Split oversized source files** into files with one well-defined scope
       each — `policy.odin` (~2,300 lines) first, then `transform.odin`,
       `extract.odin`, `emit.odin`. Target layout and rules in

@@ -6,4 +6,5 @@ config.naming = h2o.naming.odin {
 	strip_prefixes = { proc = "gl_", type = "gl_", const = "GL_" },
 }
 config.types.overrides = { gl_Vector2 = "[2]f32" }
+config.inputs = { "../declarative.h" }
 return config

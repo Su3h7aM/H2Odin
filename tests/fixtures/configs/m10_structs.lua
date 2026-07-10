@@ -33,4 +33,5 @@ config.procs.param = function(param)
   return nil
 end
 
+config.inputs = { "../m10_structs.h" }
 return config

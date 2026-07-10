@@ -24,4 +24,5 @@ config.naming = h2o.naming.odin {
 config.symbols.remove.names = { "lib_internal" }
 config.symbols.remove.patterns = { "*_COUNT" }
 
+config.inputs = { "../m9_naming.h" }
 return config

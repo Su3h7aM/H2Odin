@@ -8,30 +8,35 @@ import "core:strings"
 
 // H2Odin is a pipeline: Extraction → Analysis → Transformation → Emission.
 // main owns the generation arena and the stage order; the stages own
-// everything else.
+// everything else. Generation is steered by a Lua config file — the CLI
+// only selects the config and a few process-level knobs (help, quiet).
 main :: proc() {
-	mode := Type_Mode.ABI
-	mode_from_cli := false
-	cli_header: string
 	config_path: string
+	quiet := false
 	for arg in os.args[1:] {
-		if strings.has_prefix(arg, "-mode:") {
-			switch arg[len("-mode:"):] {
-			case "abi":
-				mode = .ABI
-			case "idiomatic":
-				mode = .Idiomatic
-			case:
+		switch {
+		case arg == "-h" || arg == "-help" || arg == "--help":
+			usage()
+		case arg == "-q" || arg == "-quiet" || arg == "--quiet":
+			quiet = true
+		case strings.has_prefix(arg, "-config:"):
+			if config_path != "" {
+				fmt.eprintln("h2odin: -config: specified more than once")
 				usage()
 			}
-			mode_from_cli = true
-		} else if strings.has_prefix(arg, "-config:") {
 			config_path = arg[len("-config:"):]
-		} else if cli_header == "" {
-			cli_header = arg
-		} else {
+			if config_path == "" {
+				fmt.eprintln("h2odin: -config: requires a path")
+				usage()
+			}
+		case:
+			fmt.eprintfln("h2odin: unknown argument %q", arg)
 			usage()
 		}
+	}
+	if config_path == "" {
+		fmt.eprintln("h2odin: -config: is required")
+		usage()
 	}
 
 	// One named generation arena owns the IR and every long-lived string for
@@ -51,12 +56,12 @@ main :: proc() {
 	}
 	defer policy_destroy(&policy)
 
-	// An explicit CLI mode wins; otherwise the config decides; otherwise ABI.
-	if !mode_from_cli && policy.type_mode_is_set {
+	mode := Type_Mode.ABI
+	if policy.type_mode_is_set {
 		mode = policy.type_mode
 	}
 
-	headers, headers_ok := resolve_input_headers(cli_header, &policy)
+	headers, headers_ok := resolve_input_headers(&policy)
 	if !headers_ok {
 		os.exit(1)
 	}
@@ -92,27 +97,21 @@ main :: proc() {
 	}
 	// Emit first, then report: errors still leave usable output on stdout /
 	// disk, but a non-zero exit marks the run as failed.
-	if !report_diagnostics(&ir, &policy) {
+	if !report_diagnostics(&ir, &policy, quiet) {
 		os.exit(1)
 	}
 }
 
-// Prefer config.inputs when set; otherwise the CLI header is required.
-// Relative config.inputs paths resolve against the config directory.
-resolve_input_headers :: proc(cli_header: string, policy: ^Policy) -> (headers: []string, ok: bool) {
-	if len(policy.inputs) > 0 {
-		out := make([]string, len(policy.inputs))
-		for path, i in policy.inputs {
-			out[i] = resolve_path(path, policy.config_dir)
-		}
-		return out, true
+// config.inputs is the sole source of headers (paths relative to the config dir).
+resolve_input_headers :: proc(policy: ^Policy) -> (headers: []string, ok: bool) {
+	if len(policy.inputs) == 0 {
+		fmt.eprintln("h2odin: config.inputs is empty (list at least one header path)")
+		return nil, false
 	}
-	if cli_header == "" {
-		fmt.eprintln("h2odin: no input headers (pass a header path or set config.inputs)")
-		usage()
+	out := make([]string, len(policy.inputs))
+	for path, i in policy.inputs {
+		out[i] = resolve_path(path, policy.config_dir)
 	}
-	out := make([]string, 1)
-	out[0] = cli_header
 	return out, true
 }
 
@@ -148,15 +147,18 @@ write_emit_result :: proc(result: Emit_Result, policy: ^Policy, stem: string) ->
 		}
 	}
 
-	if policy.output_folder == "" && policy.imports_file == "" {
+	// Relative output_folder resolves against the config directory (same as inputs).
+	output_folder := resolve_path(policy.output_folder, policy.config_dir)
+
+	if output_folder == "" && policy.imports_file == "" {
 		fmt.print(main_text)
 		return true
 	}
 
-	if policy.output_folder != "" {
-		if err := os.make_directory_all(policy.output_folder); err != nil {
-			if !os.is_dir(policy.output_folder) {
-				fmt.eprintfln("h2odin: cannot create output_folder %q: %v", policy.output_folder, err)
+	if output_folder != "" {
+		if err := os.make_directory_all(output_folder); err != nil {
+			if !os.is_dir(output_folder) {
+				fmt.eprintfln("h2odin: cannot create output_folder %q: %v", output_folder, err)
 				return false
 			}
 		}
@@ -164,13 +166,15 @@ write_emit_result :: proc(result: Emit_Result, policy: ^Policy, stem: string) ->
 
 	if policy.imports_file != "" {
 		imports_path := policy.imports_file
-		if policy.output_folder != "" && !filepath.is_abs(imports_path) {
-			joined, jerr := filepath.join({policy.output_folder, imports_path})
+		if output_folder != "" && !filepath.is_abs(imports_path) {
+			joined, jerr := filepath.join({output_folder, imports_path})
 			if jerr != nil {
 				fmt.eprintfln("h2odin: cannot join imports path: %v", jerr)
 				return false
 			}
 			imports_path = joined
+		} else if !filepath.is_abs(imports_path) {
+			imports_path = resolve_path(imports_path, policy.config_dir)
 		}
 		if werr := os.write_entire_file(imports_path, result.imports); werr != nil {
 			fmt.eprintfln("h2odin: failed to write imports file %q: %v", imports_path, werr)
@@ -178,8 +182,8 @@ write_emit_result :: proc(result: Emit_Result, policy: ^Policy, stem: string) ->
 		}
 	}
 
-	if policy.output_folder != "" {
-		out_path, jerr := filepath.join({policy.output_folder, fmt.tprintf("%s.odin", stem)})
+	if output_folder != "" {
+		out_path, jerr := filepath.join({output_folder, fmt.tprintf("%s.odin", stem)})
 		if jerr != nil {
 			fmt.eprintfln("h2odin: cannot join output path: %v", jerr)
 			return false
@@ -207,8 +211,9 @@ load_footer :: proc(policy: ^Policy, stem: string) -> string {
 		}
 		return string(data)
 	}
-	if policy.output_folder != "" {
-		if p, err := filepath.join({policy.output_folder, name}); err == nil {
+	output_folder := resolve_path(policy.output_folder, policy.config_dir)
+	if output_folder != "" {
+		if p, err := filepath.join({output_folder, name}); err == nil {
 			if s := try_read(p); s != "" {
 				return s
 			}
@@ -225,7 +230,9 @@ load_footer :: proc(policy: ^Policy, stem: string) -> string {
 }
 
 usage :: proc() -> ! {
-	fmt.eprintln("usage: h2odin [-mode:abi|idiomatic] [-config:file.lua] [header.h]")
-	fmt.eprintln("  header.h is required unless config.inputs is set")
+	fmt.eprintln("usage: h2odin -config:file.lua [-quiet]")
+	fmt.eprintln("  -config:path   Lua config (required); set config.inputs for headers")
+	fmt.eprintln("  -quiet, -q     suppress the diagnostics report on stderr")
+	fmt.eprintln("  -help, -h      show this help")
 	os.exit(2)
 }

@@ -11,4 +11,5 @@ config.naming.override = function(sym)
 	end
 	return nil
 end
+config.inputs = { "../add.h" }
 return config

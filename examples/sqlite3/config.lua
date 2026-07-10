@@ -148,6 +148,7 @@ config.comments = false
 
 -- Paths are relative to this config file's directory.
 config.inputs = { "sqlite3.h" }
+config.output_folder = "."
 config.foreign.import_lib = "sqlite3"
 config.foreign.link_prefix = "sqlite3_"
 

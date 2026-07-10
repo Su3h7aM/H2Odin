@@ -58,11 +58,11 @@ make format   # odinfmt via odinfmt.json
 ```
 
 After emission changes, regenerate and check the checked-in examples
-(configs use `config.inputs`, so the header path is optional):
+(`-config:` is required; headers/output come from the Lua config):
 
 ```sh
-./build/h2odin -config:examples/sqlite3/config.lua > examples/sqlite3/sqlite3.odin
-./build/h2odin -config:examples/fff/config.lua > examples/fff/fff.odin
+./build/h2odin -config:examples/sqlite3/config.lua
+./build/h2odin -config:examples/fff/config.lua
 odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
 odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
 ```

@@ -40,7 +40,7 @@ expect_not_contains :: proc(t: ^testing.T, haystack: []byte, needle: string) {
 
 @(test)
 test_add_fixture_abi_mode :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/add.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -55,7 +55,7 @@ test_add_fixture_abi_mode :: proc(t: ^testing.T) {
 
 @(test)
 test_add_fixture_idiomatic_mode :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-mode:idiomatic", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/add_idiomatic.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -70,7 +70,7 @@ test_add_fixture_idiomatic_mode :: proc(t: ^testing.T) {
 
 @(test)
 test_idiomatic_mode_defaults_to_native_leaf_types :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-mode:idiomatic", "tests/fixtures/idiomatic.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/idiomatic.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -96,7 +96,7 @@ test_idiomatic_mode_defaults_to_native_leaf_types :: proc(t: ^testing.T) {
 
 @(test)
 test_basic_config_sets_package_foreign_lib_and_type_mode :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/basic.lua", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/basic.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -111,7 +111,7 @@ test_basic_config_sets_package_foreign_lib_and_type_mode :: proc(t: ^testing.T) 
 
 @(test)
 test_keyword_safe_defaults_emit_link_name :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "tests/fixtures/keywords.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/keywords.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -128,7 +128,7 @@ test_keyword_safe_defaults_emit_link_name :: proc(t: ^testing.T) {
 
 @(test)
 test_declarative_config_applies_prefixes_and_type_map :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/declarative.lua", "tests/fixtures/declarative.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/declarative.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -145,7 +145,7 @@ test_declarative_config_applies_prefixes_and_type_map :: proc(t: ^testing.T) {
 
 @(test)
 test_remove_where_filters_top_level_decls :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/keep.lua", "tests/fixtures/filtering.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/keep.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -163,7 +163,7 @@ test_remove_where_filters_top_level_decls :: proc(t: ^testing.T) {
 
 @(test)
 test_diagnostics_report_lists_guessed_pointer_lowerings :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "tests/fixtures/pointers.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/pointers.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -184,7 +184,7 @@ test_diagnostics_report_lists_guessed_pointer_lowerings :: proc(t: ^testing.T) {
 
 @(test)
 test_diagnostics_report_lists_unknown_size_extern_arrays :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "tests/fixtures/extern_arrays.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/extern_arrays.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -202,9 +202,24 @@ test_diagnostics_report_lists_unknown_size_extern_arrays :: proc(t: ^testing.T) 
 }
 
 @(test)
+test_quiet_suppresses_diagnostics_report :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/pointers.lua", "-quiet"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "fill :: proc")
+	expect_not_contains(t, stderr, "non-certain")
+	expect_not_contains(t, stderr, "pointer_lowering_guess")
+}
+
+@(test)
 test_diagnostics_error_severity_exits_nonzero_after_emit :: proc(t: ^testing.T) {
 	// pointer_lowering_guess = error still emits bindings, then fails the run.
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/diag_pointer_error.lua", "tests/fixtures/pointers.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/diag_pointer_error.lua"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -220,7 +235,7 @@ test_diagnostics_error_severity_exits_nonzero_after_emit :: proc(t: ^testing.T) 
 
 @(test)
 test_bad_config_fails_without_output :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/bad_type_map.lua", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/bad_type_map.lua"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -235,7 +250,7 @@ test_bad_config_fails_without_output :: proc(t: ^testing.T) {
 
 @(test)
 test_unknown_config_key_fails_with_clear_message :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/unknown_key.lua", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/unknown_key.lua"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -250,7 +265,7 @@ test_unknown_config_key_fails_with_clear_message :: proc(t: ^testing.T) {
 
 @(test)
 test_unsupported_config_key_fails_with_clear_message :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/unsupported_key.lua", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/unsupported_key.lua"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -265,7 +280,7 @@ test_unsupported_config_key_fails_with_clear_message :: proc(t: ^testing.T) {
 
 @(test)
 test_m9_macro_groups_synthesize_enum :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_macros.lua", "tests/fixtures/m9_macros.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_macros.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -286,7 +301,7 @@ test_m9_macro_groups_synthesize_enum :: proc(t: ^testing.T) {
 
 @(test)
 test_m9_enum_policies_anonymous_member_bit_set :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_enums.lua", "tests/fixtures/m9_enums.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_enums.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -307,7 +322,7 @@ test_m9_enum_policies_anonymous_member_bit_set :: proc(t: ^testing.T) {
 
 @(test)
 test_m9_naming_overrides_and_remove_tiers :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_naming.lua", "tests/fixtures/m9_naming.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m9_naming.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -328,7 +343,7 @@ test_m9_naming_overrides_and_remove_tiers :: proc(t: ^testing.T) {
 
 @(test)
 test_parse_error_fails_without_output :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "tests/fixtures/bad_parse.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/bad_parse.lua"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -343,7 +358,7 @@ test_parse_error_fails_without_output :: proc(t: ^testing.T) {
 
 @(test)
 test_m10_structs_procs_and_link_prefix :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_structs.lua", "tests/fixtures/m10_structs.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_structs.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -396,7 +411,7 @@ test_m10_preprocess_include_and_define :: proc(t: ^testing.T) {
 
 @(test)
 test_m10_output_footer_and_interleave :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_output.lua", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/m10_output.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -412,7 +427,7 @@ test_m10_output_footer_and_interleave :: proc(t: ^testing.T) {
 
 @(test)
 test_comments_default_emits_docs :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "tests/fixtures/docs.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/docs.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -428,7 +443,7 @@ test_comments_default_emits_docs :: proc(t: ^testing.T) {
 
 @(test)
 test_comments_false_suppresses_docs :: proc(t: ^testing.T) {
-	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/no_comments.lua", "tests/fixtures/docs.h"}
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/no_comments.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)
@@ -449,18 +464,35 @@ test_m10_output_folder_writes_file :: proc(t: ^testing.T) {
 	out_dir := "/tmp/h2odin-m10-out"
 	_ = os.remove_all(out_dir)
 
+	// Config lives under /tmp, so inputs must be absolute (relative paths
+	// resolve against the config directory).
+	cwd, cwd_err := os.get_working_directory(context.allocator)
+	testing.expect(t, cwd_err == nil)
+	defer delete(cwd)
+
+	header := strings.concatenate({cwd, "/tests/fixtures/add.h"})
+	defer delete(header)
+
 	cfg_path := "/tmp/h2odin-m10-out-config.lua"
-	cfg := `local h2o = require "h2odin"
+	cfg := strings.concatenate(
+		{
+			`local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "m10f"
 config.foreign.import_lib = "m10f"
+config.inputs = { "`,
+			header,
+			`" }
 config.output_folder = "/tmp/h2odin-m10-out"
 config.output.imports_file = "imports.odin"
 return config
-`
+`,
+		},
+	)
+	defer delete(cfg)
 	testing.expect_value(t, os.write_entire_file(cfg_path, cfg), nil)
 
-	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-m10-out-config.lua", "tests/fixtures/add.h"}
+	cmd := [?]string{"build/h2odin", "-config:/tmp/h2odin-m10-out-config.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
 	defer delete(stderr)

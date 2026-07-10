@@ -40,19 +40,18 @@ make format  # odinfmt via odinfmt.json
 ## Usage
 
 ```sh
-./build/h2odin [-mode:abi|idiomatic] [-config:file.lua] <header.h>
+./build/h2odin -config:file.lua [-quiet]
 ```
 
-- Generated Odin goes to **stdout**.
-- Non-certain decisions and other honesty notes go to **stderr** as a single report.
-- `-mode:` on the CLI overrides `type_mode` in the config; default is ABI.
-- The header path is always a CLI argument (config keys like `headers` / `include_dirs` are not wired yet).
+- A **Lua config is required.** Headers, type mode, naming, output path, and other policy live there (`config.inputs`, `config.type_mode`, `config.output_folder`, …).
+- Generated Odin goes to **stdout**, or to files under `config.output_folder` when set (relative paths resolve against the config directory).
+- Non-certain decisions go to **stderr** as a single diagnostics report; `-quiet` / `-q` suppresses that report (error severities still fail the run).
+- `-help` / `-h` prints usage.
 
-Example:
+Example (writes `examples/sqlite3/sqlite3.odin` via `config.output_folder = "."`):
 
 ```sh
-./build/h2odin -mode:idiomatic -config:examples/sqlite3/config.lua examples/sqlite3/sqlite3.h \
-  > examples/sqlite3/sqlite3.odin
+./build/h2odin -config:examples/sqlite3/config.lua
 ```
 
 Check generated examples:

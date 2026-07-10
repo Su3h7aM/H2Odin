@@ -5,4 +5,5 @@ local config = h2o.config()
 config.package = "mylib"
 config.foreign.import_lib = "mylib_native"
 config.type_mode = "idiomatic"
+config.inputs = { "../add.h" }
 return config

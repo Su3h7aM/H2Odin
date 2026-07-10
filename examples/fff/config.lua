@@ -12,7 +12,9 @@ local config = h2o.config()
 config.package = "fff"
 config.type_mode = "idiomatic"
 
+-- Paths are relative to this config file's directory.
 config.inputs = { "fff.h" }
+config.output_folder = "."
 config.foreign.import_lib = "fff"
 config.foreign.link_prefix = "fff_"
 

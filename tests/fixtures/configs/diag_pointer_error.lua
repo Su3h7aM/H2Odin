@@ -4,4 +4,5 @@ local config = h2o.config()
 config.diagnostics = {
 	pointer_lowering_guess = "error",
 }
+config.inputs = { "../pointers.h" }
 return config

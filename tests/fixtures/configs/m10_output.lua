@@ -5,4 +5,5 @@ config.package = "m10o"
 config.foreign.import_lib = "m10o"
 config.output.procedures_at_end = false
 config.output.footer_per_header = true
+config.inputs = { "../add.h" }
 return config

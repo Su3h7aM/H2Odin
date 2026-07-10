@@ -3,15 +3,15 @@
 Example headers and Lua configs used while developing H2Odin.
 
 Each example contains the source header, the Lua config, and the generated
-Odin binding. Configs use `config.inputs` (paths relative to the config
-file), so the header path is optional on the CLI. Regenerate after changing
-H2Odin or the configs:
+Odin binding. Headers and output live in the config (`config.inputs`,
+`config.output_folder`); the CLI only takes `-config:`. Regenerate after
+changing H2Odin or the configs:
 
 ```sh
 make build
 
-./build/h2odin -config:examples/fff/config.lua > examples/fff/fff.odin
-./build/h2odin -config:examples/sqlite3/config.lua > examples/sqlite3/sqlite3.odin
+./build/h2odin -config:examples/fff/config.lua
+./build/h2odin -config:examples/sqlite3/config.lua
 
 odin check examples/fff -no-entry-point -collection:vendored=$(pwd)/vendored
 odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
@@ -25,5 +25,5 @@ equivalent on the target.
 
 | Example | Highlights |
 |---------|------------|
-| `fff` | `foreign.link_prefix` + `naming.strip_prefixes` (no per-proc `@(link_name)`); `config.inputs` |
-| `sqlite3` | Same link-prefix pattern; `types.map` for 64-bit typedefs; `macros.groups` for result codes, open flags, authorizer actions, and other SQLITE_* families |
+| `fff` | `foreign.link_prefix` + `naming.strip_prefixes` (no per-proc `@(link_name)`); `inputs` + `output_folder` |
+| `sqlite3` | Same link-prefix/output pattern; `types.map` for 64-bit typedefs; `macros.groups` for result codes, open flags, authorizer actions, and other SQLITE_* families |

@@ -168,10 +168,11 @@ ir_diag_with_local :: proc(ir: ^IR, local: Diag_Local_Overrides, category: Diag_
 	ir_diag(ir, category, format, ..args)
 }
 
-// Print the end-of-run report on stderr. Quiet when empty. Returns false
-// when any diagnostic resolved to error (caller should exit non-zero after
-// still having emitted output).
-report_diagnostics :: proc(ir: ^IR, policy: ^Policy) -> bool {
+// Print the end-of-run report on stderr. Quiet when empty or when `quiet` is
+// set (process-level -quiet still fails the run on error severities).
+// Returns false when any diagnostic resolved to error (caller should exit
+// non-zero after still having emitted output).
+report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false) -> bool {
 	n := len(ir.diagnostics)
 	if n == 0 {
 		return true
@@ -190,26 +191,28 @@ report_diagnostics :: proc(ir: ^IR, policy: ^Policy) -> bool {
 		}
 	}
 
-	// Header: keep "non-certain" for the all-warn case so existing e2e
-	// strings still match; mention errors when present.
-	if n_err == 0 {
-		label := "decision" if n == 1 else "decisions"
-		fmt.eprintfln("h2odin: %d non-certain %s:", n, label)
-	} else {
-		fmt.eprintfln(
-			"h2odin: %d diagnostic%s (%d warning%s, %d error%s):",
-			n,
-			"" if n == 1 else "s",
-			n_warn,
-			"" if n_warn == 1 else "s",
-			n_err,
-			"" if n_err == 1 else "s",
-		)
-	}
+	if !quiet {
+		// Header: keep "non-certain" for the all-warn case so existing e2e
+		// strings still match; mention errors when present.
+		if n_err == 0 {
+			label := "decision" if n == 1 else "decisions"
+			fmt.eprintfln("h2odin: %d non-certain %s:", n, label)
+		} else {
+			fmt.eprintfln(
+				"h2odin: %d diagnostic%s (%d warning%s, %d error%s):",
+				n,
+				"" if n == 1 else "s",
+				n_warn,
+				"" if n_warn == 1 else "s",
+				n_err,
+				"" if n_err == 1 else "s",
+			)
+		}
 
-	for d, i in ir.diagnostics {
-		sev := severities[i]
-		fmt.eprintfln("  - %s[%s]: %s", diag_severity_name(sev), diag_category_name(d.category), d.message)
+		for d, i in ir.diagnostics {
+			sev := severities[i]
+			fmt.eprintfln("  - %s[%s]: %s", diag_severity_name(sev), diag_category_name(d.category), d.message)
+		}
 	}
 
 	return n_err == 0

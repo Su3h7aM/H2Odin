@@ -18,4 +18,5 @@ config.macros.groups = {
 	},
 }
 
+config.inputs = { "../m9_macros.h" }
 return config

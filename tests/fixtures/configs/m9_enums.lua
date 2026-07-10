@@ -25,4 +25,5 @@ config.naming = h2o.naming.odin {
 	},
 }
 
+config.inputs = { "../m9_enums.h" }
 return config

@@ -50,7 +50,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `package` | string | Odin package name (default: first header stem) |
 | `type_mode` | `"abi"` \| `"idiomatic"` | leaf type spelling family |
 | `inputs` | list of strings | multi-header inputs (paths relative to the config dir) |
-| `output_folder` | string | write `.odin` files here instead of stdout |
+| `output_folder` | string | write `.odin` files here instead of stdout (relative to the config dir) |
 | `preprocess.include_paths` | list of strings | `-I` paths (relative to the config dir) |
 | `preprocess.defines` | string → string | `-DNAME=value` (empty value → `-DNAME`) |
 | `foreign.import_lib` | string | `foreign import` system library name (default: first header stem) |
@@ -90,7 +90,9 @@ Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migratio
 
 Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dirs`, `defines`, `wrappers`.
 
-**Inputs.** Pass a header on the CLI, or set `config.inputs` (or both — `inputs` wins when non-empty). Relative `inputs` and `preprocess.include_paths` resolve against the config file's directory. Without `output_folder`, generated code goes to stdout.
+**Inputs / output.** `config.inputs` is required (list at least one header). Relative `inputs`, `preprocess.include_paths`, and `output_folder` resolve against the config file's directory. Without `output_folder`, generated code goes to stdout.
+
+**CLI.** The only generation entry point is `-config:file.lua`. Process knobs: `-quiet` / `-q` (suppress the diagnostics report), `-help` / `-h`. Type mode, package name, headers, and all other policy are config fields — not flags.
 
 ## Naming convention (foreign porting)
 
