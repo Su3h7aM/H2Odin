@@ -111,14 +111,27 @@ end
 
 Or set absolute names with `naming.overrides`.
 
+Keyword safety is a generator invariant, not a naming preference: whichever
+path produced the final name — the generator default, `naming.overrides`, or
+the `naming.override` callback — a name that lands on an Odin keyword gets a
+trailing underscore (`context` → `context_`). Config cannot opt out, because
+the output would not be valid Odin.
+
 ## Callback views
 
 | Field | Meaning |
 |-------|---------|
 | `name` | original C name |
 | `default` | generator's default (after affix strip + keyword safety) |
-| `kind` | `"proc"` \| `"type"` \| `"var"` \| `"const"` \| `"enum_value"` \| `"field"` |
-| `parent` | owning declaration for members/fields when relevant |
+| `kind` | `"proc"` \| `"type"` \| `"var"` \| `"const"` \| `"enum_value"` \| `"field"` \| `"param"` |
+| `parent` | owning declaration for members/fields/params when relevant |
+
+Parameter names go through the same naming pipeline as everything else:
+`naming.override` sees them with `kind = "param"` and `parent` set to the
+owning proc's (already renamed) name — empty for parameters of function-pointer
+types, which have no owning proc. There is no separate `param` key under
+`naming.strip_prefixes`; parameters share the `proc` strip lists, so a library
+prefix stripped from procs is stripped from parameter names too.
 
 Macro `include` callbacks receive a macro view: `m.name`, `m.value` (number or nil), `m:is_integer()`, `m:has_prefix(p)`. Raw `m.expr` is not exposed.
 

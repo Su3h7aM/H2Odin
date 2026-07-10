@@ -202,7 +202,7 @@ Naming_Case :: enum {
 
 naming_case_for_kind :: proc(kind: Symbol_Kind) -> Naming_Case {
 	switch kind {
-	case .Func, .Var, .Field:
+	case .Func, .Var, .Field, .Param:
 		return .Snake
 	case .Type, .Const, .Enum_Member:
 		return .Ada

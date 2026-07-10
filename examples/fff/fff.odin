@@ -487,7 +487,7 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid pointer returned by `fff_create_instance`, or null (no-op).
 	 */
-	destroy :: proc(fff_handle: rawptr) ---
+	destroy :: proc(handle: rawptr) ---
 	/**
 	 * Perform fuzzy search on indexed files.
 	 *
@@ -506,7 +506,7 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	search :: proc(fff_handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32, combo_boost_multiplier: i32, min_combo_count: u32) -> ^Result ---
+	search :: proc(handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32, combo_boost_multiplier: i32, min_combo_count: u32) -> ^Result ---
 	/**
 	 * Glob-only search: filter indexed files by a single glob pattern, rank by
 	 * frecency, and paginate. Bypasses the regular query parser entirely.
@@ -529,7 +529,7 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `pattern` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	glob :: proc(fff_handle: rawptr, pattern: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32) -> ^Result ---
+	glob :: proc(handle: rawptr, pattern: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32) -> ^Result ---
 	/**
 	 * Perform fuzzy search on indexed directories.
 	 *
@@ -546,7 +546,7 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	search_directories :: proc(fff_handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32) -> ^Result ---
+	search_directories :: proc(handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32) -> ^Result ---
 	/**
 	 * Perform a mixed fuzzy search across both files and directories.
 	 *
@@ -569,7 +569,7 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `current_file` must be valid null-terminated UTF-8 strings or NULL.
 	 */
-	search_mixed :: proc(fff_handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32, combo_boost_multiplier: i32, min_combo_count: u32) -> ^Result ---
+	search_mixed :: proc(handle: rawptr, query: cstring, current_file: cstring, max_threads: u32, page_index: u32, page_size: u32, combo_boost_multiplier: i32, min_combo_count: u32) -> ^Result ---
 	/**
 	 * Perform content search (grep) across indexed files.
 	 *
@@ -592,7 +592,7 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` must be a valid null-terminated UTF-8 string.
 	 */
-	live_grep :: proc(fff_handle: rawptr, query: cstring, mode: u8, max_file_size: u64, max_matches_per_file: u32, smart_case: bool, file_offset: u32, page_limit: u32, time_budget_ms: u64, before_context: u32, after_context: u32, classify_definitions: bool) -> ^Result ---
+	live_grep :: proc(handle: rawptr, query: cstring, mode: u8, max_file_size: u64, max_matches_per_file: u32, smart_case: bool, file_offset: u32, page_limit: u32, time_budget_ms: u64, before_context: u32, after_context: u32, classify_definitions: bool) -> ^Result ---
 	/**
 	 * Perform multi-pattern OR search (Aho-Corasick) across indexed files.
 	 *
@@ -618,21 +618,21 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `patterns_joined` and `constraints` must be valid null-terminated UTF-8 or NULL.
 	 */
-	multi_grep :: proc(fff_handle: rawptr, patterns_joined: cstring, constraints: cstring, max_file_size: u64, max_matches_per_file: u32, smart_case: bool, file_offset: u32, page_limit: u32, time_budget_ms: u64, before_context: u32, after_context: u32, classify_definitions: bool) -> ^Result ---
+	multi_grep :: proc(handle: rawptr, patterns_joined: cstring, constraints: cstring, max_file_size: u64, max_matches_per_file: u32, smart_case: bool, file_offset: u32, page_limit: u32, time_budget_ms: u64, before_context: u32, after_context: u32, classify_definitions: bool) -> ^Result ---
 	/**
 	 * Trigger a rescan of the file index.
 	 *
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	scan_files :: proc(fff_handle: rawptr) -> ^Result ---
+	scan_files :: proc(handle: rawptr) -> ^Result ---
 	/**
 	 * Check if a scan is currently in progress.
 	 *
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	is_scanning :: proc(fff_handle: rawptr) -> bool ---
+	is_scanning :: proc(handle: rawptr) -> bool ---
 	/**
 	 * Get the base path of the file picker.
 	 *
@@ -642,28 +642,28 @@ foreign lib {
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	get_base_path :: proc(fff_handle: rawptr) -> ^Result ---
+	get_base_path :: proc(handle: rawptr) -> ^Result ---
 	/**
 	 * Get scan progress information.
 	 *
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	get_scan_progress :: proc(fff_handle: rawptr) -> ^Result ---
+	get_scan_progress :: proc(handle: rawptr) -> ^Result ---
 	/**
 	 * Wait for initial scan to complete.
 	 *
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	wait_for_scan :: proc(fff_handle: rawptr, timeout_ms: u64) -> ^Result ---
+	wait_for_scan :: proc(handle: rawptr, timeout_ms: u64) -> ^Result ---
 	/**
 	 * Wait for the background file watcher to be ready.
 	 *
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	wait_for_watcher :: proc(fff_handle: rawptr, timeout_ms: u64) -> ^Result ---
+	wait_for_watcher :: proc(handle: rawptr, timeout_ms: u64) -> ^Result ---
 	/**
 	 * Restart indexing in a new directory.
 	 *
@@ -671,14 +671,14 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `new_path` must be a valid null-terminated UTF-8 string.
 	 */
-	restart_index :: proc(fff_handle: rawptr, new_path: cstring) -> ^Result ---
+	restart_index :: proc(handle: rawptr, new_path: cstring) -> ^Result ---
 	/**
 	 * Refresh git status cache.
 	 *
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	refresh_git_status :: proc(fff_handle: rawptr) -> ^Result ---
+	refresh_git_status :: proc(handle: rawptr) -> ^Result ---
 	/**
 	 * Track query completion for smart suggestions.
 	 *
@@ -686,14 +686,14 @@ foreign lib {
 	 * * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 * * `query` and `file_path` must be valid null-terminated UTF-8 strings.
 	 */
-	track_query :: proc(fff_handle: rawptr, query: cstring, file_path: cstring) -> ^Result ---
+	track_query :: proc(handle: rawptr, query: cstring, file_path: cstring) -> ^Result ---
 	/**
 	 * Get historical query by offset (0 = most recent).
 	 *
 	 * ## Safety
 	 * `fff_handle` must be a valid instance pointer from `fff_create_instance`.
 	 */
-	get_historical_query :: proc(fff_handle: rawptr, offset: u64) -> ^Result ---
+	get_historical_query :: proc(handle: rawptr, offset: u64) -> ^Result ---
 	/**
 	 * Get health check information.
 	 *
@@ -702,7 +702,7 @@ foreign lib {
 	 *   a limited health check (version + git only).
 	 * * `test_path` can be null or a valid null-terminated UTF-8 string.
 	 */
-	health_check :: proc(fff_handle: rawptr, test_path: cstring) -> ^Result ---
+	health_check :: proc(handle: rawptr, test_path: cstring) -> ^Result ---
 	/**
 	 * Free a search result returned by `fff_search`.
 	 *

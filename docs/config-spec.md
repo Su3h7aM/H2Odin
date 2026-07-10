@@ -501,10 +501,13 @@ Every view is a **single table**, never positional arguments, so a field can be 
 `sym.kind` is drawn from one closed vocabulary, spelled the way *Odin* names things rather than the way C does:
 
 ```text
-"proc"  "type"  "var"  "const"  "enum_value"  "field"
+"proc"  "type"  "var"  "const"  "enum_value"  "field"  "param"
 ```
 
-The same words key `naming.strip_prefixes`. This is a deliberate rename from the strings the generator uses today (`function`, `variable`, `constant`, `enum_member`) — see the migration table in [`configuration.md`](configuration.md).
+`"param"` is a procedure parameter name (parent = the owning proc; empty for
+parameters of function-pointer types). Parameters have no strip lists of their
+own — they share the `proc` lists. The other words key `naming.strip_prefixes`
+directly. This is a deliberate rename from the strings the generator uses today (`function`, `variable`, `constant`, `enum_member`) — see the migration table in [`configuration.md`](configuration.md).
 
 **Why.** These views are the API contract between the config and the generator. As long as they stay stable, the internal IR — pools, handles, type representation — can be refactored freely without breaking a single user config. Exposing raw IR structs would weld every config to the generator's current internals and make refactoring a breaking change. The views are deliberately minimal: just enough to make decisions, nothing that leaks representation.
 

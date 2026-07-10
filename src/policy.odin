@@ -191,6 +191,7 @@ Symbol_Kind :: enum {
 	Const, // macro constants
 	Enum_Member,
 	Field,
+	Param, // procedure parameter names
 }
 
 // Kind names as Lua sees them — Odin vocabulary (Milestone 8).
@@ -202,6 +203,7 @@ symbol_kind_names := [Symbol_Kind]cstring {
 	.Const       = "const",
 	.Enum_Member = "enum_value",
 	.Field       = "field",
+	.Param       = "param",
 }
 
 Symbol_Context :: struct {

@@ -108,6 +108,105 @@ test_apply_struct_and_proc_adjustments :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_rename_of_escapes_keywords_from_absolute_overrides :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	// An absolute override that happens to land on an Odin keyword must still
+	// emit valid syntax — keyword safety is a generator invariant, not a
+	// naming preference, so it gates every emitted name.
+	policy := Policy{}
+	policy.naming_overrides = make(map[string]string)
+	policy.naming_overrides["context"] = "context"
+
+	name, decided := rename_of(&ir, &policy, "context", .Field, "CursorAndRangeVisitor")
+	testing.expect(t, decided)
+	testing.expect_value(t, name, "context_")
+}
+
+@(test)
+test_rename_of_escapes_keywords_from_generator_default :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	// No override callback, no absolute map: the default path must escape too.
+	policy := Policy{}
+	name, decided := rename_of(&ir, &policy, "map", .Field, "")
+	testing.expect(t, decided)
+	testing.expect_value(t, name, "map_")
+}
+
+@(test)
+test_apply_renames_renames_params_via_override_map :: proc(t: ^testing.T) {
+	// libclang names parameters after their type (CXCursor Cursor); once the
+	// type is recased to Cursor the param shadows it. Parameters must be
+	// renamable through the same naming pipeline as fields.
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	int_ty := ir_builtin_type(&ir, .Int)
+	ir_add_func(&ir, Func_Decl{name = "clang_getModuleParent", return_type = int_ty, params = {{name = "Module", type = int_ty}}})
+
+	policy := Policy{}
+	policy.naming_overrides = make(map[string]string)
+	policy.naming_overrides["Module"] = "module"
+
+	apply_renames(&ir, &policy)
+
+	testing.expect_value(t, ir.funcs[0].name, "clang_getModuleParent")
+	testing.expect_value(t, ir.funcs[0].params[0].name, "module")
+}
+
+@(test)
+test_apply_renames_escapes_keyword_param :: proc(t: ^testing.T) {
+	// A parameter named with an Odin keyword must still emit valid syntax —
+	// keyword safety gates params, same as every other emitted name.
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	int_ty := ir_builtin_type(&ir, .Int)
+	ir_add_func(&ir, Func_Decl{name = "f", return_type = int_ty, params = {{name = "context", type = int_ty}}})
+
+	apply_renames(&ir, &Policy{})
+
+	testing.expect_value(t, ir.funcs[0].params[0].name, "context_")
+}
+
+@(test)
 test_link_name_for_respects_link_prefix :: proc(t: ^testing.T) {
 	policy := Policy {
 		foreign_link_prefix = "sqlite3_",

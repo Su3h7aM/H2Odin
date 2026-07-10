@@ -12,7 +12,7 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 				decl.link_name = link_name_for(policy, decl.name, new_name)
 				decl.name = new_name
 			}
-			fix_param_names(decl.params)
+			rename_params(ir, policy, decl.name, decl.params)
 		case .Var:
 			decl := &ir.vars[ref.index]
 			if new_name, decided := rename_of(ir, policy, decl.name, .Var, ""); decided {
@@ -60,7 +60,7 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 	// Function-pointer types carry parameter names of their own.
 	for &info in ir.types {
 		if variant, is_proc := &info.variant.(Type_Proc); is_proc {
-			fix_param_names(variant.params)
+			rename_params(ir, policy, "", variant.params)
 		}
 	}
 }
@@ -79,6 +79,12 @@ link_name_for :: proc(policy: ^Policy, c_name: string, odin_name: string) -> str
 // Anonymous symbols have nothing to rename; everything else goes through
 // the naming pipeline. Returns decided=false when the final name equals
 // the original C name (no IR write needed).
+//
+// Keyword safety is a generator invariant — emitting an Odin keyword as an
+// identifier is invalid syntax, never a naming preference — so it gates the
+// final name whichever path produced it: the absolute map, the override
+// callback, or the generator default. default_odin_name already escapes on
+// the default path; re-running here is idempotent and covers the other two.
 rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, parent: string) -> (string, bool) {
 	if name == "" {
 		return "", false
@@ -86,10 +92,11 @@ rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, par
 
 	// Absolute map wins before automatic naming.
 	if odin_name, ok := policy.naming_overrides[name]; ok {
-		if odin_name == name {
+		new_name := keyword_safe_default(odin_name)
+		if new_name == name {
 			return "", false
 		}
-		return odin_name, true
+		return new_name, true
 	}
 
 	default_name := default_odin_name(ir, policy, name, kind)
@@ -98,6 +105,7 @@ rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, par
 	if !decided {
 		new_name = default_name
 	}
+	new_name = keyword_safe_default(new_name)
 	if new_name == name {
 		return "", false
 	}
@@ -128,7 +136,7 @@ strip_configured_affixes :: proc(policy: ^Policy, name: string, kind: Symbol_Kin
 	prefixes: []string
 	suffixes: []string
 	#partial switch kind {
-	case .Func:
+	case .Func, .Param:
 		prefixes = policy.strip_prefix_proc
 		suffixes = policy.strip_suffix_proc
 	case .Type:
@@ -157,9 +165,20 @@ strip_configured_affixes :: proc(policy: ^Policy, name: string, kind: Symbol_Kin
 	return result
 }
 
-fix_param_names :: proc(params: []Param) {
+// Parameters go through the same naming pipeline as fields: affix strip,
+// the override callback (kind = "param"), and keyword safety. Previously
+// they got keyword safety only, which left C-case params like `Cursor` to
+// shadow a recased type `Cursor` (libclang names many params after their
+// type). Passing the owning proc name as parent matches the field contract
+// and lets config target a specific proc's params if needed.
+rename_params :: proc(ir: ^IR, policy: ^Policy, proc_name: string, params: []Param) {
 	for &param in params {
-		param.name = keyword_safe_default(param.name)
+		if param.name == "" {
+			continue
+		}
+		if new_name, decided := rename_of(ir, policy, param.name, .Param, proc_name); decided {
+			param.name = new_name
+		}
 	}
 }
 
