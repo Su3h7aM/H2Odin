@@ -254,11 +254,11 @@ opportunistically or alongside the milestone that touches the same area.
       [`docs/specs/0004-bit-set-backing-width.md`](docs/specs/0004-bit-set-backing-width.md):
       `Bit_Set_Decl` carries the measured enum width, emission writes
       `bit_set[Enum; uN]`, fail closed under `bit_set_backing_mismatch`.
-- [ ] **Bug — 128B leak in every unit-test run.**
+- [x] **Bug — 128B leak in every unit-test run.**
       `test_bit_field_layout_rejects_user_authored_adjacent_field_type`
-      (`src/emit_bit_field_test.odin`) frees only `ir.types`, but `ir_init`
-      also allocates `ir.input_headers` since Milestone 14. Use an arena like
-      the sibling tests (leaks in tests hide real leaks behind noise).
+      (`src/emit_bit_field_test.odin`) freed only `ir.types`, but `ir_init`
+      also allocates `ir.input_headers` since Milestone 14. Fixed by using an
+      arena like the sibling tests.
 - [ ] **Type-safety gap — opaque handles are non-distinct `rawptr` aliases.**
       The generated libclang package spells every opaque handle as
       `Index :: rawptr`, `Translation_Unit :: rawptr`, …, so all handle types
@@ -292,5 +292,5 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-The next correctness work is in **Code health**: the test leak, then the
-`output.imports_file` redesign and the `distinct`-handle design gap.
+The next correctness work is in **Code health**: the `output.imports_file`
+redesign and the `distinct`-handle design gap.

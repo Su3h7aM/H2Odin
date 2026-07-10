@@ -1,5 +1,6 @@
 package h2odin
 
+import vmem "core:mem/virtual"
 import "core:testing"
 
 @(test)
@@ -87,9 +88,19 @@ test_bit_field_free_record_needs_no_layout_rewrite :: proc(t: ^testing.T) {
 
 @(test)
 test_bit_field_layout_rejects_user_authored_adjacent_field_type :: proc(t: ^testing.T) {
+	// ir_init allocates types and input_headers; free both via an arena so
+	// partial delete(ir.types) does not leave a 128B leak (and hide real ones).
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
 	ir: IR
 	ir_init(&ir)
-	defer delete(ir.types)
 	record := Record_Decl {
 		name      = "Configured",
 		size      = 8,
