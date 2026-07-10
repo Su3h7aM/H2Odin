@@ -18,9 +18,9 @@ Status: Milestones 0–5, 7–14 complete; Milestone 6 (idiomatic wrappers) is
 deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
-Known correctness debt lives in ROADMAP's **Code health** section; the open
-item is `distinct` opaque handles (spec 0005). Spec 0006
-(`output.imports_file` removal) is done. See [`ROADMAP.md`](ROADMAP.md) and
+Code health items for opaque handles (spec 0005) and `output.imports_file`
+removal (spec 0006) are done. Remaining debt is polish / deferred work in
+ROADMAP's **Later** section. See [`ROADMAP.md`](ROADMAP.md) and
 [`docs/specs/`](docs/specs/).
 
 ---

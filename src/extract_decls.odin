@@ -196,12 +196,12 @@ fill_enum :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Curs
 		ctx   = context,
 		state = state,
 	}
-	clang.visit_children(cursor, visit_enum_child, &fill)
+	clang.visit_children(cursor, visit_enum_child, clang.Client_Data(rawptr(&fill)))
 	state.ir.enums[int(handle)].members = fill.members[:]
 }
 
 visit_enum_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {
-	fill := cast(^Enum_Fill)client_data
+	fill := cast(^Enum_Fill)rawptr(client_data)
 	context = fill.ctx
 
 	#partial switch clang.get_cursor_kind(cursor) {
@@ -279,7 +279,7 @@ fill_record :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cu
 		ctx   = context,
 		state = state,
 	}
-	clang.visit_children(cursor, visit_record_child, &fill)
+	clang.visit_children(cursor, visit_record_child, clang.Client_Data(rawptr(&fill)))
 
 	// Written back by handle: the records pool may have grown while nested
 	// types were captured, so no pointer into it was held across the visit.
@@ -325,7 +325,7 @@ record_display_name :: proc(record: Record_Decl) -> string {
 }
 
 visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {
-	fill := cast(^Record_Fill)client_data
+	fill := cast(^Record_Fill)rawptr(client_data)
 	context = fill.ctx
 
 	#partial switch clang.get_cursor_kind(cursor) {

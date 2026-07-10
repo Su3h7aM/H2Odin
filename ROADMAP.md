@@ -261,17 +261,15 @@ opportunistically or alongside the milestone that touches the same area.
       (`src/emit_bit_field_test.odin`) freed only `ir.types`, but `ir_init`
       also allocates `ir.input_headers` since Milestone 14. Fixed by using an
       arena like the sibling tests.
-- [ ] **Type-safety gap — opaque handles are non-distinct `rawptr` aliases.**
+- [x] **Type-safety gap — opaque handles are non-distinct `rawptr` aliases.**
       Decided in
       [`docs/specs/0005-opaque-handle-typedefs.md`](docs/specs/0005-opaque-handle-typedefs.md):
       a typedef of a pointer to an *incomplete* record emits
-      `Foo :: distinct rawptr` automatically (C itself distinguishes these
-      types — provable, ABI-identical, and honest where the current empty
-      `Impl` struct lies about its size); `void*` typedefs stay plain aliases
-      unless opted in via a new `types.distinct` list. Aliased handles of one
-      record stay mutually assignable; completed records emit normally. Then
-      drop the libclang config's `types.overrides` rawptr-collapse block and
-      its `symbols.remove` `*Impl` entries, and regenerate the package.
+      `Foo :: distinct rawptr` automatically; `void*` typedefs stay plain
+      aliases unless opted in via `types.distinct`. Aliased handles of one
+      record stay mutually assignable; completed records emit normally.
+      Libclang config drops the `types.overrides` rawptr-collapse block and
+      `*Impl` `symbols.remove` entries; package regenerated.
 
 ## Later
 
@@ -296,6 +294,7 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-The next correctness work is in **Code health**: emit opaque handle typedefs
-as `distinct rawptr` (spec 0005). Spec 0006 (`output.imports_file` removal)
-is done.
+Code health items for specs 0005 (opaque handles) and 0006
+(`output.imports_file`) are done. Remaining Code health / Later items are
+polish and deferred work (wrappers, full pointer-lowering curation, Windows
+multi-lib, …).

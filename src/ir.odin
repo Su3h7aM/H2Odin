@@ -113,6 +113,10 @@ Idiomatic_Reason :: enum {
 	Derived_From_Measurement,
 	// The config's type_map named this type explicitly.
 	Config_Override,
+	// Opaque handle: typedef of a pointer to an incomplete record (automatic)
+	// or a void* typedef opted in via types.distinct. Spelling is
+	// `distinct rawptr` (spec 0005).
+	Opaque_Handle,
 }
 
 // Transformation's decision to spell a C type with an explicit Odin

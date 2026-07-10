@@ -69,25 +69,13 @@ config.output.layout = "per_header"
 
 config.foreign.import_lib = "clang"
 
--- Opaque handles spelled `typedef struct CXFooImpl *CXFoo` in the headers.
--- Faithful emission is `Foo_Impl :: struct {}` + `Foo :: ^Foo_Impl`. Collapse
--- to named `rawptr` aliases (Karl / hand-binding style). Incomplete *Impl
--- records are removed so they are not left as empty structs.
-config.types.overrides = {
-	CXTargetInfo = "rawptr",
-	CXTranslationUnit = "rawptr",
-	CXCursorSet = "rawptr",
-	CXVirtualFileOverlay = "rawptr",
-	CXModuleMapDescriptor = "rawptr",
-	CXAPISet = "rawptr",
-}
-config.symbols.remove.names = {
-	"CXTargetInfoImpl",
-	"CXTranslationUnitImpl",
-	"CXCursorSetImpl",
-	"CXVirtualFileOverlayImpl",
-	"CXModuleMapDescriptorImpl",
-	"CXAPISetImpl",
+-- Opaque handles (spec 0005): typedefs of pointers to incomplete *Impl
+-- records emit `distinct rawptr` automatically and the *Impl records are
+-- dropped. void* handles stay plain rawptr unless listed here — match the
+-- hand binding's type safety for Index / Client_Data.
+config.types.distinct = {
+	"CXIndex",
+	"CXClientData",
 }
 
 -- Quality pass (M13): curate what Extraction actually calls. Full-API

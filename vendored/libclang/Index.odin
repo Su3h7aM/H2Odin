@@ -4,13 +4,13 @@ foreign import lib "system:clang"
 
 VERSION_MAJOR :: 0
 VERSION_MINOR :: 64
-Index :: rawptr
+Index :: distinct rawptr
 
-Target_Info :: rawptr
+Target_Info :: distinct rawptr
 
-Translation_Unit :: rawptr
+Translation_Unit :: distinct rawptr
 
-Client_Data :: rawptr
+Client_Data :: distinct rawptr
 
 Unsaved_File :: struct {
 	filename: cstring,
@@ -491,7 +491,7 @@ Tls_Kind :: enum u32 {
 	Static = 2,
 }
 
-Cursor_Set :: rawptr
+Cursor_Set :: distinct rawptr
 
 Type_Kind :: enum u32 {
 	Invalid = 0,
@@ -770,9 +770,7 @@ Child_Visit_Result :: enum u32 {
 
 Cursor_Visitor :: proc "c" (_: Cursor, _: Cursor, _: Client_Data) -> Child_Visit_Result
 
-Cx_Child_Visit_Result :: struct {}
-
-Cursor_Visitor_Block :: ^Cx_Child_Visit_Result
+Cursor_Visitor_Block :: distinct rawptr
 
 Printing_Policy :: rawptr
 
@@ -956,9 +954,7 @@ Result :: enum u32 {
 	Visit_Break = 2,
 }
 
-Cx_Cursor_And_Range_Visitor_Block :: struct {}
-
-Cursor_And_Range_Visitor_Block :: ^Cx_Cursor_And_Range_Visitor_Block
+Cursor_And_Range_Visitor_Block :: distinct rawptr
 
 Idx_Client_File :: rawptr
 

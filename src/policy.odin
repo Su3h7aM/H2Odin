@@ -157,6 +157,9 @@ Policy :: struct {
 	// (typedef → named alias; record/enum → drop + inline spelling).
 	type_map:            map[string]string,
 	type_overrides:      map[string]string,
+	// types.distinct: void* typedef C names that opt into `distinct rawptr`
+	// (incomplete-record handles are distinct automatically — spec 0005).
+	types_distinct:      []string,
 
 	// symbols.remove declarative tiers.
 	remove_names:        []string,

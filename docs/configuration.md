@@ -62,6 +62,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `naming.override` | `function(sym) → string\|nil` | rename a symbol |
 | `types.map` | string → string | rewrite every *reference* to a C type |
 | `types.overrides` | string → string | rewrite references **and** suppress the declaration |
+| `types.distinct` | list of strings | opt a `void*` typedef into `distinct rawptr` (incomplete-record handles are distinct automatically — [spec 0005](specs/0005-opaque-handle-typedefs.md)) |
 | `symbols.remove.names` | list of strings | drop exact C names |
 | `symbols.remove.patterns` | list of shell patterns | drop names matching `*` / `?` patterns |
 | `symbols.remove.where` | `function(sym) → bool\|nil` | **true drops** the symbol |

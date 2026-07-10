@@ -46,6 +46,7 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 	delete_string_map(&policy.naming_overrides)
 	delete_string_map(&policy.type_map)
 	delete_string_map(&policy.type_overrides)
+	delete_string_slice(policy.types_distinct)
 	for g in policy.macro_groups {
 		delete(g.id)
 		delete(g.name)
@@ -124,6 +125,7 @@ config.naming = h2o.naming.odin {
   strip_prefixes = { proc = "gl_", type = "GL", const = "GL_" },
 }
 config.types.overrides = { Vector2 = "[2]f32" }
+config.types.distinct = { "CXIndex", "CXClientData" }
 return config
 `
 
@@ -145,6 +147,9 @@ test_policy_load_declarative_fields :: proc(t: ^testing.T) {
 	testing.expect(t, len(policy.strip_prefix_type) == 1 && policy.strip_prefix_type[0] == "GL")
 	testing.expect(t, len(policy.strip_prefix_const) == 1 && policy.strip_prefix_const[0] == "GL_")
 	testing.expect_value(t, policy.type_overrides["Vector2"], "[2]f32")
+	testing.expect(t, len(policy.types_distinct) == 2)
+	testing.expect_value(t, policy.types_distinct[0], "CXIndex")
+	testing.expect_value(t, policy.types_distinct[1], "CXClientData")
 }
 
 @(test)

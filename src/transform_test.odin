@@ -106,6 +106,152 @@ test_apply_type_overrides_typedef_becomes_named_alias :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_opaque_handles_incomplete_record_pointer_is_distinct :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	impl_a := ir_add_record(&ir, Record_Decl{name = "FooImpl", is_complete = false})
+	impl_b := ir_add_record(&ir, Record_Decl{name = "BarImpl", is_complete = false})
+	a_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = impl_a}})
+	b_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = impl_b}})
+	a_ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = a_ty, kind = .Single}})
+	b_ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = b_ty, kind = .Single}})
+	td_a := ir_add_typedef(&ir, Typedef_Decl{name = "Foo", aliased = a_ptr})
+	td_b := ir_add_typedef(&ir, Typedef_Decl{name = "Bar", aliased = b_ptr})
+
+	apply_opaque_handles(&ir, &Policy{})
+
+	body_a, ok_a := ir.types[int(ir.typedefs[int(td_a)].aliased)].variant.(Type_Idiomatic_Leaf)
+	body_b, ok_b := ir.types[int(ir.typedefs[int(td_b)].aliased)].variant.(Type_Idiomatic_Leaf)
+	testing.expect(t, ok_a)
+	testing.expect(t, ok_b)
+	testing.expect_value(t, body_a.spelling, SPELLING_DISTINCT_RAWPTR)
+	testing.expect_value(t, body_b.spelling, SPELLING_DISTINCT_RAWPTR)
+	testing.expect_value(t, body_a.reason, Idiomatic_Reason.Opaque_Handle)
+
+	// Incomplete *Impl records are not emitted.
+	for ref in ir.order {
+		testing.expect(t, ref.kind != .Record)
+	}
+	// Both typedefs remain.
+	found := 0
+	for ref in ir.order {
+		if ref.kind == .Typedef {
+			found += 1
+		}
+	}
+	testing.expect_value(t, found, 2)
+}
+
+@(test)
+test_opaque_handles_same_record_stay_aliases :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	impl := ir_add_record(&ir, Record_Decl{name = "SharedImpl", is_complete = false})
+	impl_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = impl}})
+	ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = impl_ty, kind = .Single}})
+	first := ir_add_typedef(&ir, Typedef_Decl{name = "Handle_A", aliased = ptr})
+	second := ir_add_typedef(&ir, Typedef_Decl{name = "Handle_B", aliased = ptr})
+
+	apply_opaque_handles(&ir, &Policy{})
+
+	body, is_distinct := ir.types[int(ir.typedefs[int(first)].aliased)].variant.(Type_Idiomatic_Leaf)
+	testing.expect(t, is_distinct)
+	testing.expect_value(t, body.spelling, SPELLING_DISTINCT_RAWPTR)
+
+	alias, is_alias := ir.types[int(ir.typedefs[int(second)].aliased)].variant.(Type_Typedef_Ref)
+	testing.expect(t, is_alias)
+	testing.expect_value(t, alias.decl, first)
+}
+
+@(test)
+test_opaque_handles_complete_record_pointer_unchanged :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	rec := ir_add_record(&ir, Record_Decl{name = "Complete", is_complete = true})
+	rec_ty := ir_add_type(&ir, Type_Info{variant = Type_Record_Ref{decl = rec}})
+	ptr := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = rec_ty, kind = .Single}})
+	td := ir_add_typedef(&ir, Typedef_Decl{name = "Complete_Ptr", aliased = ptr})
+
+	apply_opaque_handles(&ir, &Policy{})
+
+	// Still a pointer to the complete record — not collapsed to distinct rawptr.
+	_, is_ptr := ir.types[int(ir.typedefs[int(td)].aliased)].variant.(Type_Lowered_Pointer)
+	testing.expect(t, is_ptr)
+	// Complete record stays in order.
+	found_rec := false
+	for ref in ir.order {
+		if ref.kind == .Record && ref.index == u32(rec) {
+			found_rec = true
+		}
+	}
+	testing.expect(t, found_rec)
+}
+
+@(test)
+test_opaque_handles_void_ptr_opt_in_via_types_distinct :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+
+	void_ty := ir_builtin_type(&ir, .Void)
+	raw := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = void_ty, kind = .Rawptr}})
+	td_opt := ir_add_typedef(&ir, Typedef_Decl{name = "CXIndex", aliased = raw})
+	td_plain := ir_add_typedef(&ir, Typedef_Decl{name = "CXFile", aliased = raw})
+
+	policy := Policy {
+		types_distinct = {"CXIndex"},
+	}
+	apply_opaque_handles(&ir, &policy)
+
+	opt_body, opt_ok := ir.types[int(ir.typedefs[int(td_opt)].aliased)].variant.(Type_Idiomatic_Leaf)
+	testing.expect(t, opt_ok)
+	testing.expect_value(t, opt_body.spelling, SPELLING_DISTINCT_RAWPTR)
+
+	// Not listed → stays rawptr (lowered pointer or plain rawptr leaf).
+	plain := ir.types[int(ir.typedefs[int(td_plain)].aliased)]
+	_, still_raw := plain.variant.(Type_Lowered_Pointer)
+	testing.expect(t, still_raw)
+}
+
+@(test)
 test_apply_struct_and_proc_adjustments :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

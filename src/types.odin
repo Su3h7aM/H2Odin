@@ -124,6 +124,7 @@ std_mappings := []Std_Mapping {
 // construct becomes an Odin type name), unlike the ^ / [^] sigils, which are
 // just Odin syntax and stay inline in emission.
 SPELLING_RAWPTR :: "rawptr"
+SPELLING_DISTINCT_RAWPTR :: "distinct rawptr"
 SPELLING_CSTRING :: "cstring"
 
 // The size in bytes of an Odin type named in an idiomatic column, on the

@@ -2,9 +2,9 @@ package clang
 
 foreign import lib "system:clang"
 
-Virtual_File_Overlay :: rawptr
+Virtual_File_Overlay :: distinct rawptr
 
-Module_Map_Descriptor :: rawptr
+Module_Map_Descriptor :: distinct rawptr
 
 foreign lib {
 	@(link_name = "clang_getBuildSessionTimestamp")

@@ -95,7 +95,7 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 			return false
 		}
 		state.tu = tu
-		clang.visit_children(clang.get_translation_unit_cursor(tu), visit_top_level, &state)
+		clang.visit_children(clang.get_translation_unit_cursor(tu), visit_top_level, clang.Client_Data(rawptr(&state)))
 		clang.dispose_translation_unit(tu)
 	}
 	return true
@@ -213,7 +213,7 @@ clang_resource_dir_arg :: proc() -> (arg: cstring, ok: bool) {
 }
 
 visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {
-	state := cast(^Extract_State)client_data
+	state := cast(^Extract_State)rawptr(client_data)
 	context = state.ctx
 
 	// Bind declarations from any config.inputs header, not only the current

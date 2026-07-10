@@ -2,6 +2,108 @@ package h2odin
 
 import "core:fmt"
 
+// Spec 0005: typedefs of pointers to incomplete records emit
+// `Name :: distinct rawptr` (C already distinguishes those types). Multiple
+// typedefs of the same incomplete record stay mutually assignable — first in
+// declaration order is distinct; later ones alias it. Incomplete *Impl
+// records are dropped from emission. void* typedefs stay plain rawptr unless
+// listed in types.distinct.
+apply_opaque_handles :: proc(ir: ^IR, policy: ^Policy) {
+	distinct_names: map[string]bool
+	if len(policy.types_distinct) > 0 {
+		distinct_names = make(map[string]bool, context.temp_allocator)
+		for name in policy.types_distinct {
+			distinct_names[name] = true
+		}
+	}
+
+	// Incomplete record index → first typedef Decl_Handle that claimed it.
+	first_for_record := make(map[Decl_Handle]Decl_Handle, context.temp_allocator)
+	records_to_drop := make(map[Decl_Handle]bool, context.temp_allocator)
+	changed := false
+
+	for ref in ir.order {
+		if ref.kind != .Typedef {
+			continue
+		}
+		td_handle := Decl_Handle(ref.index)
+		td := &ir.typedefs[ref.index]
+		if td.is_unresolvable || td.name == "" {
+			continue
+		}
+
+		if record, is_opaque := opaque_handle_record(ir, td.aliased); is_opaque {
+			if first, found := first_for_record[record]; found {
+				// Same incomplete record as an earlier typedef: stay an alias
+				// so C's mutual assignability is preserved. Type_Typedef_Ref
+				// tracks renames of the first handle.
+				td.aliased = ir_add_type(ir, Type_Info{variant = Type_Typedef_Ref{decl = first}})
+			} else {
+				first_for_record[record] = td_handle
+				records_to_drop[record] = true
+				td.aliased = ir_add_type(
+					ir,
+					Type_Info{variant = Type_Idiomatic_Leaf{original = td.aliased, spelling = SPELLING_DISTINCT_RAWPTR, reason = .Opaque_Handle}},
+				)
+			}
+			changed = true
+			continue
+		}
+
+		// void* (and other rawptr) typedefs: opt-in only.
+		if len(distinct_names) > 0 && distinct_names[td.name] && type_is_rawptr(ir, td.aliased) {
+			td.aliased = ir_add_type(
+				ir,
+				Type_Info{variant = Type_Idiomatic_Leaf{original = td.aliased, spelling = SPELLING_DISTINCT_RAWPTR, reason = .Opaque_Handle}},
+			)
+			changed = true
+		}
+	}
+
+	if !changed && len(records_to_drop) == 0 {
+		return
+	}
+
+	// Drop incomplete records that only existed as opaque-handle targets.
+	if len(records_to_drop) == 0 {
+		return
+	}
+	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
+	for ref in ir.order {
+		if ref.kind == .Record && records_to_drop[Decl_Handle(ref.index)] {
+			continue
+		}
+		append(&kept, ref)
+	}
+	ir.order = kept
+}
+
+// Pointer-to-incomplete-record after lowering: the C opaque-handle idiom.
+opaque_handle_record :: proc(ir: ^IR, handle: Type_Handle) -> (record: Decl_Handle, ok: bool) {
+	ptr, is_ptr := ir_type(ir, handle).variant.(Type_Lowered_Pointer)
+	if !is_ptr || ptr.kind != .Single {
+		return 0, false
+	}
+	rec, is_rec := ir_type(ir, ptr.pointee).variant.(Type_Record_Ref)
+	if !is_rec {
+		return 0, false
+	}
+	if ir.records[rec.decl].is_complete {
+		return 0, false
+	}
+	return rec.decl, true
+}
+
+type_is_rawptr :: proc(ir: ^IR, handle: Type_Handle) -> bool {
+	#partial switch variant in ir_type(ir, handle).variant {
+	case Type_Lowered_Pointer:
+		return variant.kind == .Rawptr
+	case Type_Idiomatic_Leaf:
+		return variant.spelling == SPELLING_RAWPTR
+	}
+	return false
+}
+
 substitute_leaf_types :: proc(ir: ^IR) {
 	count := len(ir.types) // slots appended below carry no leaves to revisit
 	for i in 0 ..< count {
