@@ -319,7 +319,7 @@ test_m9_enum_policies_anonymous_member_bit_set :: proc(t: ^testing.T) {
 	expect_contains(t, stdout, "FULLSCREEN = 1")
 	expect_contains(t, stdout, "MSAA = 2")
 	expect_not_contains(t, stdout, "COUNT")
-	expect_contains(t, stdout, "Config_Flags :: bit_set[Config_Flag]")
+	expect_contains(t, stdout, "Config_Flags :: bit_set[Config_Flag; u32]")
 }
 
 @(test)

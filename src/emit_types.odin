@@ -138,6 +138,10 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 	case Type_Bit_Set:
 		strings.write_string(b, "bit_set[")
 		write_type(b, ir, variant.elem, indent, emit_comments, uses_core_c)
-		strings.write_string(b, "]")
+		backing := bit_set_backing_spelling(variant.backing_bits)
+		if backing == "" {
+			panic("Type_Bit_Set reached emission without a proven backing width")
+		}
+		fmt.sbprintf(b, "; %s]", backing)
 	}
 }

@@ -246,16 +246,14 @@ opportunistically or alongside the milestone that touches the same area.
       compile when those declarations exist only in `imports.odin`. Add an
       `odin check` regression and redesign or remove this option independently;
       Milestone 14 rejects it in per-header layout.
-- [ ] **Bug (ABI) — generated `bit_set`s have no explicit backing width.**
-      `enums.bit_sets` emits `Name :: bit_set[Enum]`; Odin sizes it from the
+- [x] **Bug (ABI) — generated `bit_set`s have no explicit backing width.**
+      `enums.bit_sets` emitted `Name :: bit_set[Enum]`; Odin sized it from the
       highest flag bit, not from the C type it replaces.
-      `Translation_Unit_Flags` is 2 bytes against a 4-byte C `unsigned`
-      parameter, and Extraction's own `parse_translation_unit` call passes it —
-      it works only because x86-64 happens to zero-extend. Fix per
+      `Translation_Unit_Flags` was 2 bytes against a 4-byte C `unsigned`
+      parameter. Fixed per
       [`docs/specs/0004-bit-set-backing-width.md`](docs/specs/0004-bit-set-backing-width.md):
-      carry the measured enum width in `Bit_Set_Decl`, emit
-      `bit_set[Enum; uN]`, fail closed on mismatch, regenerate
-      `vendored/libclang` and the examples in the same change.
+      `Bit_Set_Decl` carries the measured enum width, emission writes
+      `bit_set[Enum; uN]`, fail closed under `bit_set_backing_mismatch`.
 - [ ] **Bug — 128B leak in every unit-test run.**
       `test_bit_field_layout_rejects_user_authored_adjacent_field_type`
       (`src/emit_bit_field_test.odin`) frees only `ir.types`, but `ir_init`
@@ -294,7 +292,5 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-The next correctness work is in **Code health**: the `bit_set` backing-width
-ABI bug ([spec 0004](docs/specs/0004-bit-set-backing-width.md)) is live at
-Extraction's own `parse_translation_unit` call site and should land before
-further widening; the test leak and the `distinct`-handle design gap follow.
+The next correctness work is in **Code health**: the test leak, then the
+`output.imports_file` redesign and the `distinct`-handle design gap.

@@ -1,6 +1,6 @@
 # Spec 0004 — Explicit backing width for generated `bit_set`s
 
-**Status:** proposed
+**Status:** accepted
 **Date:** 2026-07-10
 
 ## Context

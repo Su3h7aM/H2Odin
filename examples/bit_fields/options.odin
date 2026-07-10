@@ -2,8 +2,6 @@ package bit_fields
 
 import "core:c"
 
-foreign import lib "system:example"
-
 Example_Options :: struct {
 	Size: c.uint,
 	IndexPriority: c.uchar,

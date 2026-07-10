@@ -1,6 +1,7 @@
 package h2odin
 
 import vmem "core:mem/virtual"
+import "core:strings"
 import "core:testing"
 
 @(test)
@@ -394,11 +395,14 @@ test_macro_group_and_bit_set_inherit_home :: proc(t: ^testing.T) {
 	// Two macros in different homes; first matched (pool order) is home_a.
 	ir_add_macro(&ir, Macro_Decl{name = "FLG_A", tokens = {{spelling = "1", kind = .Literal}}, home = 1})
 	ir_add_macro(&ir, Macro_Decl{name = "FLG_B", tokens = {{spelling = "2", kind = .Literal}}, home = 2})
-	// Backing enum for bit_set lives in header b.
-	_ = ir_add_enum(
-		&ir,
-		Enum_Decl{name = "Flag", backing = ir_builtin_type(&ir, .Int), members = {{name = "One", value = 1}, {name = "Two", value = 2}}, home = 2},
-	)
+	// Backing enum for bit_set lives in header b. Seed a measured size so
+	// the bit_set transform has a proven width (spec 0004).
+	int_ty := ir_builtin_type(&ir, .Int)
+	ir.types[int(int_ty)].variant = Type_Builtin {
+		kind = .Int,
+		size = 4,
+	}
+	_ = ir_add_enum(&ir, Enum_Decl{name = "Flag", backing = int_ty, members = {{name = "One", value = 1}, {name = "Two", value = 2}}, home = 2})
 
 	policy := Policy {
 		macro_groups  = {{name = "Flg", prefix = "FLG_"}},
@@ -421,7 +425,160 @@ test_macro_group_and_bit_set_inherit_home :: proc(t: ^testing.T) {
 		if bs.name == "Flag_Set" {
 			found_bs = true
 			testing.expect_value(t, bs.home, Input_Header_Handle(2))
+			testing.expect_value(t, bs.backing_bits, 32)
 		}
 	}
 	testing.expect(t, found_bs)
+}
+
+@(test)
+test_bit_set_records_measured_backing_width :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	int_ty := ir_builtin_type(&ir, .Int)
+	ir.types[int(int_ty)].variant = Type_Builtin {
+		kind = .Int,
+		size = 4,
+	}
+	_ = ir_add_enum(
+		&ir,
+		Enum_Decl {
+			name = "Config_Flag",
+			backing = int_ty,
+			members = {{name = "VSYNC", value = 1}, {name = "FULLSCREEN", value = 2}, {name = "MSAA", value = 4}},
+		},
+	)
+
+	policy := Policy {
+		enum_bit_sets = {{enum_name = "Config_Flag", name = "Config_Flags", mode = "log2"}},
+	}
+	apply_enum_bit_sets(&ir, &policy)
+
+	testing.expect_value(t, len(ir.bit_sets), 1)
+	if len(ir.bit_sets) == 1 {
+		testing.expect_value(t, ir.bit_sets[0].backing_bits, 32)
+		// Hard bar from spec 0004: Odin size of the explicit backing must
+		// match the measured C enum size (4 bytes for int).
+		testing.expect_value(t, odin_type_size(bit_set_backing_spelling(ir.bit_sets[0].backing_bits)), 4)
+	}
+	// Members rewritten to bit positions.
+	for e in ir.enums {
+		if e.name == "Config_Flag" {
+			testing.expect_value(t, e.members[0].value, i64(0))
+			testing.expect_value(t, e.members[1].value, i64(1))
+			testing.expect_value(t, e.members[2].value, i64(2))
+		}
+	}
+}
+
+@(test)
+test_bit_set_skips_when_flag_exceeds_backing_width :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	// 1-byte backing cannot hold bit position 8 (value 256).
+	u8_ty := ir_builtin_type(&ir, .U_Char)
+	ir.types[int(u8_ty)].variant = Type_Builtin {
+		kind = .U_Char,
+		size = 1,
+	}
+	_ = ir_add_enum(&ir, Enum_Decl{name = "Wide_Flag", backing = u8_ty, members = {{name = "Low", value = 1}, {name = "High", value = 256}}})
+
+	policy := Policy {
+		enum_bit_sets = {{enum_name = "Wide_Flag", name = "Wide_Flags", mode = "log2"}},
+	}
+	apply_enum_bit_sets(&ir, &policy)
+
+	testing.expect_value(t, len(ir.bit_sets), 0)
+	// Members must stay as C masks when the rewrite is skipped.
+	testing.expect_value(t, ir.enums[0].members[1].value, i64(256))
+	found_diag := false
+	for d in ir.diagnostics {
+		if d.category == .Bit_Set_Backing_Mismatch {
+			found_diag = true
+		}
+	}
+	testing.expect(t, found_diag)
+}
+
+@(test)
+test_bit_set_skips_when_backing_size_unknown :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	// Pre-seeded builtins start at size -1; do not fill.
+	_ = ir_add_enum(&ir, Enum_Decl{name = "Flag", backing = ir_builtin_type(&ir, .Int), members = {{name = "One", value = 1}}})
+
+	policy := Policy {
+		enum_bit_sets = {{enum_name = "Flag", name = "Flag_Set", mode = "log2"}},
+	}
+	apply_enum_bit_sets(&ir, &policy)
+
+	testing.expect_value(t, len(ir.bit_sets), 0)
+	found_diag := false
+	for d in ir.diagnostics {
+		if d.category == .Bit_Set_Backing_Mismatch {
+			found_diag = true
+		}
+	}
+	testing.expect(t, found_diag)
+}
+
+@(test)
+test_emit_bit_set_writes_explicit_backing :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	int_ty := ir_builtin_type(&ir, .Int)
+	ir.types[int(int_ty)].variant = Type_Builtin {
+		kind = .Int,
+		size = 4,
+	}
+	enum_handle := ir_add_enum(&ir, Enum_Decl{name = "Flag", backing = int_ty, members = {{name = "One", value = 0}}})
+	elem := ir_add_type(&ir, Type_Info{variant = Type_Enum_Ref{decl = enum_handle}})
+	decl := Bit_Set_Decl {
+		name         = "Flags",
+		elem         = elem,
+		backing_bits = 32,
+	}
+
+	b: strings.Builder
+	strings.builder_init(&b)
+	uses_core_c: bool
+	emit_bit_set(&b, &ir, decl, false, &uses_core_c)
+	out := strings.to_string(b)
+	testing.expect(t, strings.contains(out, "Flags :: bit_set[Flag; u32]"))
 }

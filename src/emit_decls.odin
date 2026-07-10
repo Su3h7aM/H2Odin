@@ -218,7 +218,13 @@ emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, emit_comm
 	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: bit_set[", decl.name)
 	write_type(b, ir, decl.elem, 0, emit_comments, uses_core_c)
-	strings.write_string(b, "]\n\n")
+	// Explicit backing from the measured C enum width (spec 0004). Bare
+	// bit_set[E] sizes from the highest flag bit and is not ABI-faithful.
+	backing := bit_set_backing_spelling(decl.backing_bits)
+	if backing == "" {
+		panic("bit_set reached emission without a proven backing width")
+	}
+	fmt.sbprintf(b, "; %s]\n\n", backing)
 }
 
 macro_literal_can_emit :: proc(s: string) -> bool {

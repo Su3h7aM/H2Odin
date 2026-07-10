@@ -379,7 +379,7 @@ config.enums.bit_sets = {
 }
 ```
 
-**Why `mode = "log2"` is explicit.** A C flag enum stores masks (`1, 2, 4, 8`); an Odin `bit_set`'s backing enum stores bit *positions* (`0, 1, 2, 3`). The conversion is therefore `value -> log2(value)`, and it only works when every member is a power of two. Naming the mode makes the transform explicit rather than magic, and it flags the failure case: a "flag" enum containing a non-power-of-two member (an all-bits mask like `_ALL = 0xFF`, or `_NONE = 0`) can't be a single bit position and must produce a diagnostic. The transform creates two named types — the `bit_set` takes the collective name (`Config_Flags`), the backing enum takes the singular (`Config_Flag`).
+**Why `mode = "log2"` is explicit.** A C flag enum stores masks (`1, 2, 4, 8`); an Odin `bit_set`'s backing enum stores bit *positions* (`0, 1, 2, 3`). The conversion is therefore `value -> log2(value)`, and it only works when every member is a power of two. Naming the mode makes the transform explicit rather than magic, and it flags the failure case: a "flag" enum containing a non-power-of-two member (an all-bits mask like `_ALL = 0xFF`, or `_NONE = 0`) can't be a single bit position and must produce a diagnostic. The transform creates two named types — the `bit_set` takes the collective name (`Config_Flags`), the backing enum takes the singular (`Config_Flag`). The set is always emitted with an **explicit backing width** taken from the C enum's measured integer type (`bit_set[Config_Flag; u32]`), never bare `bit_set[E]` — Odin would otherwise size the set from the highest flag bit, which is not the C ABI size (spec 0004). A flag that does not fit that width fails closed under `bit_set_backing_mismatch`.
 
 Enum transforms **create or modify normal IR enum declarations** — never a parallel emit path, same principle as macro grouping.
 
@@ -479,6 +479,7 @@ config.diagnostics = {
     unsupported_macro         = "warn",
     symbol_collision          = "error",
     bit_set_non_power_of_two  = "error",
+    bit_set_backing_mismatch  = "warn",
 }
 ```
 

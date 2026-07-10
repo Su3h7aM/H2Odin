@@ -26,6 +26,7 @@ Diag_Category :: enum u8 {
 	Macro_Group_Empty,
 	Bit_Set_Non_Power_Of_Two,
 	Bit_Set_Target_Missing,
+	Bit_Set_Backing_Mismatch,
 	Incomplete_Extern_Array,
 	// Spec-listed; reserved for future emitters.
 	Duplicate_Enum_Value,
@@ -63,6 +64,8 @@ diag_category_name :: proc(c: Diag_Category) -> string {
 		return "bit_set_non_power_of_two"
 	case .Bit_Set_Target_Missing:
 		return "bit_set_target_missing"
+	case .Bit_Set_Backing_Mismatch:
+		return "bit_set_backing_mismatch"
 	case .Incomplete_Extern_Array:
 		return "incomplete_extern_array"
 	case .Duplicate_Enum_Value:
@@ -97,6 +100,8 @@ diag_category_from_name :: proc(name: string) -> (Diag_Category, bool) {
 		return .Bit_Set_Non_Power_Of_Two, true
 	case "bit_set_target_missing":
 		return .Bit_Set_Target_Missing, true
+	case "bit_set_backing_mismatch":
+		return .Bit_Set_Backing_Mismatch, true
 	case "incomplete_extern_array":
 		return .Incomplete_Extern_Array, true
 	case "duplicate_enum_value":

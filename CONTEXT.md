@@ -18,10 +18,9 @@ Status: Milestones 0–5, 7–14 complete; Milestone 6 (idiomatic wrappers) is
 deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
-Known correctness debt lives in ROADMAP's **Code health** section; the top
-item is the `bit_set` backing-width ABI bug (spec 0004), live at Extraction's
-own `parse_translation_unit` call site. See [`ROADMAP.md`](ROADMAP.md) and
-[`docs/specs/`](docs/specs/).
+Known correctness debt lives in ROADMAP's **Code health** section (test leak,
+`output.imports_file`, distinct-handle design). See [`ROADMAP.md`](ROADMAP.md)
+and [`docs/specs/`](docs/specs/).
 
 ---
 

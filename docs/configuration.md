@@ -207,7 +207,7 @@ config.enums.bit_sets = {
 }
 ```
 
-`mode = "log2"` rewrites flag masks to bit positions. Non-power-of-two members emit a `bit_set_non_power_of_two` diagnostic and skip the transform.
+`mode = "log2"` rewrites flag masks to bit positions. Non-power-of-two members emit a `bit_set_non_power_of_two` diagnostic and skip the transform. The emitted form always carries an explicit backing width from the C enum's measured integer type — `Config_Flags :: bit_set[Config_Flag; u32]` — never a bare `bit_set[E]` (spec 0004). A flag bit that does not fit that width, or an unmeasurable backing, skips the rewrite under `bit_set_backing_mismatch`.
 
 Constructors that emit diagnostics may carry a local severity table; when present it **beats** `config.diagnostics` for that rule only:
 
@@ -233,6 +233,7 @@ config.diagnostics = {
   macro_group_empty         = "warn",
   bit_set_non_power_of_two  = "error",
   bit_set_target_missing    = "warn",
+  bit_set_backing_mismatch  = "warn",
   incomplete_extern_array   = "warn",
   -- reserved (no emitter yet): duplicate_enum_value, unresolved_type,
   -- unsupported_macro, symbol_collision

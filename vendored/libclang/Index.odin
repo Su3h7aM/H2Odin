@@ -1254,7 +1254,7 @@ Unary_Operator_Kind :: enum u32 {
 
 Remapping :: rawptr
 
-Translation_Unit_Flags :: bit_set[Translation_Unit_Flag]
+Translation_Unit_Flags :: bit_set[Translation_Unit_Flag; u32]
 
 foreign lib {
 	@(link_name = "clang_createIndex")

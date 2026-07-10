@@ -184,10 +184,13 @@ Type_Typedef_Ref :: struct {
 	decl: Decl_Handle, // into IR.typedefs
 }
 
-// Odin `bit_set[Enum]` produced by enums.bit_sets (log2 transform). The
-// backing enum is a normal Enum_Decl; this type is only the set wrapper.
+// Odin `bit_set[Enum; uN]` produced by enums.bit_sets (log2 transform). The
+// element enum is a normal Enum_Decl; this type is only the set wrapper.
+// backing_bits is the proven width from the C enum's measured integer type
+// (spec 0004); never size from the highest flag bit.
 Type_Bit_Set :: struct {
-	elem: Type_Handle, // Type_Enum_Ref to the flag enum
+	elem:         Type_Handle, // Type_Enum_Ref to the flag enum
+	backing_bits: int, // 8 / 16 / 32 / 64
 }
 
 // ---------------------------------------------------------------- Decls
@@ -343,14 +346,16 @@ Macro_Decl :: struct {
 	home:             Input_Header_Handle,
 }
 
-// A named `Name :: bit_set[Enum]` produced by enums.bit_sets. Stored as its
-// own pool entry so emission stays a pure serialization of IR decls.
+// A named `Name :: bit_set[Enum; uN]` produced by enums.bit_sets. Stored as
+// its own pool entry so emission stays a pure serialization of IR decls.
+// backing_bits is the C enum's measured integer width in bits (spec 0004).
 Bit_Set_Decl :: struct {
-	name: string,
-	elem: Type_Handle, // Type_Enum_Ref
-	doc:  string,
-	// Inherits the backing enum's home (set in Transformation).
-	home: Input_Header_Handle,
+	name:         string,
+	elem:         Type_Handle, // Type_Enum_Ref
+	backing_bits: int, // 8 / 16 / 32 / 64
+	doc:          string,
+	// Inherits the element enum's home (set in Transformation).
+	home:         Input_Header_Handle,
 }
 
 IR :: struct {
