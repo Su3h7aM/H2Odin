@@ -179,16 +179,20 @@ Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaqu
       typedef declared in a sibling input header is resolved transparently at
       use sites (its name is lost), which breaks the `clang-c/*.h` family
       (`Index.h` includes `CXString.h`, …).
-- [ ] A checked-in `config.lua` for the pinned headers under
-      `vendored/libclang/headers/`: multi-header inputs, include paths,
+- [x] A checked-in `config.lua` for the pinned headers under
+      `vendored/libclang/headers/` (flat): multi-header inputs, include
+      paths (`-I headers`; pin `#include`s use local `"Foo.h"` form),
       Odin-convention naming (strip `clang_`/`CX*`, recase via
       `h2o.naming.snake_case` / `ada_case` as in the sqlite3 example),
-      curation of macro groups / enums as needed.
+      curation of macro groups / enums as needed. Generated output goes to
+      `vendored/libclang/bindings/` (hand package stays at the package root
+      until the switch).
 - [ ] Quality pass on the generated output: pointer out-params
       (`pointer_lowering_guess`) resolved via config where the hand binding
       proves the intent; flag enums grouped where applicable.
-- [ ] Regenerate into the `vendored:libclang` import path (replacing the hand
-      package) and migrate `src/extract.odin` to the generated names
+- [ ] Regenerate into `vendored/libclang/bindings/`, point the
+      `vendored:libclang` import at the generated package (replacing the
+      hand files), and migrate `src/extract.odin` to the generated names
       (`clang.create_index`, `clang.get_cursor_kind`, …).
 - [ ] Bootstrap explicitly: generation N is produced by a binary built against
       the checked-in bindings from generation N−1; the generated package is

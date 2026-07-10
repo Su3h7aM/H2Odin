@@ -10,8 +10,8 @@
 #ifndef LLVM_CLANG_C_FATAL_ERROR_HANDLER_H
 #define LLVM_CLANG_C_FATAL_ERROR_HANDLER_H
 
-#include "clang-c/ExternC.h"
-#include "clang-c/Platform.h"
+#include "ExternC.h"
+#include "Platform.h"
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 

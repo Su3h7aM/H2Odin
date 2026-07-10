@@ -14,10 +14,10 @@
 #ifndef LLVM_CLANG_C_CXDIAGNOSTIC_H
 #define LLVM_CLANG_C_CXDIAGNOSTIC_H
 
-#include "clang-c/CXSourceLocation.h"
-#include "clang-c/CXString.h"
-#include "clang-c/ExternC.h"
-#include "clang-c/Platform.h"
+#include "CXSourceLocation.h"
+#include "CXString.h"
+#include "ExternC.h"
+#include "Platform.h"
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 

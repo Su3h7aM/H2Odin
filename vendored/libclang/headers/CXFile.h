@@ -16,9 +16,9 @@
 
 #include <time.h>
 
-#include "clang-c/CXString.h"
-#include "clang-c/ExternC.h"
-#include "clang-c/Platform.h"
+#include "CXString.h"
+#include "ExternC.h"
+#include "Platform.h"
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 

@@ -14,10 +14,10 @@
 #ifndef LLVM_CLANG_C_BUILDSYSTEM_H
 #define LLVM_CLANG_C_BUILDSYSTEM_H
 
-#include "clang-c/CXErrorCode.h"
-#include "clang-c/CXString.h"
-#include "clang-c/ExternC.h"
-#include "clang-c/Platform.h"
+#include "CXErrorCode.h"
+#include "CXString.h"
+#include "ExternC.h"
+#include "Platform.h"
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 

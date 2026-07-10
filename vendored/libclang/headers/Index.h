@@ -16,14 +16,14 @@
 #ifndef LLVM_CLANG_C_INDEX_H
 #define LLVM_CLANG_C_INDEX_H
 
-#include "clang-c/BuildSystem.h"
-#include "clang-c/CXDiagnostic.h"
-#include "clang-c/CXErrorCode.h"
-#include "clang-c/CXFile.h"
-#include "clang-c/CXSourceLocation.h"
-#include "clang-c/CXString.h"
-#include "clang-c/ExternC.h"
-#include "clang-c/Platform.h"
+#include "BuildSystem.h"
+#include "CXDiagnostic.h"
+#include "CXErrorCode.h"
+#include "CXFile.h"
+#include "CXSourceLocation.h"
+#include "CXString.h"
+#include "ExternC.h"
+#include "Platform.h"
 
 /**
  * The version constants for the libclang API.
