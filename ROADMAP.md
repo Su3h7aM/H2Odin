@@ -273,6 +273,88 @@ opportunistically or alongside the milestone that touches the same area.
       Libclang config drops the `types.overrides` rawptr-collapse block and
       `*Impl` `symbols.remove` entries; package regenerated.
 
+The items below come out of the 2026-07 external code review (findings
+verified against the code before being recorded; the review's symlink-escape
+claim was *disproven* on Linux and survives only as the Windows note below).
+
+- [ ] **Bug — symbol collisions after renaming are undetected.**
+      `apply_renames` is the last transformation pass; nothing checks final
+      Odin names for uniqueness, so `glOpen`/`vkOpen` + `strip_prefixes` both
+      become `Open` and the output fails `odin check` (or worse, enum members
+      silently merge). `.Symbol_Collision` is registered in
+      `src/diagnostics.odin` but never emitted. Design in
+      [`docs/specs/0008-symbol-collision-validation.md`](docs/specs/0008-symbol-collision-validation.md)
+      (proposed): scope-aware `validate_symbol_names` pass, detect-and-report,
+      default severity `error`.
+- [ ] **Bug — package and foreign-lib names are emitted unvalidated.**
+      `emit.odin` prints `package %s` raw and `foreign import lib "system:%s"`
+      unescaped; both default to the first header's filename stem, so
+      `my-library.h` yields `package my-library` — invalid Odin. Validate the
+      package name as a legal non-keyword identifier (sanitize the stem
+      default), and validate/escape `foreign.import_lib`.
+- [ ] **Determinism gap — the sandbox exposes `math.random`.**
+      `policy_open_sandbox_libs` opens the whole `math` library, so a callback
+      can rename nondeterministically, contradicting the determinism claim
+      (README now qualified until fixed; `docs/architecture.md` already
+      acknowledged the caveat). Remove `math.random`/`math.randomseed` from
+      the exposed table.
+- [ ] **Portability — `require` sandbox path check is lexical on Windows.**
+      On Linux, `filepath.abs` resolves symlinks through an fd (verified: a
+      symlink escaping the config dir is rejected) — pin that load-bearing
+      behavior with a test so a `core:os` change can't silently regress it.
+      On Windows, `GetFullPathNameW` is purely lexical, so a symlink/junction
+      could escape. `path_is_under` also mis-rejects descendants when the
+      root is `/` and compares case-sensitively on case-insensitive volumes.
+- [ ] **Dead diagnostic — `naming_ambiguity` cannot fire.**
+      `longest_known_at` counts equal-length exact matches at one index, but
+      `known_tokens` map keys are unique, so `match_count > 1` is unreachable.
+      Real ambiguity is competing segmentations (`ABC = AB+C` vs `A+BC`),
+      which needs a different detection. Implement that, or retire the
+      diagnostic and the doc comment promising it (`src/naming.odin`).
+- [ ] **Validation gap — Lua list fields accept hybrid tables.**
+      `policy_string_list_field` / `policy_string_or_list_field`
+      (`src/policy_lua.odin`) only scan non-index keys when `luaL_len` is 0,
+      so `{ "a.h", typo = "b.h" }` passes silently. Validate every key as a
+      dense 1..n integer index, and consolidate the two near-duplicate
+      parsers while there.
+- [ ] **`resolve_path` silently falls back on join failure**
+      (`src/main.odin`): a config-relative path degrades to cwd-relative,
+      which can select the wrong header or output dir. Propagate the error
+      with both path components in the message.
+- [ ] **Multi-file output is not transactional.**
+      `write_emit_to_config_folder` writes in sequence, so a mid-run failure
+      leaves a mixed generation, and files from since-removed headers are
+      never cleaned up. Render everything first, write to temp files, rename
+      into place; consider a generated-file manifest for stale cleanup. Also
+      document (not just in a code comment) that output is written *before*
+      error-severity diagnostics are reported — builds must gate on exit
+      code, not file existence.
+- [ ] **Structure — deep `os.exit` in `src/policy_callbacks.odin`**
+      (18 call sites): skips main's defers, makes negative callback paths
+      untestable, and diverges from the `(value, ok)` style elsewhere.
+      Propagate an error state and let `main` own the single exit. Shared
+      pcall/error-report/stack-cleanup helpers would also collapse the
+      repeated dispatch boilerplate. (Same-area trivia: `delete_int_map` /
+      `delete_string_bool_map` in `src/policy_test.odin` are identical bodies
+      — one generic helper suffices.)
+- [ ] **Provenance — builtin headers may not match the loaded libclang.**
+      `clang_resource_dir_arg` (`src/extract.odin`) shells out to whatever
+      `clang` is in `PATH`, which can belong to a different LLVM than the
+      linked `libclang`. Make the executable/resource-dir configurable and
+      print `clang_getClangVersion()` + the chosen resource dir under
+      `-verbose`.
+- [ ] **Flaky e2e observed (2026-07-11):**
+      `test_opaque_tags_idiomatic_default_handle` once failed all four
+      `expect_contains` (empty/truncated stdout?) under the 16-thread runner
+      right after a rebuild; rerun and direct invocation pass. Watch for
+      recurrence; suspect a process-spawn/stdout-read race in `run_h2odin`.
+- [ ] **Reproducibility — no pinned Odin release, no CI.**
+      Document the tested compiler (currently `dev-2026-07a` nightly via
+      mise) and a minimum version; add CI running the AGENTS.md sequence
+      (`make format && make check && make test && make build`) plus
+      `make regen-libclang` + `git diff --exit-code` and the example
+      `odin check`s.
+
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
@@ -303,6 +385,9 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-Code health items for specs 0005–0007 are done. Remaining Later items are
-polish and deferred work (wrappers, full pointer-lowering curation, Windows
-multi-lib, …).
+Code health items for specs 0005–0007 are done. The open Code health items
+from the 2026-07 review are the current hardening backlog — start with
+symbol-collision validation (spec 0008, proposed) and package-name
+validation, which are the two that can produce invalid Odin today. Later
+items remain polish and deferred work (wrappers, full pointer-lowering
+curation, Windows multi-lib, …).

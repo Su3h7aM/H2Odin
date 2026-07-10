@@ -43,7 +43,7 @@ return config
 
 The config file must **return** the config table. Prefer building it with `h2o.config()` so every section exists up front.
 
-### Supported surface (through Milestone 11)
+### Supported surface (current)
 
 | Path | Type | Role |
 |------|------|------|

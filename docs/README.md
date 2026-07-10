@@ -11,4 +11,4 @@ Start here:
 - [Config Spec](config-spec.md) — the north-star configuration model everything grows toward.
 - [Memory](memory.md) — how the generator owns its memory.
 - [Source Layout](source-layout.md) — what each `src/` file is for, and the planned splits.
-- [`specs/`](specs/) — numbered design specs for major decisions (bit-field emission, self-hosted libclang, multi-file emission, bit_set backing width, opaque handles, imports_file removal, opaque tag records).
+- [`specs/`](specs/) — numbered design specs for major decisions (bit-field emission, self-hosted libclang, multi-file emission, bit_set backing width, opaque handles, imports_file removal, opaque tag records, symbol-collision validation).

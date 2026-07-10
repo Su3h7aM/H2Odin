@@ -10,6 +10,7 @@ The pipeline has four stages: **Extraction → Analysis → Transformation → E
 - **Lua stays behind the policy layer.** Only Transformation consults policy. Other stages must not know Lua exists. Algorithms exposed to Lua (case conversion, identifier tokenizing, prefix handling) live in pure Odin modules that `policy.odin` merely *registers* — never inside the policy layer itself.
 - **Lua sees views, never the IR.** Callbacks receive small, stable, read-only tables and return decisions. Handing Lua an IR handle or pointer would weld every user config to the current internals.
 - **Copy foreign strings (libclang/Lua) into the generation arena at the boundary.** Never store foreign-owned strings in the IR.
+- **Lua errors unwind with C `longjmp`.** `lua.L_error` and the `L_check*` helpers never return normally — they jump across Odin frames, skipping `defer`. In any Odin proc callable from Lua: no `defer` that must run, and no owned resource held, across a call that can raise; keep raising calls in small leaf procedures.
 - **IR references are handles, not pointers.** Pool growth invalidates pointers.
 - **The generation arena owns long-lived memory.** `context.allocator` is a convenience, not the owner. Scratch uses `context.temp_allocator` and never enters the IR.
 - **Configuration selects behavior; it never authors output.** The generator owns every byte of Odin emitted. This constrains *who writes the Odin*; it is not the separate question of whether the generator may emit wrapper procedures (Milestone 6, deferred).
