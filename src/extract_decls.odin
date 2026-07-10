@@ -7,7 +7,7 @@ import "core:fmt"
 import clang "vendored:libclang"
 
 extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
-	if clang.Cursor_isMacroBuiltin(cursor) != 0 {
+	if clang.cursor_is_macro_builtin(cursor) != 0 {
 		return
 	}
 	// Skip when this macro was already captured from a sibling input's TU
@@ -18,12 +18,12 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 
 	tokens: [^]clang.Token
 	num_tokens: c.uint
-	clang.tokenize(state.tu, clang.getCursorExtent(cursor), &tokens, &num_tokens)
+	clang.tokenize(state.tu, clang.get_cursor_extent(cursor), &tokens, &num_tokens)
 	// disposeTokens must outlive the replacement loop below. A defer inside
 	// `if num_tokens > 0` would free the array at the end of that if-block
 	// (Odin defer is block-scoped), which is a use-after-free.
 	defer if num_tokens > 0 {
-		clang.disposeTokens(state.tu, tokens, num_tokens)
+		clang.dispose_tokens(state.tu, tokens, num_tokens)
 	}
 
 	replacement_count := max(int(num_tokens) - 1, 0)
@@ -31,18 +31,18 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	for i in 0 ..< replacement_count {
 		token := tokens[i + 1]
 		replacement[i] = Macro_Token {
-			spelling = clone_clang_string(clang.getTokenSpelling(state.tu, token)),
-			kind     = macro_token_kind_from_clang(clang.getTokenKind(token)),
+			spelling = clone_clang_string(clang.get_token_spelling(state.tu, token)),
+			kind     = macro_token_kind_from_clang(clang.get_token_kind(token)),
 		}
 	}
 
 	ir_add_macro(
 		state.ir,
 		Macro_Decl {
-			name = clone_clang_string(clang.getCursorSpelling(cursor)),
+			name = clone_clang_string(clang.get_cursor_spelling(cursor)),
 			tokens = replacement,
-			is_function_like = clang.Cursor_isMacroFunctionLike(cursor) != 0,
-			doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+			is_function_like = clang.cursor_is_macro_function_like(cursor) != 0,
+			doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 			home = cursor_home(state, cursor),
 		},
 	)
@@ -69,15 +69,15 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	if already_captured(state, cursor) {
 		return
 	}
-	name := clone_clang_string(clang.getCursorSpelling(cursor))
+	name := clone_clang_string(clang.get_cursor_spelling(cursor))
 
 	// static file-scope variables have no linkable symbol to bind.
-	if clang.Cursor_getStorageClass(cursor) == .Static {
+	if clang.cursor_get_storage_class(cursor) == .Static {
 		fmt.eprintfln("h2odin: skipping %q: static variables have no external symbol", name)
 		return
 	}
 
-	type, type_ok := capture_type(state, clang.getCursorType(cursor))
+	type, type_ok := capture_type(state, clang.get_cursor_type(cursor))
 	if !type_ok {
 		fmt.eprintfln("h2odin: skipping %q: unsupported type", name)
 		return
@@ -91,7 +91,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 
 	ir_add_var(
 		state.ir,
-		Var_Decl{name = name, type = type, doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)), home = cursor_home(state, cursor)},
+		Var_Decl{name = name, type = type, doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)), home = cursor_home(state, cursor)},
 	)
 	remember_captured(state, cursor, .Var, u32(len(state.ir.vars) - 1))
 }
@@ -101,14 +101,14 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 // typedef struct N { TD *p; } TD; — resolves to this decl instead of
 // recursing forever.
 typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
-	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	usr := clone_clang_string(clang.get_cursor_usr(cursor))
 	if ref, found := state.decl_map[usr]; usr != "" && found {
 		return Decl_Handle(ref.index)
 	}
 
 	decl := Typedef_Decl {
-		name = clone_clang_string(clang.getCursorSpelling(cursor)),
-		doc  = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+		name = clone_clang_string(clang.get_cursor_spelling(cursor)),
+		doc  = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 		home = cursor_home(state, cursor),
 	}
 	handle := ir_add_typedef(state.ir, decl)
@@ -119,7 +119,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 		}
 	}
 
-	aliased, aliased_ok := capture_type(state, clang.getTypedefDeclUnderlyingType(cursor))
+	aliased, aliased_ok := capture_type(state, clang.get_typedef_decl_underlying_type(cursor))
 	if !aliased_ok {
 		state.ir.typedefs[int(handle)].is_unresolvable = true
 		fmt.eprintfln("h2odin: typedef %q aliases an unsupported type; skipped along with its uses", decl.name)
@@ -146,13 +146,13 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 // Get or create the IR declaration for an enum cursor; fill its members when
 // this cursor is the definition. Mirrors record_decl_for_cursor.
 enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
-	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	usr := clone_clang_string(clang.get_cursor_usr(cursor))
 	if ref, found := state.decl_map[usr]; usr != "" && found {
 		handle := Decl_Handle(ref.index)
 		if state.ir.enums[int(handle)].doc == "" {
-			state.ir.enums[int(handle)].doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
+			state.ir.enums[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 		}
-		if clang.isCursorDefinition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
+		if clang.is_cursor_definition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
 			// Definition becomes home when it lands in a configured input.
 			if home := cursor_home(state, cursor); home != 0 {
 				state.ir.enums[int(handle)].home = home
@@ -163,15 +163,15 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 	}
 
 	decl: Enum_Decl
-	if clang.Cursor_isAnonymous(cursor) == 0 {
-		decl.name = clone_clang_string(clang.getCursorSpelling(cursor))
+	if clang.cursor_is_anonymous(cursor) == 0 {
+		decl.name = clone_clang_string(clang.get_cursor_spelling(cursor))
 	}
-	decl.doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
+	decl.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 	decl.home = cursor_home(state, cursor)
 	// The backing integer type is known for any enum cursor — clang answers
 	// with the target's ABI choice — so capture it even for a declaration
 	// that never gets a definition in this header.
-	decl.backing, _ = capture_type(state, clang.getEnumDeclIntegerType(cursor))
+	decl.backing, _ = capture_type(state, clang.get_enum_decl_integer_type(cursor))
 	handle := ir_add_enum(state.ir, decl)
 	if usr != "" {
 		state.decl_map[usr] = Decl_Ref {
@@ -179,7 +179,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 			index = u32(handle),
 		}
 	}
-	if clang.isCursorDefinition(cursor) != 0 {
+	if clang.is_cursor_definition(cursor) != 0 {
 		fill_enum(state, handle, cursor)
 	}
 	return handle
@@ -196,7 +196,7 @@ fill_enum :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Curs
 		ctx   = context,
 		state = state,
 	}
-	clang.visitChildren(cursor, visit_enum_child, &fill)
+	clang.visit_children(cursor, visit_enum_child, &fill)
 	state.ir.enums[int(handle)].members = fill.members[:]
 }
 
@@ -204,12 +204,12 @@ visit_enum_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data
 	fill := cast(^Enum_Fill)client_data
 	context = fill.ctx
 
-	#partial switch clang.getCursorKind(cursor) {
-	case .EnumConstantDecl:
+	#partial switch clang.get_cursor_kind(cursor) {
+	case .Enum_Constant_Decl:
 		member := Enum_Member {
-			name  = clone_clang_string(clang.getCursorSpelling(cursor)),
-			value = i64(clang.getEnumConstantDeclValue(cursor)),
-			doc   = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+			name  = clone_clang_string(clang.get_cursor_spelling(cursor)),
+			value = i64(clang.get_enum_constant_decl_value(cursor)),
+			doc   = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 		}
 		append(&fill.members, member)
 	}
@@ -221,13 +221,13 @@ visit_enum_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data
 // forward declaration (or a first mention inside another type) are completed
 // later when the definition shows up.
 record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
-	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	usr := clone_clang_string(clang.get_cursor_usr(cursor))
 	if ref, found := state.decl_map[usr]; usr != "" && found {
 		handle := Decl_Handle(ref.index)
 		if state.ir.records[int(handle)].doc == "" {
-			state.ir.records[int(handle)].doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
+			state.ir.records[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 		}
-		if clang.isCursorDefinition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
+		if clang.is_cursor_definition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
 			// Definition becomes home when it lands in a configured input.
 			if home := cursor_home(state, cursor); home != 0 {
 				state.ir.records[int(handle)].home = home
@@ -238,15 +238,15 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	}
 
 	record := Record_Decl {
-		is_union = clang.getCursorKind(cursor) == .UnionDecl,
+		is_union = clang.get_cursor_kind(cursor) == .Union_Decl,
 		home     = cursor_home(state, cursor),
 	}
 	// Anonymous records keep "" as their name: recent libclang spells them
 	// as "struct (unnamed at file:line)", which is a description, not a name.
-	if clang.Cursor_isAnonymous(cursor) == 0 {
-		record.name = clone_clang_string(clang.getCursorSpelling(cursor))
+	if clang.cursor_is_anonymous(cursor) == 0 {
+		record.name = clone_clang_string(clang.get_cursor_spelling(cursor))
 	}
-	record.doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor))
+	record.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 	handle := ir_add_record(state.ir, record)
 	if usr != "" {
 		state.decl_map[usr] = Decl_Ref {
@@ -254,7 +254,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 			index = u32(handle),
 		}
 	}
-	if clang.isCursorDefinition(cursor) != 0 {
+	if clang.is_cursor_definition(cursor) != 0 {
 		fill_record(state, handle, cursor)
 	}
 	return handle
@@ -279,14 +279,14 @@ fill_record :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cu
 		ctx   = context,
 		state = state,
 	}
-	clang.visitChildren(cursor, visit_record_child, &fill)
+	clang.visit_children(cursor, visit_record_child, &fill)
 
 	// Written back by handle: the records pool may have grown while nested
 	// types were captured, so no pointer into it was held across the visit.
 	record := state.ir.records[int(handle)]
 	record.is_complete = true
 	record.is_packed = fill.is_packed
-	record_type := clang.getCursorType(cursor)
+	record_type := clang.get_cursor_type(cursor)
 	record.size = measured_size_of(record_type)
 	record.alignment = measured_alignment_of(record_type)
 	if fill.failed_field != "" || fill.failed_bitfield_fact != "" {
@@ -328,10 +328,10 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 	fill := cast(^Record_Fill)client_data
 	context = fill.ctx
 
-	#partial switch clang.getCursorKind(cursor) {
-	case .FieldDecl:
-		name := clone_clang_string(clang.getCursorSpelling(cursor))
-		clang_type := clang.getCursorType(cursor)
+	#partial switch clang.get_cursor_kind(cursor) {
+	case .Field_Decl:
+		name := clone_clang_string(clang.get_cursor_spelling(cursor))
+		clang_type := clang.get_cursor_type(cursor)
 		type, type_ok := capture_type(fill.state, clang_type)
 		if !type_ok {
 			if fill.failed_field == "" {
@@ -339,12 +339,12 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 			}
 			return .Continue
 		}
-		is_bitfield := clang.Cursor_isBitField(cursor) != 0
+		is_bitfield := clang.cursor_is_bit_field(cursor) != 0
 		bit_width: i64
 		if is_bitfield {
-			bit_width = i64(clang.getFieldDeclBitWidth(cursor))
+			bit_width = i64(clang.get_field_decl_bit_width(cursor))
 		}
-		bit_offset := i64(clang.Cursor_getOffsetOfField(cursor))
+		bit_offset := i64(clang.cursor_get_offset_of_field(cursor))
 		if is_bitfield && (bit_width < 0 || bit_offset < 0) {
 			if fill.failed_bitfield_fact == "" {
 				fill.failed_bitfield_fact = name if name != "" else "(anonymous)"
@@ -361,19 +361,19 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 				bit_offset = bit_offset,
 				size = measured_size_of(clang_type),
 				alignment = measured_alignment_of(clang_type),
-				doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+				doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 			},
 		)
-	case .PackedAttr:
+	case .Packed_Attr:
 		fill.is_packed = true
-	case .StructDecl, .UnionDecl, .EnumDecl:
+	case .Struct_Decl, .Union_Decl, .Enum_Decl:
 		// A C11 anonymous member (union { ... }; with no declarator) never
 		// gets a FieldDecl — the bare tag declaration is the member, so it
 		// must become a field here or the record's layout silently shrinks.
 		// Named tag declarations are captured lazily when a field's type
 		// references them; nothing to do for those.
-		if clang.Cursor_isAnonymousRecordDecl(cursor) != 0 {
-			clang_type := clang.getCursorType(cursor)
+		if clang.cursor_is_anonymous_record_decl(cursor) != 0 {
+			clang_type := clang.get_cursor_type(cursor)
 			type, type_ok := capture_type(fill.state, clang_type)
 			if !type_ok {
 				if fill.failed_field == "" {
@@ -386,10 +386,10 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 				Field {
 					name = "",
 					type = type,
-					bit_offset = i64(clang.Cursor_getOffsetOfField(cursor)),
+					bit_offset = i64(clang.cursor_get_offset_of_field(cursor)),
 					size = measured_size_of(clang_type),
 					alignment = measured_alignment_of(clang_type),
-					doc = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+					doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 				},
 			)
 		}
@@ -401,31 +401,31 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	if already_captured(state, cursor) {
 		return
 	}
-	name := clone_clang_string(clang.getCursorSpelling(cursor))
+	name := clone_clang_string(clang.get_cursor_spelling(cursor))
 
 	// static (usually static inline) functions have no linkable symbol.
-	if clang.Cursor_getStorageClass(cursor) == .Static {
+	if clang.cursor_get_storage_class(cursor) == .Static {
 		fmt.eprintfln("h2odin: skipping %q: static functions have no external symbol", name)
 		return
 	}
 
-	return_type, return_ok := capture_type(state, clang.getCursorResultType(cursor))
+	return_type, return_ok := capture_type(state, clang.get_cursor_result_type(cursor))
 	if !return_ok {
 		fmt.eprintfln("h2odin: skipping %q: unsupported return type", name)
 		return
 	}
 
-	num_params := int(clang.Cursor_getNumArguments(cursor))
+	num_params := int(clang.cursor_get_num_arguments(cursor))
 	params := make([]Param, num_params)
 	for i in 0 ..< num_params {
-		arg := clang.Cursor_getArgument(cursor, c.uint(i))
-		param_type, param_ok := capture_param_type(state, clang.getCursorType(arg))
+		arg := clang.cursor_get_argument(cursor, c.uint(i))
+		param_type, param_ok := capture_param_type(state, clang.get_cursor_type(arg))
 		if !param_ok {
 			fmt.eprintfln("h2odin: skipping %q: unsupported type of parameter %d", name, i)
 			return
 		}
 		params[i] = Param {
-			name = clone_clang_string(clang.getCursorSpelling(arg)),
+			name = clone_clang_string(clang.get_cursor_spelling(arg)),
 			type = param_type,
 		}
 	}
@@ -434,8 +434,8 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		name        = name,
 		return_type = return_type,
 		params      = params,
-		is_variadic = clang.Cursor_isVariadic(cursor) != 0,
-		doc         = clone_clang_string(clang.Cursor_getRawCommentText(cursor)),
+		is_variadic = clang.cursor_is_variadic(cursor) != 0,
+		doc         = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 		home        = cursor_home(state, cursor),
 	}
 	ir_add_func(state.ir, func)
@@ -446,7 +446,7 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 // input TU or an earlier include of the same sibling). Empty USR means the
 // entity cannot be shared; treat it as not-yet-captured.
 already_captured :: proc(state: ^Extract_State, cursor: clang.Cursor) -> bool {
-	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	usr := clone_clang_string(clang.get_cursor_usr(cursor))
 	if usr == "" {
 		return false
 	}
@@ -455,7 +455,7 @@ already_captured :: proc(state: ^Extract_State, cursor: clang.Cursor) -> bool {
 }
 
 remember_captured :: proc(state: ^Extract_State, cursor: clang.Cursor, kind: Decl_Kind, index: u32) {
-	usr := clone_clang_string(clang.getCursorUSR(cursor))
+	usr := clone_clang_string(clang.get_cursor_usr(cursor))
 	if usr == "" {
 		return
 	}

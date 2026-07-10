@@ -54,8 +54,8 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 		fmt.eprintln("h2odin: no input headers")
 		return false
 	}
-	index := clang.createIndex(0, 0) // diagnostics are printed by check_parse_diagnostics
-	defer clang.disposeIndex(index)
+	index := clang.create_index(0, 0) // diagnostics are printed by check_parse_diagnostics
+	defer clang.dispose_index(index)
 
 	state := Extract_State {
 		ctx         = context,
@@ -85,18 +85,18 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 
 	for header_path in header_paths {
 		path := strings.clone_to_cstring(header_path, context.temp_allocator)
-		tu := clang.parseTranslationUnit(index, path, raw_data(base_args[:]), c.int(len(base_args)), nil, 0, {.DetailedPreprocessingRecord})
+		tu := clang.parse_translation_unit(index, path, raw_data(base_args[:]), c.int(len(base_args)), nil, 0, {.Detailed_Preprocessing_Record})
 		if tu == nil {
 			fmt.eprintfln("h2odin: failed to parse %q", header_path)
 			return false
 		}
 		if !check_parse_diagnostics(tu, header_path) {
-			clang.disposeTranslationUnit(tu)
+			clang.dispose_translation_unit(tu)
 			return false
 		}
 		state.tu = tu
-		clang.visitChildren(clang.getTranslationUnitCursor(tu), visit_top_level, &state)
-		clang.disposeTranslationUnit(tu)
+		clang.visit_children(clang.get_translation_unit_cursor(tu), visit_top_level, &state)
+		clang.dispose_translation_unit(tu)
 	}
 	return true
 }
@@ -140,29 +140,29 @@ location_home :: proc(state: ^Extract_State, location: clang.Source_Location) ->
 
 // Home for a cursor's primary source location.
 cursor_home :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Input_Header_Handle {
-	return location_home(state, clang.getCursorLocation(cursor))
+	return location_home(state, clang.get_cursor_location(cursor))
 }
 
 // Path clang reports for a source location, normalized like input_files keys.
 location_source_path :: proc(location: clang.Source_Location, allocator := context.allocator) -> string {
 	file: clang.File
-	clang.getFileLocation(location, &file, nil, nil, nil)
+	clang.get_file_location(location, &file, nil, nil, nil)
 	if file == nil {
 		return ""
 	}
 	// Prefer the real path so an include found via -I matches the absolute
 	// path we stored for that same header in config.inputs.
-	if real := clone_clang_string_with(clang.File_tryGetRealPathName(file), allocator); real != "" {
+	if real := clone_clang_string_with(clang.file_try_get_real_path_name(file), allocator); real != "" {
 		return normalize_source_path(real, allocator)
 	}
-	name := clone_clang_string_with(clang.getFileName(file), allocator)
+	name := clone_clang_string_with(clang.get_file_name(file), allocator)
 	return normalize_source_path(name, allocator)
 }
 
 // Like clone_clang_string but into an explicit allocator (temp for probes).
 clone_clang_string_with :: proc(s: clang.String, allocator := context.allocator) -> string {
-	defer clang.disposeString(s)
-	c_str := clang.getCString(s)
+	defer clang.dispose_string(s)
+	c_str := clang.get_c_string(s)
 	if c_str == nil {
 		return ""
 	}
@@ -175,15 +175,15 @@ clone_clang_string_with :: proc(s: clang.String, allocator := context.allocator)
 // have — no output at all beats silently wrong output.
 check_parse_diagnostics :: proc(tu: clang.Translation_Unit, header_path: string) -> bool {
 	ok := true
-	for i in 0 ..< clang.getNumDiagnostics(tu) {
-		diag := clang.getDiagnostic(tu, i)
-		defer clang.disposeDiagnostic(diag)
+	for i in 0 ..< clang.get_num_diagnostics(tu) {
+		diag := clang.get_diagnostic(tu, i)
+		defer clang.dispose_diagnostic(diag)
 
-		severity := clang.getDiagnosticSeverity(diag)
+		severity := clang.get_diagnostic_severity(diag)
 		if severity == .Ignored {
 			continue
 		}
-		fmt.eprintln(clone_clang_string(clang.formatDiagnostic(diag, clang.defaultDiagnosticDisplayOptions())))
+		fmt.eprintln(clone_clang_string(clang.format_diagnostic(diag, clang.default_diagnostic_display_options())))
 		if severity >= .Error {
 			ok = false
 		}
@@ -219,30 +219,30 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 	// Bind declarations from any config.inputs header, not only the current
 	// TU's main file. Sibling inputs included from another input (clang-c)
 	// are still "ours"; system headers and unlisted includes are not.
-	if !location_is_ours(state, clang.getCursorLocation(cursor)) {
+	if !location_is_ours(state, clang.get_cursor_location(cursor)) {
 		return .Continue
 	}
 
-	#partial switch clang.getCursorKind(cursor) {
-	case .FunctionDecl:
+	#partial switch clang.get_cursor_kind(cursor) {
+	case .Function_Decl:
 		extract_func(state, cursor)
-	case .StructDecl, .UnionDecl:
+	case .Struct_Decl, .Union_Decl:
 		record_decl_for_cursor(state, cursor)
-	case .EnumDecl:
+	case .Enum_Decl:
 		enum_decl_for_cursor(state, cursor)
-	case .TypedefDecl:
+	case .Typedef_Decl:
 		typedef_decl_for_cursor(state, cursor)
-	case .VarDecl:
+	case .Var_Decl:
 		extract_var(state, cursor)
-	case .MacroDefinition:
+	case .Macro_Definition:
 		extract_macro(state, cursor)
 	}
 	return .Continue
 }
 
 clone_clang_string :: proc(s: clang.String) -> string {
-	defer clang.disposeString(s)
-	c_str := clang.getCString(s)
+	defer clang.dispose_string(s)
+	c_str := clang.get_c_string(s)
 	if c_str == nil {
 		return ""
 	}

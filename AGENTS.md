@@ -55,6 +55,7 @@ make check    # odin check src (vet + strict-style)
 make build    # build/h2odin
 make test     # unit tests (src/*_test.odin) + e2e (tests/)
 make format   # odinfmt via odinfmt.json
+make regen-libclang  # rebuild + regenerate vendored/libclang (self-host package)
 ```
 
 After emission changes, regenerate and check the checked-in examples

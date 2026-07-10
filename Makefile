@@ -31,7 +31,7 @@ ifneq ($(ODIN_PATH),)
 endif
 RUN_ODIN ?= $(ODIN)
 
-.PHONY: all check build run test test-unit test-e2e format clean
+.PHONY: all check build run test test-unit test-e2e format clean regen-libclang
 
 all: check build
 
@@ -56,6 +56,13 @@ test-e2e: build
 	else \
 		echo "no e2e test package yet"; \
 	fi
+
+# Bootstrap: generation N is produced by a binary linked against generation N−1
+# (the checked-in vendored/libclang package). Headers stay pinned under
+# vendored/libclang/headers/; config is vendored/libclang/config.lua.
+regen-libclang: build
+	./$(BIN) -config:vendored/libclang/config.lua
+	$(RUN_ODIN) check vendored/libclang -no-entry-point $(COLLECTION_FLAGS)
 
 format:
 	$(ODINFMT) $(SRC_DIR) -config:odinfmt.json -w

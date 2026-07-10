@@ -579,13 +579,14 @@ test_m12_bit_fields_emit_proven_layout_and_fail_closed :: proc(t: ^testing.T) {
 	_ = os.remove_all(out_dir)
 	testing.expect_value(t, os.make_directory_all(out_dir), nil)
 	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-m12-bit-fields/generated.odin", stdout), nil)
+	// Fixture keeps C field spellings; generated libclang uses Odin snake_case.
 	layout_check := `package bit_fields
 
 import clang "vendored:libclang"
 
 #assert(size_of(H2O_IndexOptions) == size_of(clang.Index_Options))
-#assert(offset_of(H2O_IndexOptions, PreambleStoragePath) == offset_of(clang.Index_Options, PreambleStoragePath))
-#assert(offset_of(H2O_IndexOptions, InvocationEmissionPath) == offset_of(clang.Index_Options, InvocationEmissionPath))
+#assert(offset_of(H2O_IndexOptions, PreambleStoragePath) == offset_of(clang.Index_Options, preamble_storage_path))
+#assert(offset_of(H2O_IndexOptions, InvocationEmissionPath) == offset_of(clang.Index_Options, invocation_emission_path))
 `
 	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-m12-bit-fields/layout_check.odin", layout_check), nil)
 

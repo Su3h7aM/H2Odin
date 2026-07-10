@@ -17,13 +17,13 @@ capture_param_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: 
 // represent is reported as unsupported rather than approximated.
 capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_Handle, ok: bool) {
 	ir := state.ir
-	is_const := clang.isConstQualifiedType(type) != 0
+	is_const := clang.is_const_qualified_type(type) != 0
 
 	#partial switch type.kind {
 	case .Elaborated:
 		// "struct Foo"-style sugar: capture what it names, keeping any
 		// qualifier that sits on the sugar node itself.
-		handle = capture_type(state, clang.Type_getNamedType(type)) or_return
+		handle = capture_type(state, clang.type_get_named_type(type)) or_return
 		if is_const && !ir_type(ir, handle).is_const {
 			info := ir_type(ir, handle)
 			info.is_const = true
@@ -32,56 +32,56 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 		return handle, true
 
 	case .Pointer:
-		pointee := capture_type(state, clang.getPointeeType(type)) or_return
+		pointee := capture_type(state, clang.get_pointee_type(type)) or_return
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Pointer{pointee = pointee}}), true
 
-	case .ConstantArray:
-		element := capture_type(state, clang.getArrayElementType(type)) or_return
+	case .Constant_Array:
+		element := capture_type(state, clang.get_array_element_type(type)) or_return
 		array := Type_Array {
 			element = element,
-			count   = i64(clang.getArraySize(type)),
+			count   = i64(clang.get_array_size(type)),
 		}
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = array}), true
 
-	case .IncompleteArray:
-		element := capture_type(state, clang.getArrayElementType(type)) or_return
+	case .Incomplete_Array:
+		element := capture_type(state, clang.get_array_element_type(type)) or_return
 		array := Type_Array {
 			element       = element,
 			is_incomplete = true,
 		}
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = array}), true
 
-	case .FunctionProto, .FunctionNoProto:
-		return_type := capture_type(state, clang.getResultType(type)) or_return
-		num_params := max(int(clang.getNumArgTypes(type)), 0)
+	case .Function_Proto, .Function_No_Proto:
+		return_type := capture_type(state, clang.get_result_type(type)) or_return
+		num_params := max(int(clang.get_num_arg_types(type)), 0)
 		params := make([]Param, num_params)
 		for i in 0 ..< num_params {
 			// Parameter names do not exist at the type level; only types.
-			params[i].type = capture_param_type(state, clang.getArgType(type, c.uint(i))) or_return
+			params[i].type = capture_param_type(state, clang.get_arg_type(type, c.uint(i))) or_return
 		}
 		proc_type := Type_Proc {
 			return_type = return_type,
 			params      = params,
-			is_variadic = clang.isFunctionTypeVariadic(type) != 0,
+			is_variadic = clang.is_function_type_variadic(type) != 0,
 		}
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = proc_type}), true
 
 	case .Record:
-		decl := record_decl_for_cursor(state, clang.getTypeDeclaration(type))
+		decl := record_decl_for_cursor(state, clang.get_type_declaration(type))
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Record_Ref{decl = decl}}), true
 
 	case .Enum:
-		decl := enum_decl_for_cursor(state, clang.getTypeDeclaration(type))
+		decl := enum_decl_for_cursor(state, clang.get_type_declaration(type))
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = Type_Enum_Ref{decl = decl}}), true
 
 	case .Typedef:
-		decl_cursor := clang.getTypeDeclaration(type)
+		decl_cursor := clang.get_type_declaration(type)
 		// Typedefs from config.inputs keep their name (including siblings
 		// included from another input). Everything else is not ours: C
 		// standard names stay via core:c; other foreign aliases peel to the
 		// underlying type so we never claim a name we did not bind.
-		if !location_is_ours(state, clang.getCursorLocation(decl_cursor)) {
-			name := clone_clang_string(clang.getCursorSpelling(decl_cursor))
+		if !location_is_ours(state, clang.get_cursor_location(decl_cursor)) {
+			name := clone_clang_string(clang.get_cursor_spelling(decl_cursor))
 			if is_std_c_type(name) {
 				return ir_add_type(
 						ir,
@@ -92,7 +92,7 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 					),
 					true
 			}
-			return capture_type(state, clang.getTypedefDeclUnderlyingType(decl_cursor))
+			return capture_type(state, clang.get_typedef_decl_underlying_type(decl_cursor))
 		}
 		decl := typedef_decl_for_cursor(state, decl_cursor)
 		if ir.typedefs[int(decl)].is_unresolvable {
@@ -126,7 +126,7 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 // code for incomplete or invalid types; that becomes -1, and downstream code
 // must treat -1 as "unknown, cannot prove a substitution".
 measured_size_of :: proc(type: clang.Type) -> int {
-	size := clang.Type_getSizeOf(type)
+	size := clang.type_get_size_of(type)
 	if size < 0 {
 		return -1
 	}
@@ -136,7 +136,7 @@ measured_size_of :: proc(type: clang.Type) -> int {
 // The alignment of a Clang type in bytes on the extraction target. It has
 // the same negative-error contract as measured_size_of.
 measured_alignment_of :: proc(type: clang.Type) -> int {
-	alignment := clang.Type_getAlignOf(type)
+	alignment := clang.type_get_align_of(type)
 	if alignment < 0 {
 		return -1
 	}
@@ -149,9 +149,9 @@ measured_alignment_of :: proc(type: clang.Type) -> int {
 // signedness is not otherwise decided by the type table (e.g. wchar_t,
 // which is unsigned on Windows but a signed int on glibc).
 is_unsigned_integer_type :: proc(type: clang.Type) -> bool {
-	canonical := clang.getCanonicalType(type)
+	canonical := clang.get_canonical_type(type)
 	#partial switch canonical.kind {
-	case .Bool, .Char_U, .UChar, .UShort, .UInt, .ULong, .ULongLong, .UInt128:
+	case .Bool, .Char_U, .U_Char, .U_Short, .U_Int, .U_Long, .U_Long_Long, .U_Int128:
 		return true
 	}
 	return false
@@ -167,25 +167,25 @@ builtin_kind_from_clang :: proc(clang_kind: clang.Type_Kind) -> (kind: Builtin_K
 		return .Char_Signed, true
 	case .Char_U:
 		return .Char_Unsigned, true
-	case .SChar:
+	case .S_Char:
 		return .S_Char, true
-	case .UChar:
+	case .U_Char:
 		return .U_Char, true
 	case .Short:
 		return .Short, true
-	case .UShort:
+	case .U_Short:
 		return .U_Short, true
 	case .Int:
 		return .Int, true
-	case .UInt:
+	case .U_Int:
 		return .U_Int, true
 	case .Long:
 		return .Long, true
-	case .ULong:
+	case .U_Long:
 		return .U_Long, true
-	case .LongLong:
+	case .Long_Long:
 		return .Long_Long, true
-	case .ULongLong:
+	case .U_Long_Long:
 		return .U_Long_Long, true
 	case .Float:
 		return .Float, true

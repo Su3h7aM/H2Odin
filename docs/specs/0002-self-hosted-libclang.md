@@ -1,6 +1,6 @@
 # Spec 0002 — Self-hosted libclang bindings, in the Odin naming convention
 
-**Status:** accepted (planned — Milestone 13, not yet implemented)
+**Status:** accepted (implemented — Milestone 13)
 **Date:** 2026-07-09
 
 ## Context
@@ -61,8 +61,7 @@ A dry run against `clang-c/Index.h` already produces ~6k lines that pass
    `vendored/libclang/headers/` (`#include "Foo.h"` + `-I headers` so the
    pin is used, not system `/usr/include/clang-c`) and remain the generation
    input — regeneration is reproducible. Config lives next to them;
-   generated Odin goes to `vendored/libclang/bindings/` until the hand
-   package is removed.
+   generated Odin is written to the package root (`output_folder = "."`).
 
 5. **Bootstrap is generation-over-generation.** Generation N is produced by
    an `h2odin` binary built against the checked-in bindings from generation
@@ -75,8 +74,8 @@ A dry run against `clang-c/Index.h` already produces ~6k lines that pass
 ## Definition of done
 
 1. Checked-in config generates the package from the pinned
-   `vendored/libclang/headers/` via `config.inputs` into
-   `vendored/libclang/bindings/`.
+   `vendored/libclang/headers/` via `config.inputs` into the
+   `vendored/libclang` package root.
 2. Bit-field layouts correct for the types Extraction needs
    (`CXIndexOptions` at minimum) — spec 0001 acceptance.
 3. `src/extract.odin` builds and runs against the generated package.

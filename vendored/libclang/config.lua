@@ -1,16 +1,15 @@
 -- Self-host generation config for libclang (Milestone 13, spec 0002).
 --
--- H2Odin generates the libclang bindings its own Extraction stage imports,
--- replacing the vendored hand-written package (Karl Zylinski's). Generated
--- output goes to bindings/; Extraction migrates to those names (and the
--- import path) in a later step of the milestone. The hand-written .odin
--- files at this directory root stay until that switch.
+-- H2Odin generates the libclang bindings its own Extraction stage imports.
+-- Generated Odin lives at this package root (import path vendored:libclang).
+-- Bootstrap is generation-over-generation: build/h2odin (linked against the
+-- checked-in package) regenerates these files in place via make regen-libclang.
 --
 -- Layout (next to this config):
 --
 --   headers/*.h   pinned C API (flat under headers/; #include "Foo.h" form
 --                 so -I headers finds the pin — not system /usr/include)
---   bindings/     generated Odin package (output_folder)
+--   *.odin        generated package (output_folder = ".")
 --
 -- Naming follows the Odin convention (examples wiki): Ada_Case types and enum
 -- values, snake_case procs/fields, SCREAMING_SNAKE constants. The package name
@@ -63,9 +62,9 @@ config.inputs = {
 	"headers/ExternC.h",
 }
 
--- Generated package lives here; hand-written bindings stay at package root
--- until Extraction switches over. One Odin file per configured input header.
-config.output_folder = "bindings"
+-- Generated package is the package root (vendored:libclang). One Odin file
+-- per configured input header.
+config.output_folder = "."
 config.output.layout = "per_header"
 
 config.foreign.import_lib = "clang"

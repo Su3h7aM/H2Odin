@@ -56,15 +56,20 @@ emit_close_foreign :: proc(b: ^strings.Builder, in_foreign: ^bool) {
 	in_foreign^ = false
 }
 
-emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, uses_core_c: bool) {
+emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, uses_core_c: bool, needs_foreign: bool) {
 	fmt.sbprintfln(b, "package %s", opts.package_name)
 	strings.write_string(b, "\n")
 	if uses_core_c {
 		strings.write_string(b, "import \"core:c\"\n")
 		strings.write_string(b, "\n")
 	}
-	fmt.sbprintfln(b, "foreign import lib \"system:%s\"", opts.foreign_lib)
-	strings.write_string(b, "\n")
+	// Type-only / empty units must not declare an unused foreign import:
+	// -vet treats that as an error and per_header layout emits one file per
+	// input (macros-only headers become package-only files).
+	if needs_foreign {
+		fmt.sbprintfln(b, "foreign import lib \"system:%s\"", opts.foreign_lib)
+		strings.write_string(b, "\n")
+	}
 }
 
 emit_write_foreign_block :: proc(b: ^strings.Builder, foreign_body: string, link_prefix: string) {
@@ -88,10 +93,11 @@ emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
 	split_imports := opts.imports_file != "" && len(plan.units) == 1
 
 	for unit, ui in plan.units {
-		content, uses_core_c := emit_unit_body(ir, unit.decls, opts)
+		content, uses_core_c, needs_foreign := emit_unit_body(ir, unit.decls, opts)
 		if split_imports {
 			imports_b: strings.Builder
-			emit_write_prelude(&imports_b, opts, uses_core_c)
+			// Foreign import lives only in the imports file (when needed).
+			emit_write_prelude(&imports_b, opts, uses_core_c, needs_foreign)
 			result.imports = strings.to_string(imports_b)
 
 			// Main file still needs package (shared with imports_file). Foreign
@@ -107,7 +113,7 @@ emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
 			}
 		} else {
 			out: strings.Builder
-			emit_write_prelude(&out, opts, uses_core_c)
+			emit_write_prelude(&out, opts, uses_core_c, needs_foreign)
 			strings.write_string(&out, content)
 			files[ui] = Generated_File {
 				filename = unit.filename,
@@ -121,19 +127,22 @@ emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
 }
 
 // Build the declaration body for one unit (no package/prelude). Returns
-// whether the body needs core:c.
-emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body: string, uses_core_c: bool) {
+// whether the body needs core:c and whether it declares foreign symbols
+// (so the prelude can omit an unused `foreign import` under -vet).
+emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body: string, uses_core_c: bool, needs_foreign: bool) {
 	types_body: strings.Builder
 	foreign_body: strings.Builder
 	interleaved: strings.Builder
 	uses_core_c = false
 	in_foreign := false
+	needs_foreign = false
 
 	if opts.procedures_at_end {
 		for ref in decls {
 			switch ref.kind {
 			case .Invalid:
 			case .Func:
+				needs_foreign = true
 				emit_func(&foreign_body, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
 			case .Record:
 				emit_record(&types_body, ir, ir.records[ref.index], opts.emit_comments, &uses_core_c)
@@ -142,6 +151,7 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 			case .Typedef:
 				emit_typedef(&types_body, ir, ir.typedefs[ref.index], opts.emit_comments, &uses_core_c)
 			case .Var:
+				needs_foreign = true
 				emit_var(&foreign_body, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
 			case .Macro:
 				emit_macro(&types_body, ir.macros[ref.index], opts.emit_comments)
@@ -152,16 +162,18 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 		out: strings.Builder
 		strings.write_string(&out, strings.to_string(types_body))
 		emit_write_foreign_block(&out, strings.to_string(foreign_body), opts.link_prefix)
-		return strings.to_string(out), uses_core_c
+		return strings.to_string(out), uses_core_c, needs_foreign
 	}
 
 	for ref in decls {
 		switch ref.kind {
 		case .Invalid:
 		case .Func:
+			needs_foreign = true
 			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
 			emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
 		case .Var:
+			needs_foreign = true
 			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
 			emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
 		case .Record:
@@ -182,5 +194,5 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 		}
 	}
 	emit_close_foreign(&interleaved, &in_foreign)
-	return strings.to_string(interleaved), uses_core_c
+	return strings.to_string(interleaved), uses_core_c, needs_foreign
 }

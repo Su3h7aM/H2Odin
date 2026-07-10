@@ -184,27 +184,23 @@ Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaqu
       paths (`-I headers`; pin `#include`s use local `"Foo.h"` form),
       Odin-convention naming (strip `clang_`/`CX*`, recase via
       `h2o.naming.snake_case` / `ada_case` as in the sqlite3 example),
-      curation of macro groups / enums as needed. Generated output goes to
-      `vendored/libclang/bindings/` (hand package stays at the package root
-      until the switch).
+      curation of macro groups / enums as needed. Generated package is the
+      `vendored/libclang` root (`output_folder = "."`, `per_header` layout).
 - [x] Quality pass on the generated output: pointer out-params
       (`pointer_lowering_guess`) resolved via config where the hand binding
       proves the intent; flag enums grouped where applicable. Scoped to
       Extraction's call surface (`parse_translation_unit` multipointers +
       `Translation_Unit_Flags` bit_set, `tokenize`/`dispose_tokens`); full-API
       curation remains polish (spec 0002).
-- [ ] Regenerate into `vendored/libclang/bindings/`, point the
-      `vendored:libclang` import at the generated package (replacing the
-      hand files), and migrate `src/extract.odin` to the generated names
+- [x] Replace the hand-written package at `vendored/libclang` with the
+      generated package; migrate `src/extract*.odin` to generated names
       (`clang.create_index`, `clang.get_cursor_kind`, …).
-- [ ] Bootstrap explicitly: generation N is produced by a binary built against
+- [x] Bootstrap explicitly: generation N is produced by a binary built against
       the checked-in bindings from generation N−1; the generated package is
       checked in, so the cycle never needs the old hand binding again after
-      the switch.
-- [ ] `make test` / examples stay green against the generated package; a
-      `make regen-libclang` (or similar) target documents the regeneration
-      workflow; the clang-c header version stays pinned in
-      `vendored/libclang/headers/`.
+      the switch (`make regen-libclang`).
+- [x] `make test` stays green against the generated package; clang-c headers
+      stay pinned in `vendored/libclang/headers/`.
 
 ## Milestone 14 — Multi-file Odin emission
 
@@ -261,8 +257,7 @@ opportunistically or alongside the milestone that touches the same area.
 
 ### Start here
 
-Milestones 0–5, 7–12, and **14 (multi-file Odin emission)** are complete.
-**The next goal is self-hosted libclang bindings (Milestone 13)**; its
-bit-field emission prerequisite (Milestone 12) is complete, and the libclang
-config already uses `output.layout = "per_header"`. **Milestone 6 (wrappers)**
+Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindings
+(Milestone 13)** and **multi-file Odin emission (Milestone 14)**. Regenerate the
+checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
