@@ -91,6 +91,41 @@ config.symbols.remove.names = {
 	"CXAPISetImpl",
 }
 
+-- Quality pass (M13): curate what Extraction actually calls. Full-API
+-- pointer_lowering_guess cleanup is polish and stays deferred (spec 0002).
+--
+-- CXTranslationUnit_Flags is a mask enum (powers of two + a zero "None").
+-- Drop None (empty bit_set is the zero value), log2 the rest into a bit_set
+-- so call sites can write `{.Detailed_Preprocessing_Record}` like the hand
+-- binding. The backing enum is renamed to the singular form below.
+config.enums.member = function(member)
+	if member.name == "CXTranslationUnit_None" then
+		return { remove = true }
+	end
+	return nil
+end
+config.enums.bit_sets = {
+	h2o.enum.bit_set {
+		enum = "CXTranslationUnit_Flags",
+		name = "Translation_Unit_Flags",
+		mode = "log2",
+	},
+}
+
+-- Keys are C names (procs.params runs before naming). Type spellings are final
+-- Odin text emitted as-is.
+--
+-- - command_line_args / Tokens: multipointer shape matching Karl + extract's
+--   `raw_data(...)` / `[^]Token` call sites (default lowering is ^T).
+-- - options: C types this as unsigned; promote to the bit_set above so extract
+--   can pass a flag set without a cast.
+config.procs.params = {
+	["clang_parseTranslationUnit.command_line_args"] = { type = "[^]cstring" },
+	["clang_parseTranslationUnit.options"] = { type = "Translation_Unit_Flags" },
+	["clang_tokenize.Tokens"] = { type = "^[^]Token" },
+	["clang_disposeTokens.Tokens"] = { type = "[^]Token" },
+}
+
 config.naming = h2o.naming.odin {
 	strip_prefixes = {
 		proc = "clang_",
@@ -174,8 +209,12 @@ config.naming = h2o.naming.odin {
 	-- CX_BinaryOperatorKind (members CX_BO_*, returned only by the legacy
 	-- clang_Cursor_getBinaryOpcode). Keep the current enum's natural name and
 	-- qualify the deprecated one.
+	--
+	-- CXTranslationUnit_Flags → singular backing enum for the bit_set above
+	-- (bit_set keeps the collective name Translation_Unit_Flags).
 	overrides = {
 		CX_BinaryOperatorKind = "Legacy_Binary_Operator_Kind",
+		CXTranslationUnit_Flags = "Translation_Unit_Flag",
 	},
 	-- https://github.com/odin-lang/examples/wiki/Naming-and-style-convention
 	override = function(sym)

@@ -187,9 +187,12 @@ Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaqu
       curation of macro groups / enums as needed. Generated output goes to
       `vendored/libclang/bindings/` (hand package stays at the package root
       until the switch).
-- [ ] Quality pass on the generated output: pointer out-params
+- [x] Quality pass on the generated output: pointer out-params
       (`pointer_lowering_guess`) resolved via config where the hand binding
-      proves the intent; flag enums grouped where applicable.
+      proves the intent; flag enums grouped where applicable. Scoped to
+      Extraction's call surface (`parse_translation_unit` multipointers +
+      `Translation_Unit_Flags` bit_set, `tokenize`/`dispose_tokens`); full-API
+      curation remains polish (spec 0002).
 - [ ] Regenerate into `vendored/libclang/bindings/`, point the
       `vendored:libclang` import at the generated package (replacing the
       hand files), and migrate `src/extract.odin` to the generated names

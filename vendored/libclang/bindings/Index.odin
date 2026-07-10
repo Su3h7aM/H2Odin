@@ -71,24 +71,23 @@ Index_Options :: struct {
 	invocation_emission_path: cstring,
 }
 
-Translation_Unit_Flags :: enum u32 {
-	None = 0,
-	Detailed_Preprocessing_Record = 1,
-	Incomplete = 2,
-	Precompiled_Preamble = 4,
-	Cache_Completion_Results = 8,
-	For_Serialization = 16,
-	Cxx_Chained_Pch = 32,
-	Skip_Function_Bodies = 64,
-	Include_Brief_Comments_In_Code_Completion = 128,
-	Create_Preamble_On_First_Parse = 256,
-	Keep_Going = 512,
-	Single_File_Parse = 1024,
-	Limit_Skip_Function_Bodies_To_Preamble = 2048,
-	Include_Attributed_Types = 4096,
-	Visit_Implicit_Attributes = 8192,
-	Ignore_Non_Errors_From_Included_Files = 16384,
-	Retain_Excluded_Conditional_Blocks = 32768,
+Translation_Unit_Flag :: enum u32 {
+	Detailed_Preprocessing_Record = 0,
+	Incomplete = 1,
+	Precompiled_Preamble = 2,
+	Cache_Completion_Results = 3,
+	For_Serialization = 4,
+	Cxx_Chained_Pch = 5,
+	Skip_Function_Bodies = 6,
+	Include_Brief_Comments_In_Code_Completion = 7,
+	Create_Preamble_On_First_Parse = 8,
+	Keep_Going = 9,
+	Single_File_Parse = 10,
+	Limit_Skip_Function_Bodies_To_Preamble = 11,
+	Include_Attributed_Types = 12,
+	Visit_Implicit_Attributes = 13,
+	Ignore_Non_Errors_From_Included_Files = 14,
+	Retain_Excluded_Conditional_Blocks = 15,
 }
 
 Save_Translation_Unit_Flags :: enum u32 {
@@ -1255,6 +1254,8 @@ Unary_Operator_Kind :: enum u32 {
 
 Remapping :: rawptr
 
+Translation_Unit_Flags :: bit_set[Translation_Unit_Flag]
+
 foreign lib {
 	@(link_name = "clang_createIndex")
 	create_index :: proc(exclude_declarations_from_pch: i32, display_diagnostics: i32) -> Index ---
@@ -1299,7 +1300,7 @@ foreign lib {
 	@(link_name = "clang_defaultEditingTranslationUnitOptions")
 	default_editing_translation_unit_options :: proc() -> u32 ---
 	@(link_name = "clang_parseTranslationUnit")
-	parse_translation_unit :: proc(c_idx: Index, source_filename: cstring, command_line_args: ^cstring, num_command_line_args: i32, unsaved_files: ^Unsaved_File, num_unsaved_files: u32, options: u32) -> Translation_Unit ---
+	parse_translation_unit :: proc(c_idx: Index, source_filename: cstring, command_line_args: [^]cstring, num_command_line_args: i32, unsaved_files: ^Unsaved_File, num_unsaved_files: u32, options: Translation_Unit_Flags) -> Translation_Unit ---
 	@(link_name = "clang_parseTranslationUnit2")
 	parse_translation_unit2 :: proc(c_idx: Index, source_filename: cstring, command_line_args: ^cstring, num_command_line_args: i32, unsaved_files: ^Unsaved_File, num_unsaved_files: u32, options: u32, out_tu: ^Translation_Unit) -> Error_Code ---
 	@(link_name = "clang_parseTranslationUnit2FullArgv")
@@ -1723,11 +1724,11 @@ foreign lib {
 	@(link_name = "clang_getTokenExtent")
 	get_token_extent :: proc(_: Translation_Unit, _: Token) -> Source_Range ---
 	@(link_name = "clang_tokenize")
-	tokenize :: proc(tu: Translation_Unit, range: Source_Range, tokens: ^^Token, num_tokens: ^u32) ---
+	tokenize :: proc(tu: Translation_Unit, range: Source_Range, tokens: ^[^]Token, num_tokens: ^u32) ---
 	@(link_name = "clang_annotateTokens")
 	annotate_tokens :: proc(tu: Translation_Unit, tokens: ^Token, num_tokens: u32, cursors: ^Cursor) ---
 	@(link_name = "clang_disposeTokens")
-	dispose_tokens :: proc(tu: Translation_Unit, tokens: ^Token, num_tokens: u32) ---
+	dispose_tokens :: proc(tu: Translation_Unit, tokens: [^]Token, num_tokens: u32) ---
 	@(link_name = "clang_getCursorKindSpelling")
 	get_cursor_kind_spelling :: proc(kind: Cursor_Kind) -> String ---
 	@(link_name = "clang_getDefinitionSpellingAndExtent")
