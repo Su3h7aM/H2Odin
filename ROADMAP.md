@@ -204,11 +204,11 @@ Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaqu
 Not a milestone — a running list of known defects and structural debt. Fix
 opportunistically or alongside the milestone that touches the same area.
 
-- [ ] **Bug — macro token use-after-free** (`src/extract.odin`,
-      `extract_macro`): `defer clang.disposeTokens(...)` sits inside the
-      `if num_tokens > 0 { }` block, and Odin's `defer` runs at the end of the
-      *enclosing block* — the token array is disposed before the loop below
-      reads it. Works today only by libclang allocator luck.
+- [x] **Bug — macro token use-after-free** (`src/extract.odin`,
+      `extract_macro`): `defer clang.disposeTokens(...)` was inside the
+      `if num_tokens > 0 { }` block; Odin's `defer` is block-scoped, so the
+      token array was freed before the loop below read it. Fixed by deferring
+      dispose at procedure scope.
 - [x] **CLI is config-only**: drop `-mode:` and positional headers; require
       `-config:` with `config.inputs`. Keep process knobs (`-help`, `-quiet`).
 - [ ] **Split oversized source files** into files with one well-defined scope

@@ -164,8 +164,11 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	tokens: [^]clang.Token
 	num_tokens: c.uint
 	clang.tokenize(state.tu, clang.getCursorExtent(cursor), &tokens, &num_tokens)
-	if num_tokens > 0 {
-		defer clang.disposeTokens(state.tu, tokens, num_tokens)
+	// disposeTokens must outlive the replacement loop below. A defer inside
+	// `if num_tokens > 0` would free the array at the end of that if-block
+	// (Odin defer is block-scoped), which is a use-after-free.
+	defer if num_tokens > 0 {
+		clang.disposeTokens(state.tu, tokens, num_tokens)
 	}
 
 	replacement_count := max(int(num_tokens) - 1, 0)
