@@ -165,6 +165,15 @@ rather than bend it silently.
   bytes that Odin will emit. Opaque records do not produce diagnostics for
   pointer guesses in fields that never appear.
 
+- **An output unit is one self-contained Odin file.** Multi-header extraction
+  still builds one shared IR and one Odin package. A planned per-header layout
+  partitions live declarations by their *home header* (the configured input
+  header that owns the declaration or its definition); merged layout keeps one
+  unit. Placement is decided in Transformation before Emission serializes bytes.
+  Every unit repeats the imports and foreign-library declaration it needs because
+  Odin names introduced by `import` and `foreign import` are file-local. See
+  [`docs/specs/0003-multi-file-odin-emission.md`](docs/specs/0003-multi-file-odin-emission.md).
+
 - **Wrappers are NOT implemented.** Milestone 6 (generated wrapper procs:
   `cstring→string`, pointer+length→slice, flag-enum→`bit_set`) is **deferred and
   has never existed** in the codebase — earlier roadmap boxes that implied

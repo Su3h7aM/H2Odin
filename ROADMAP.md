@@ -203,6 +203,29 @@ Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaqu
       workflow; the clang-c header version stays pinned in
       `vendored/libclang/headers/`.
 
+## Milestone 14 — Multi-file Odin emission
+
+Keep the current merged output as the default, and add an opt-in layout that
+mirrors each configured input header as one Odin file in the same package.
+Decisions and edge cases are recorded in
+[`docs/specs/0003-multi-file-odin-emission.md`](docs/specs/0003-multi-file-odin-emission.md).
+
+- [ ] Extraction records each declaration's home input header as an IR fact;
+      record/enum definitions replace placeholder ownership without leaking a
+      libclang handle past Extraction.
+- [ ] `config.output.layout = "merged" | "per_header"` (default `merged`);
+      per-header layout requires `output_folder` and rejects
+      `output.imports_file`.
+- [ ] Transformation produces an explicit output plan, inherits placement for
+      synthesized macro enums / bit sets, preserves per-header relative order,
+      and fails before writes on duplicate stems or missing placement.
+- [ ] Emission serializes named output units with their own file-local Odin
+      prelude; merged output remains byte-identical.
+- [ ] `footer_per_header` appends the matching footer to each per-header unit;
+      e2e fixtures `odin check` the whole generated directory.
+- [ ] The libclang self-host config opts into `per_header`; regenerate and check
+      `Index.odin`, `CXString.odin`, and the rest of the pinned input family.
+
 ## Code health (ongoing)
 
 Not a milestone — a running list of known defects and structural debt. Fix
@@ -218,6 +241,12 @@ opportunistically or alongside the milestone that touches the same area.
 - [x] **Split oversized source files** into files with one well-defined scope
       each — `policy_*`, `transform_*`, `extract_*`, `emit_*` per
       [`docs/source-layout.md`](docs/source-layout.md).
+- [ ] **Bug — `output.imports_file` cannot share Odin names across files.**
+      `import "core:c"` aliases and `foreign import lib` names are file-local,
+      so a generated body that refers to `c` or opens `foreign lib` does not
+      compile when those declarations exist only in `imports.odin`. Add an
+      `odin check` regression and redesign or remove this option independently;
+      Milestone 14 rejects it in per-header layout.
 
 ## Later
 
@@ -231,5 +260,6 @@ opportunistically or alongside the milestone that touches the same area.
 
 Milestones 0–5 and 7–12 are complete. **The next goal is self-hosted libclang
 bindings (Milestone 13)**; its **bit-field emission prerequisite (Milestone 12)**
-is complete. **Milestone 6 (wrappers)** remains
-deferred and independent.
+is complete. **Multi-file Odin emission (Milestone 14)** is planned as an
+opt-in organization layer over the shared multi-header IR. **Milestone 6
+(wrappers)** remains deferred and independent.
