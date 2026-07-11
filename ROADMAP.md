@@ -374,6 +374,41 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
       `make regen-libclang` + `git diff --exit-code` and the example
       `odin check`s.
 
+## Validation findings (investigation backlog)
+
+Surfaced while building the vendor-library validation corpus
+([`examples/`](examples/) — raylib, box3d, cgltf, curl, miniaudio). **Do not
+treat config workarounds in those examples as fixes.** Each item needs a
+dedicated investigation (and likely a small design note) before implementation.
+
+- [ ] **Bug — pure `typedef void Name` opaque handles panic at emission.**
+      libcurl (`typedef void CURL;` / `CURLM` / `CURLSH`) and miniaudio
+      (`typedef void ma_data_source;`, `ma_node`, `ma_vfs`, …) hit
+      `panic: void type has no ABI spelling` in `emit_types.odin` when the
+      typedef is emitted. Incomplete-tag handles (sqlite3-style) work; pure
+      void tags do not. **Needs investigation:** emit as
+      `Name :: distinct rawptr` (or incomplete struct), peel `Name *` like
+      other opaques, and avoid panicking. Dogfood: `examples/curl`,
+      `examples/miniaudio` (configs currently drop the typedefs as a
+      temporary workaround and still fail `odin check` on dangling names).
+
+- [ ] **Bug — prefix strip can make a type and a field share one name.**
+      After stripping `cgltf_` / `ma_`, types such as `cgltf_size` → `size`
+      and `ma_format` → `format` collide with fields of the same spelling
+      (`size: size`, `format: format`), which Odin rejects as an illegal
+      declaration cycle. **Needs investigation:** detect strip collisions,
+      refuse the strip for that symbol, rename fields, or keep a disambiguating
+      type spelling. Dogfood: cgltf (types left unstripped in config to stay
+      green), miniaudio (fails `odin check` when strip is on).
+
+- [ ] **Bug — system-header types can appear in generated packages.**
+      `examples/curl` emits two `sockaddr :: struct` declarations (from the
+      platform includes pulled by `curl.h`), which should not be part of a
+      binding limited to `config.inputs` homes. **Needs investigation:**
+      whether Extraction treats a system type as “ours”, or a nested capture
+      bypasses the home filter. Related: incomplete story once void CURL
+      typedefs are dropped — callback typedefs still name `^CURL`.
+
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
