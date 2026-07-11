@@ -239,8 +239,9 @@ config.diagnostics = {
   bit_set_backing_mismatch  = "warn",
   incomplete_extern_array   = "warn",
   opaque_record_complete    = "error", -- default: types.opaque on a complete record
-  -- reserved (no emitter yet): duplicate_enum_value, unresolved_type,
-  -- unsupported_macro, symbol_collision
+  symbol_collision          = "error", -- default: post-rename name clashes / type shadowing (spec 0008)
+  -- reserved (no emitter yet): duplicate_enum_value, unsupported_macro
+  -- unresolved_type is emitted for foreign by-value layouts and similar (spec 0010)
 }
 ```
 

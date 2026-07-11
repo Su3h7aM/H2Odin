@@ -1,6 +1,6 @@
 # Spec 0008 — Post-rename symbol-collision validation
 
-**Status:** proposed
+**Status:** accepted and implemented (`src/transform_validate.odin`)
 **Date:** 2026-07-11
 
 ## Context

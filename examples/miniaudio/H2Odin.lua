@@ -21,6 +21,16 @@ config.naming = {
 		const = "MA_",
 		enum_value = "ma_",
 	},
+	-- Fields named like package types (format, thread, log, …) break Odin
+	-- when the same type is used again in the same record body (spec 0008).
+	override = function(sym)
+		if sym.kind == "field" then
+			local n = sym.default
+			if n == "format" or n == "thread" or n == "log" then
+				return n .. "_"
+			end
+		end
+	end,
 }
 
 return config

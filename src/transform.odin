@@ -50,4 +50,8 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 
 	filter_declarations(ir, policy)
 	apply_renames(ir, policy)
+
+	// Spec 0008: detect package/member collisions and field/param type
+	// shadowing after every rename is final. Reports only — never renames.
+	validate_symbol_names(ir)
 }

@@ -37,23 +37,23 @@ cgltf_result :: enum u32 {
 
 cgltf_memory_options :: struct {
 	alloc_func: proc "c" (_: rawptr, _: cgltf_size) -> rawptr,
-	free_func: proc "c" (_: rawptr, _: rawptr),
-	user_data: rawptr,
+	free_func:  proc "c" (_: rawptr, _: rawptr),
+	user_data:  rawptr,
 }
 
 cgltf_file_options :: struct {
-	read: proc "c" (_: ^cgltf_memory_options, _: ^cgltf_file_options, _: cstring, _: ^cgltf_size, _: ^rawptr) -> cgltf_result,
-	release: proc "c" (_: ^cgltf_memory_options, _: ^cgltf_file_options, _: rawptr),
+	read:      proc "c" (_: ^cgltf_memory_options, _: ^cgltf_file_options, _: cstring, _: ^cgltf_size, _: ^rawptr) -> cgltf_result,
+	release:   proc "c" (_: ^cgltf_memory_options, _: ^cgltf_file_options, _: rawptr),
 	user_data: rawptr,
 }
 
 cgltf_options :: struct {
 	/* invalid == auto detect */
-	type: cgltf_file_type,
+	type:             cgltf_file_type,
 	/* 0 == auto */
 	json_token_count: cgltf_size,
-	memory: cgltf_memory_options,
-	file: cgltf_file_options,
+	memory:           cgltf_memory_options,
+	file:             cgltf_file_options,
 }
 
 cgltf_buffer_view_type :: enum u32 {
@@ -166,8 +166,8 @@ cgltf_extras :: struct {
 	/* this field is deprecated and will be removed in the future; use data instead */
 	start_offset: cgltf_size,
 	/* this field is deprecated and will be removed in the future; use data instead */
-	end_offset: cgltf_size,
-	data: ^u8,
+	end_offset:   cgltf_size,
+	data:         ^u8,
 }
 
 cgltf_extension :: struct {
@@ -176,15 +176,15 @@ cgltf_extension :: struct {
 }
 
 cgltf_buffer :: struct {
-	name: ^u8,
-	size: cgltf_size,
-	uri: ^u8,
+	name:             ^u8,
+	size:             cgltf_size,
+	uri:              ^u8,
 	/* loaded by cgltf_load_buffers */
-	data: rawptr,
+	data:             rawptr,
 	data_free_method: cgltf_data_free_method,
-	extras: cgltf_extras,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_meshopt_compression_mode :: enum u32 {
@@ -206,142 +206,142 @@ cgltf_meshopt_compression_filter :: enum u32 {
 cgltf_meshopt_compression :: struct {
 	buffer: ^cgltf_buffer,
 	offset: cgltf_size,
-	size: cgltf_size,
+	size:   cgltf_size,
 	stride: cgltf_size,
-	count: cgltf_size,
-	mode: cgltf_meshopt_compression_mode,
+	count:  cgltf_size,
+	mode:   cgltf_meshopt_compression_mode,
 	filter: cgltf_meshopt_compression_filter,
 }
 
 cgltf_buffer_view :: struct {
-	name: ^u8,
-	buffer: ^cgltf_buffer,
-	offset: cgltf_size,
-	size: cgltf_size,
+	name:                    ^u8,
+	buffer:                  ^cgltf_buffer,
+	offset:                  cgltf_size,
+	size:                    cgltf_size,
 	/* 0 == automatically determined by accessor */
-	stride: cgltf_size,
-	type: cgltf_buffer_view_type,
+	stride:                  cgltf_size,
+	type:                    cgltf_buffer_view_type,
 	/* overrides buffer->data if present, filled by extensions */
-	data: rawptr,
+	data:                    rawptr,
 	has_meshopt_compression: cgltf_bool,
-	meshopt_compression: cgltf_meshopt_compression,
-	extras: cgltf_extras,
-	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	meshopt_compression:     cgltf_meshopt_compression,
+	extras:                  cgltf_extras,
+	extensions_count:        cgltf_size,
+	extensions:              ^cgltf_extension,
 }
 
 cgltf_accessor_sparse :: struct {
-	count: cgltf_size,
-	indices_buffer_view: ^cgltf_buffer_view,
-	indices_byte_offset: cgltf_size,
+	count:                  cgltf_size,
+	indices_buffer_view:    ^cgltf_buffer_view,
+	indices_byte_offset:    cgltf_size,
 	indices_component_type: cgltf_component_type,
-	values_buffer_view: ^cgltf_buffer_view,
-	values_byte_offset: cgltf_size,
+	values_buffer_view:     ^cgltf_buffer_view,
+	values_byte_offset:     cgltf_size,
 }
 
 cgltf_accessor :: struct {
-	name: ^u8,
-	component_type: cgltf_component_type,
-	normalized: cgltf_bool,
-	type: cgltf_type,
-	offset: cgltf_size,
-	count: cgltf_size,
-	stride: cgltf_size,
-	buffer_view: ^cgltf_buffer_view,
-	has_min: cgltf_bool,
-	min: [16]cgltf_float,
-	has_max: cgltf_bool,
-	max: [16]cgltf_float,
-	is_sparse: cgltf_bool,
-	sparse: cgltf_accessor_sparse,
-	extras: cgltf_extras,
+	name:             ^u8,
+	component_type:   cgltf_component_type,
+	normalized:       cgltf_bool,
+	type:             cgltf_type,
+	offset:           cgltf_size,
+	count:            cgltf_size,
+	stride:           cgltf_size,
+	buffer_view:      ^cgltf_buffer_view,
+	has_min:          cgltf_bool,
+	min:              [16]cgltf_float,
+	has_max:          cgltf_bool,
+	max:              [16]cgltf_float,
+	is_sparse:        cgltf_bool,
+	sparse:           cgltf_accessor_sparse,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_attribute :: struct {
-	name: ^u8,
-	type: cgltf_attribute_type,
+	name:  ^u8,
+	type:  cgltf_attribute_type,
 	index: cgltf_int,
-	data: ^cgltf_accessor,
+	data:  ^cgltf_accessor,
 }
 
 cgltf_image :: struct {
-	name: ^u8,
-	uri: ^u8,
-	buffer_view: ^cgltf_buffer_view,
-	mime_type: ^u8,
-	extras: cgltf_extras,
+	name:             ^u8,
+	uri:              ^u8,
+	buffer_view:      ^cgltf_buffer_view,
+	mime_type:        ^u8,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_sampler :: struct {
-	name: ^u8,
-	mag_filter: cgltf_int,
-	min_filter: cgltf_int,
-	wrap_s: cgltf_int,
-	wrap_t: cgltf_int,
-	extras: cgltf_extras,
+	name:             ^u8,
+	mag_filter:       cgltf_int,
+	min_filter:       cgltf_int,
+	wrap_s:           cgltf_int,
+	wrap_t:           cgltf_int,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_texture :: struct {
-	name: ^u8,
-	image: ^cgltf_image,
-	sampler: ^cgltf_sampler,
-	has_basisu: cgltf_bool,
-	basisu_image: ^cgltf_image,
-	extras: cgltf_extras,
+	name:             ^u8,
+	image:            ^cgltf_image,
+	sampler:          ^cgltf_sampler,
+	has_basisu:       cgltf_bool,
+	basisu_image:     ^cgltf_image,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_texture_transform :: struct {
-	offset: [2]cgltf_float,
-	rotation: cgltf_float,
-	scale: [2]cgltf_float,
+	offset:       [2]cgltf_float,
+	rotation:     cgltf_float,
+	scale:        [2]cgltf_float,
 	has_texcoord: cgltf_bool,
-	texcoord: cgltf_int,
+	texcoord:     cgltf_int,
 }
 
 cgltf_texture_view :: struct {
-	texture: ^cgltf_texture,
-	texcoord: cgltf_int,
+	texture:       ^cgltf_texture,
+	texcoord:      cgltf_int,
 	/* equivalent to strength for occlusion_texture */
-	scale: cgltf_float,
+	scale:         cgltf_float,
 	has_transform: cgltf_bool,
-	transform: cgltf_texture_transform,
+	transform:     cgltf_texture_transform,
 }
 
 cgltf_pbr_metallic_roughness :: struct {
-	base_color_texture: cgltf_texture_view,
+	base_color_texture:         cgltf_texture_view,
 	metallic_roughness_texture: cgltf_texture_view,
-	base_color_factor: [4]cgltf_float,
-	metallic_factor: cgltf_float,
-	roughness_factor: cgltf_float,
+	base_color_factor:          [4]cgltf_float,
+	metallic_factor:            cgltf_float,
+	roughness_factor:           cgltf_float,
 }
 
 cgltf_pbr_specular_glossiness :: struct {
-	diffuse_texture: cgltf_texture_view,
+	diffuse_texture:             cgltf_texture_view,
 	specular_glossiness_texture: cgltf_texture_view,
-	diffuse_factor: [4]cgltf_float,
-	specular_factor: [3]cgltf_float,
-	glossiness_factor: cgltf_float,
+	diffuse_factor:              [4]cgltf_float,
+	specular_factor:             [3]cgltf_float,
+	glossiness_factor:           cgltf_float,
 }
 
 cgltf_clearcoat :: struct {
-	clearcoat_texture: cgltf_texture_view,
+	clearcoat_texture:           cgltf_texture_view,
 	clearcoat_roughness_texture: cgltf_texture_view,
-	clearcoat_normal_texture: cgltf_texture_view,
-	clearcoat_factor: cgltf_float,
-	clearcoat_roughness_factor: cgltf_float,
+	clearcoat_normal_texture:    cgltf_texture_view,
+	clearcoat_factor:            cgltf_float,
+	clearcoat_roughness_factor:  cgltf_float,
 }
 
 cgltf_transmission :: struct {
 	transmission_texture: cgltf_texture_view,
-	transmission_factor: cgltf_float,
+	transmission_factor:  cgltf_float,
 }
 
 cgltf_ior :: struct {
@@ -349,24 +349,24 @@ cgltf_ior :: struct {
 }
 
 cgltf_specular :: struct {
-	specular_texture: cgltf_texture_view,
+	specular_texture:       cgltf_texture_view,
 	specular_color_texture: cgltf_texture_view,
-	specular_color_factor: [3]cgltf_float,
-	specular_factor: cgltf_float,
+	specular_color_factor:  [3]cgltf_float,
+	specular_factor:        cgltf_float,
 }
 
 cgltf_volume :: struct {
-	thickness_texture: cgltf_texture_view,
-	thickness_factor: cgltf_float,
-	attenuation_color: [3]cgltf_float,
+	thickness_texture:    cgltf_texture_view,
+	thickness_factor:     cgltf_float,
+	attenuation_color:    [3]cgltf_float,
 	attenuation_distance: cgltf_float,
 }
 
 cgltf_sheen :: struct {
-	sheen_color_texture: cgltf_texture_view,
-	sheen_color_factor: [3]cgltf_float,
+	sheen_color_texture:     cgltf_texture_view,
+	sheen_color_factor:      [3]cgltf_float,
 	sheen_roughness_texture: cgltf_texture_view,
-	sheen_roughness_factor: cgltf_float,
+	sheen_roughness_factor:  cgltf_float,
 }
 
 cgltf_emissive_strength :: struct {
@@ -374,18 +374,18 @@ cgltf_emissive_strength :: struct {
 }
 
 cgltf_iridescence :: struct {
-	iridescence_factor: cgltf_float,
-	iridescence_texture: cgltf_texture_view,
-	iridescence_ior: cgltf_float,
-	iridescence_thickness_min: cgltf_float,
-	iridescence_thickness_max: cgltf_float,
+	iridescence_factor:            cgltf_float,
+	iridescence_texture:           cgltf_texture_view,
+	iridescence_ior:               cgltf_float,
+	iridescence_thickness_min:     cgltf_float,
+	iridescence_thickness_max:     cgltf_float,
 	iridescence_thickness_texture: cgltf_texture_view,
 }
 
 cgltf_anisotropy :: struct {
 	anisotropy_strength: cgltf_float,
 	anisotropy_rotation: cgltf_float,
-	anisotropy_texture: cgltf_texture_view,
+	anisotropy_texture:  cgltf_texture_view,
 }
 
 cgltf_dispersion :: struct {
@@ -393,275 +393,275 @@ cgltf_dispersion :: struct {
 }
 
 cgltf_material :: struct {
-	name: ^u8,
-	has_pbr_metallic_roughness: cgltf_bool,
+	name:                        ^u8,
+	has_pbr_metallic_roughness:  cgltf_bool,
 	has_pbr_specular_glossiness: cgltf_bool,
-	has_clearcoat: cgltf_bool,
-	has_transmission: cgltf_bool,
-	has_volume: cgltf_bool,
-	has_ior: cgltf_bool,
-	has_specular: cgltf_bool,
-	has_sheen: cgltf_bool,
-	has_emissive_strength: cgltf_bool,
-	has_iridescence: cgltf_bool,
-	has_anisotropy: cgltf_bool,
-	has_dispersion: cgltf_bool,
-	pbr_metallic_roughness: cgltf_pbr_metallic_roughness,
-	pbr_specular_glossiness: cgltf_pbr_specular_glossiness,
-	clearcoat: cgltf_clearcoat,
-	ior: cgltf_ior,
-	specular: cgltf_specular,
-	sheen: cgltf_sheen,
-	transmission: cgltf_transmission,
-	volume: cgltf_volume,
-	emissive_strength: cgltf_emissive_strength,
-	iridescence: cgltf_iridescence,
-	anisotropy: cgltf_anisotropy,
-	dispersion: cgltf_dispersion,
-	normal_texture: cgltf_texture_view,
-	occlusion_texture: cgltf_texture_view,
-	emissive_texture: cgltf_texture_view,
-	emissive_factor: [3]cgltf_float,
-	alpha_mode: cgltf_alpha_mode,
-	alpha_cutoff: cgltf_float,
-	double_sided: cgltf_bool,
-	unlit: cgltf_bool,
-	extras: cgltf_extras,
-	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	has_clearcoat:               cgltf_bool,
+	has_transmission:            cgltf_bool,
+	has_volume:                  cgltf_bool,
+	has_ior:                     cgltf_bool,
+	has_specular:                cgltf_bool,
+	has_sheen:                   cgltf_bool,
+	has_emissive_strength:       cgltf_bool,
+	has_iridescence:             cgltf_bool,
+	has_anisotropy:              cgltf_bool,
+	has_dispersion:              cgltf_bool,
+	pbr_metallic_roughness:      cgltf_pbr_metallic_roughness,
+	pbr_specular_glossiness:     cgltf_pbr_specular_glossiness,
+	clearcoat:                   cgltf_clearcoat,
+	ior:                         cgltf_ior,
+	specular:                    cgltf_specular,
+	sheen:                       cgltf_sheen,
+	transmission:                cgltf_transmission,
+	volume:                      cgltf_volume,
+	emissive_strength:           cgltf_emissive_strength,
+	iridescence:                 cgltf_iridescence,
+	anisotropy:                  cgltf_anisotropy,
+	dispersion:                  cgltf_dispersion,
+	normal_texture:              cgltf_texture_view,
+	occlusion_texture:           cgltf_texture_view,
+	emissive_texture:            cgltf_texture_view,
+	emissive_factor:             [3]cgltf_float,
+	alpha_mode:                  cgltf_alpha_mode,
+	alpha_cutoff:                cgltf_float,
+	double_sided:                cgltf_bool,
+	unlit:                       cgltf_bool,
+	extras:                      cgltf_extras,
+	extensions_count:            cgltf_size,
+	extensions:                  ^cgltf_extension,
 }
 
 cgltf_material_mapping :: struct {
-	variant: cgltf_size,
+	variant:  cgltf_size,
 	material: ^cgltf_material,
-	extras: cgltf_extras,
+	extras:   cgltf_extras,
 }
 
 cgltf_morph_target :: struct {
-	attributes: ^cgltf_attribute,
+	attributes:       ^cgltf_attribute,
 	attributes_count: cgltf_size,
 }
 
 cgltf_draco_mesh_compression :: struct {
-	buffer_view: ^cgltf_buffer_view,
-	attributes: ^cgltf_attribute,
+	buffer_view:      ^cgltf_buffer_view,
+	attributes:       ^cgltf_attribute,
 	attributes_count: cgltf_size,
 }
 
 cgltf_mesh_gpu_instancing :: struct {
-	attributes: ^cgltf_attribute,
+	attributes:       ^cgltf_attribute,
 	attributes_count: cgltf_size,
 }
 
 cgltf_primitive :: struct {
-	type: cgltf_primitive_type,
-	indices: ^cgltf_accessor,
-	material: ^cgltf_material,
-	attributes: ^cgltf_attribute,
-	attributes_count: cgltf_size,
-	targets: ^cgltf_morph_target,
-	targets_count: cgltf_size,
-	extras: cgltf_extras,
+	type:                       cgltf_primitive_type,
+	indices:                    ^cgltf_accessor,
+	material:                   ^cgltf_material,
+	attributes:                 ^cgltf_attribute,
+	attributes_count:           cgltf_size,
+	targets:                    ^cgltf_morph_target,
+	targets_count:              cgltf_size,
+	extras:                     cgltf_extras,
 	has_draco_mesh_compression: cgltf_bool,
-	draco_mesh_compression: cgltf_draco_mesh_compression,
-	mappings: ^cgltf_material_mapping,
-	mappings_count: cgltf_size,
-	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	draco_mesh_compression:     cgltf_draco_mesh_compression,
+	mappings:                   ^cgltf_material_mapping,
+	mappings_count:             cgltf_size,
+	extensions_count:           cgltf_size,
+	extensions:                 ^cgltf_extension,
 }
 
 cgltf_mesh :: struct {
-	name: ^u8,
-	primitives: ^cgltf_primitive,
-	primitives_count: cgltf_size,
-	weights: ^cgltf_float,
-	weights_count: cgltf_size,
-	target_names: ^^u8,
+	name:               ^u8,
+	primitives:         ^cgltf_primitive,
+	primitives_count:   cgltf_size,
+	weights:            ^cgltf_float,
+	weights_count:      cgltf_size,
+	target_names:       ^^u8,
 	target_names_count: cgltf_size,
-	extras: cgltf_extras,
-	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extras:             cgltf_extras,
+	extensions_count:   cgltf_size,
+	extensions:         ^cgltf_extension,
 }
 
 cgltf_node :: struct {
-	name: ^u8,
-	parent: ^cgltf_node,
-	children: ^^cgltf_node,
-	children_count: cgltf_size,
-	skin: ^cgltf_skin,
-	mesh: ^cgltf_mesh,
-	camera: ^cgltf_camera,
-	light: ^cgltf_light,
-	weights: ^cgltf_float,
-	weights_count: cgltf_size,
-	has_translation: cgltf_bool,
-	has_rotation: cgltf_bool,
-	has_scale: cgltf_bool,
-	has_matrix: cgltf_bool,
-	translation: [3]cgltf_float,
-	rotation: [4]cgltf_float,
-	scale: [3]cgltf_float,
-	matrix_: [16]cgltf_float,
-	extras: cgltf_extras,
+	name:                    ^u8,
+	parent:                  ^cgltf_node,
+	children:                ^^cgltf_node,
+	children_count:          cgltf_size,
+	skin:                    ^cgltf_skin,
+	mesh:                    ^cgltf_mesh,
+	camera:                  ^cgltf_camera,
+	light:                   ^cgltf_light,
+	weights:                 ^cgltf_float,
+	weights_count:           cgltf_size,
+	has_translation:         cgltf_bool,
+	has_rotation:            cgltf_bool,
+	has_scale:               cgltf_bool,
+	has_matrix:              cgltf_bool,
+	translation:             [3]cgltf_float,
+	rotation:                [4]cgltf_float,
+	scale:                   [3]cgltf_float,
+	matrix_:                 [16]cgltf_float,
+	extras:                  cgltf_extras,
 	has_mesh_gpu_instancing: cgltf_bool,
-	mesh_gpu_instancing: cgltf_mesh_gpu_instancing,
-	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	mesh_gpu_instancing:     cgltf_mesh_gpu_instancing,
+	extensions_count:        cgltf_size,
+	extensions:              ^cgltf_extension,
 }
 
 cgltf_skin :: struct {
-	name: ^u8,
-	joints: ^^cgltf_node,
-	joints_count: cgltf_size,
-	skeleton: ^cgltf_node,
+	name:                  ^u8,
+	joints:                ^^cgltf_node,
+	joints_count:          cgltf_size,
+	skeleton:              ^cgltf_node,
 	inverse_bind_matrices: ^cgltf_accessor,
-	extras: cgltf_extras,
-	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extras:                cgltf_extras,
+	extensions_count:      cgltf_size,
+	extensions:            ^cgltf_extension,
 }
 
 cgltf_camera_perspective :: struct {
 	has_aspect_ratio: cgltf_bool,
-	aspect_ratio: cgltf_float,
-	yfov: cgltf_float,
-	has_zfar: cgltf_bool,
-	zfar: cgltf_float,
-	znear: cgltf_float,
-	extras: cgltf_extras,
+	aspect_ratio:     cgltf_float,
+	yfov:             cgltf_float,
+	has_zfar:         cgltf_bool,
+	zfar:             cgltf_float,
+	znear:            cgltf_float,
+	extras:           cgltf_extras,
 }
 
 cgltf_camera_orthographic :: struct {
-	xmag: cgltf_float,
-	ymag: cgltf_float,
-	zfar: cgltf_float,
-	znear: cgltf_float,
+	xmag:   cgltf_float,
+	ymag:   cgltf_float,
+	zfar:   cgltf_float,
+	znear:  cgltf_float,
 	extras: cgltf_extras,
 }
 
 cgltf_camera :: struct {
-	name: ^u8,
-	type: cgltf_camera_type,
-	data: struct #raw_union {
-		perspective: cgltf_camera_perspective,
+	name:             ^u8,
+	type:             cgltf_camera_type,
+	data:             struct #raw_union {
+		perspective:  cgltf_camera_perspective,
 		orthographic: cgltf_camera_orthographic,
 	},
-	extras: cgltf_extras,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_light :: struct {
-	name: ^u8,
-	color: [3]cgltf_float,
-	intensity: cgltf_float,
-	type: cgltf_light_type,
-	range: cgltf_float,
+	name:                  ^u8,
+	color:                 [3]cgltf_float,
+	intensity:             cgltf_float,
+	type:                  cgltf_light_type,
+	range:                 cgltf_float,
 	spot_inner_cone_angle: cgltf_float,
 	spot_outer_cone_angle: cgltf_float,
-	extras: cgltf_extras,
+	extras:                cgltf_extras,
 }
 
 cgltf_scene :: struct {
-	name: ^u8,
-	nodes: ^^cgltf_node,
-	nodes_count: cgltf_size,
-	extras: cgltf_extras,
+	name:             ^u8,
+	nodes:            ^^cgltf_node,
+	nodes_count:      cgltf_size,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_animation_sampler :: struct {
-	input: ^cgltf_accessor,
-	output: ^cgltf_accessor,
-	interpolation: cgltf_interpolation_type,
-	extras: cgltf_extras,
+	input:            ^cgltf_accessor,
+	output:           ^cgltf_accessor,
+	interpolation:    cgltf_interpolation_type,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_animation_channel :: struct {
-	sampler: ^cgltf_animation_sampler,
-	target_node: ^cgltf_node,
-	target_path: cgltf_animation_path_type,
-	extras: cgltf_extras,
+	sampler:          ^cgltf_animation_sampler,
+	target_node:      ^cgltf_node,
+	target_path:      cgltf_animation_path_type,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_animation :: struct {
-	name: ^u8,
-	samplers: ^cgltf_animation_sampler,
-	samplers_count: cgltf_size,
-	channels: ^cgltf_animation_channel,
-	channels_count: cgltf_size,
-	extras: cgltf_extras,
+	name:             ^u8,
+	samplers:         ^cgltf_animation_sampler,
+	samplers_count:   cgltf_size,
+	channels:         ^cgltf_animation_channel,
+	channels_count:   cgltf_size,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_material_variant :: struct {
-	name: ^u8,
+	name:   ^u8,
 	extras: cgltf_extras,
 }
 
 cgltf_asset :: struct {
-	copyright: ^u8,
-	generator: ^u8,
-	version: ^u8,
-	min_version: ^u8,
-	extras: cgltf_extras,
+	copyright:        ^u8,
+	generator:        ^u8,
+	version:          ^u8,
+	min_version:      ^u8,
+	extras:           cgltf_extras,
 	extensions_count: cgltf_size,
-	extensions: ^cgltf_extension,
+	extensions:       ^cgltf_extension,
 }
 
 cgltf_data :: struct {
-	file_type: cgltf_file_type,
-	file_data: rawptr,
-	asset: cgltf_asset,
-	meshes: ^cgltf_mesh,
-	meshes_count: cgltf_size,
-	materials: ^cgltf_material,
-	materials_count: cgltf_size,
-	accessors: ^cgltf_accessor,
-	accessors_count: cgltf_size,
-	buffer_views: ^cgltf_buffer_view,
-	buffer_views_count: cgltf_size,
-	buffers: ^cgltf_buffer,
-	buffers_count: cgltf_size,
-	images: ^cgltf_image,
-	images_count: cgltf_size,
-	textures: ^cgltf_texture,
-	textures_count: cgltf_size,
-	samplers: ^cgltf_sampler,
-	samplers_count: cgltf_size,
-	skins: ^cgltf_skin,
-	skins_count: cgltf_size,
-	cameras: ^cgltf_camera,
-	cameras_count: cgltf_size,
-	lights: ^cgltf_light,
-	lights_count: cgltf_size,
-	nodes: ^cgltf_node,
-	nodes_count: cgltf_size,
-	scenes: ^cgltf_scene,
-	scenes_count: cgltf_size,
-	scene: ^cgltf_scene,
-	animations: ^cgltf_animation,
-	animations_count: cgltf_size,
-	variants: ^cgltf_material_variant,
-	variants_count: cgltf_size,
-	extras: cgltf_extras,
-	data_extensions_count: cgltf_size,
-	data_extensions: ^cgltf_extension,
-	extensions_used: ^^u8,
-	extensions_used_count: cgltf_size,
-	extensions_required: ^^u8,
+	file_type:                 cgltf_file_type,
+	file_data:                 rawptr,
+	asset:                     cgltf_asset,
+	meshes:                    ^cgltf_mesh,
+	meshes_count:              cgltf_size,
+	materials:                 ^cgltf_material,
+	materials_count:           cgltf_size,
+	accessors:                 ^cgltf_accessor,
+	accessors_count:           cgltf_size,
+	buffer_views:              ^cgltf_buffer_view,
+	buffer_views_count:        cgltf_size,
+	buffers:                   ^cgltf_buffer,
+	buffers_count:             cgltf_size,
+	images:                    ^cgltf_image,
+	images_count:              cgltf_size,
+	textures:                  ^cgltf_texture,
+	textures_count:            cgltf_size,
+	samplers:                  ^cgltf_sampler,
+	samplers_count:            cgltf_size,
+	skins:                     ^cgltf_skin,
+	skins_count:               cgltf_size,
+	cameras:                   ^cgltf_camera,
+	cameras_count:             cgltf_size,
+	lights:                    ^cgltf_light,
+	lights_count:              cgltf_size,
+	nodes:                     ^cgltf_node,
+	nodes_count:               cgltf_size,
+	scenes:                    ^cgltf_scene,
+	scenes_count:              cgltf_size,
+	scene:                     ^cgltf_scene,
+	animations:                ^cgltf_animation,
+	animations_count:          cgltf_size,
+	variants:                  ^cgltf_material_variant,
+	variants_count:            cgltf_size,
+	extras:                    cgltf_extras,
+	data_extensions_count:     cgltf_size,
+	data_extensions:           ^cgltf_extension,
+	extensions_used:           ^^u8,
+	extensions_used_count:     cgltf_size,
+	extensions_required:       ^^u8,
 	extensions_required_count: cgltf_size,
-	json: cstring,
-	json_size: cgltf_size,
-	bin: rawptr,
-	bin_size: cgltf_size,
-	memory: cgltf_memory_options,
-	file: cgltf_file_options,
+	json:                      cstring,
+	json_size:                 cgltf_size,
+	bin:                       rawptr,
+	bin_size:                  cgltf_size,
+	memory:                    cgltf_memory_options,
+	file:                      cgltf_file_options,
 }
 
 @(link_prefix = "cgltf_")

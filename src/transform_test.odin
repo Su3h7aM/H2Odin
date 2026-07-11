@@ -861,3 +861,79 @@ test_emit_bit_set_writes_explicit_backing :: proc(t: ^testing.T) {
 	out := strings.to_string(b)
 	testing.expect(t, strings.contains(out, "Flags :: bit_set[Flag; u32]"))
 }
+
+@(test)
+test_validate_package_scope_collision :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+	old := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old
+
+	ir: IR
+	ir_init(&ir)
+	ir_add_func(&ir, Func_Decl{name = "Open"})
+	ir_add_func(&ir, Func_Decl{name = "Open"})
+	validate_symbol_names(&ir)
+	testing.expect(t, len(ir.diagnostics) >= 1)
+	testing.expect_value(t, ir.diagnostics[0].category, Diag_Category.Symbol_Collision)
+}
+
+@(test)
+test_validate_field_shadow_with_second_type_use :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+	old := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old
+
+	ir: IR
+	ir_init(&ir)
+	enm := ir_add_enum(&ir, Enum_Decl{name = "format"})
+	enm_ty := ir_add_type(&ir, Type_Info{variant = Type_Enum_Ref{decl = enm}})
+	fields := make([]Field, 2)
+	fields[0] = Field {
+		name = "format",
+		type = enm_ty,
+	}
+	fields[1] = Field {
+		name = "internalFormat",
+		type = enm_ty,
+	}
+	ir_add_record(&ir, Record_Decl{name = "device", fields = fields, is_complete = true})
+	validate_symbol_names(&ir)
+	found := false
+	for d in ir.diagnostics {
+		if d.category == .Symbol_Collision && strings.contains(d.message, "shadows type") {
+			found = true
+		}
+	}
+	testing.expect(t, found)
+}
+
+@(test)
+test_validate_alone_self_annotation_is_ok :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+	old := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old
+
+	ir: IR
+	ir_init(&ir)
+	enm := ir_add_enum(&ir, Enum_Decl{name = "format"})
+	enm_ty := ir_add_type(&ir, Type_Info{variant = Type_Enum_Ref{decl = enm}})
+	fields := make([]Field, 1)
+	fields[0] = Field {
+		name = "format",
+		type = enm_ty,
+	}
+	ir_add_record(&ir, Record_Decl{name = "S", fields = fields, is_complete = true})
+	validate_symbol_names(&ir)
+	for d in ir.diagnostics {
+		testing.expect(t, d.category != .Symbol_Collision)
+	}
+}

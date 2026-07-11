@@ -22,6 +22,13 @@ config.naming = {
 		const = "CURL_",
 		enum_value = "CURL",
 	},
+	-- formadd(httppost: ^^httppost, last_post: ^^httppost) — the first
+	-- parameter name shadows the type for later parameters (spec 0008).
+	override = function(sym)
+		if sym.kind == "param" and sym.default == "httppost" then
+			return "httppost_"
+		end
+	end,
 }
 
 return config

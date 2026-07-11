@@ -74,41 +74,41 @@ sslbackend :: enum u32 {
 
 httppost :: struct {
 	/* next entry in the list */
-	next: ^httppost,
+	next:           ^httppost,
 	/* pointer to allocated name */
-	name: ^u8,
+	name:           ^u8,
 	/* length of name length */
-	namelength: i64,
+	namelength:     i64,
 	/* pointer to allocated data contents */
-	contents: ^u8,
+	contents:       ^u8,
 	/* length of contents field, see also
 	                                       CURL_HTTPPOST_LARGE */
 	contentslength: i64,
 	/* pointer to allocated buffer contents */
-	buffer: ^u8,
+	buffer:         ^u8,
 	/* length of buffer field */
-	bufferlength: i64,
+	bufferlength:   i64,
 	/* Content-Type */
-	contenttype: ^u8,
+	contenttype:    ^u8,
 	/* list of extra headers for this form */
-	contentheader: ^slist,
+	contentheader:  ^slist,
 	/* if one field name has more than one
 	                                       file, this link should link to following
 	                                       files */
-	more: ^httppost,
+	more:           ^httppost,
 	/* as defined below */
-	flags: i64,
+	flags:          i64,
 	/* The filename to show. If not set, the
 	                                       actual filename will be used (if this
 	                                       is a file part) */
-	showfilename: ^u8,
+	showfilename:   ^u8,
 	/* custom pointer used for
 	                                       HTTPPOST_CALLBACK posts */
-	userp: rawptr,
+	userp:          rawptr,
 	/* alternative length of contents
 	                                       field. Used if CURL_HTTPPOST_LARGE is
 	                                       set. Added in 7.46.0 */
-	contentlen: off_t,
+	contentlen:     off_t,
 }
 
 /* linked-list structure for the CURLOPT_QUOTE option (and other) */
@@ -150,30 +150,30 @@ curlfiletype :: enum u32 {
 
 /* Information about a single file, used when doing FTP wildcard matching */
 fileinfo :: struct {
-	filename: ^u8,
-	filetype: curlfiletype,
+	filename:  ^u8,
+	filetype:  curlfiletype,
 	/* always zero! */
-	time: libc.time_t,
-	perm: u32,
-	uid: i32,
-	gid: i32,
-	size: off_t,
+	time:      libc.time_t,
+	perm:      u32,
+	uid:       i32,
+	gid:       i32,
+	size:      off_t,
 	hardlinks: i64,
-	strings: struct {
+	strings:   struct {
 		/* If some of these fields is not NULL, it is a pointer to b_data. */
-		time: ^u8,
-		perm: ^u8,
-		user: ^u8,
-		group: ^u8,
+		time:   ^u8,
+		perm:   ^u8,
+		user:   ^u8,
+		group:  ^u8,
 		/* pointer to the target filename of a symlink */
 		target: ^u8,
 	},
-	flags: u32,
+	flags:     u32,
 	/* These are libcurl private struct fields. Previously used by libcurl, so
 	     they must never be interfered with. */
-	b_data: ^u8,
-	b_size: uint,
-	b_used: uint,
+	b_data:    ^u8,
+	b_size:    uint,
+	b_used:    uint,
 }
 
 /* if splitting of data transfer is enabled, this callback is called before
@@ -211,14 +211,14 @@ curlsocktype :: enum u32 {
 sockopt_callback :: proc "c" (_: rawptr, _: socket_t, _: curlsocktype) -> i32
 
 sockaddr :: struct {
-	family: i32,
+	family:   i32,
 	socktype: i32,
 	protocol: i32,
 	/* addrlen was a socklen_t type before 7.18.0 but it
 	                           turned really ugly and painful on the systems that
 	                           lack this type */
-	addrlen: u32,
-	addr: posix.sockaddr,
+	addrlen:  u32,
+	addr:     posix.sockaddr,
 }
 
 opensocket_callback :: proc "c" (_: rawptr, _: curlsocktype, _: ^sockaddr) -> socket_t
@@ -590,8 +590,8 @@ khtype :: enum u32 {
 khkey :: struct {
 	/* points to a null-terminated string encoded with base64
 	                      if len is zero, otherwise to the "raw" data */
-	key: cstring,
-	len: uint,
+	key:     cstring,
+	len:     uint,
 	keytype: khtype,
 }
 
@@ -654,14 +654,14 @@ ftpmethod :: enum u32 {
 }
 
 hstsentry :: struct {
-	name: ^u8,
+	name:    ^u8,
 	namelen: uint,
 	using _: bit_field u8 {
 		includeSubDomains: u8 | 1,
-		_: u8 | 7,
+		_:                 u8 | 7,
 	},
 	/* YYYYMMDD HH:MM:SS [null-terminated] */
-	expire: [18]u8,
+	expire:  [18]u8,
 }
 
 index :: struct {
@@ -896,7 +896,7 @@ CURLoption :: enum u32 {
 	   */
 	OPT_SSLENGINE_DEFAULT = 90,
 	/* Non-zero value means to use the global dns cache */
-	  /* DEPRECATED, do not use! */
+	/* DEPRECATED, do not use! */
 	OPT_DNS_USE_GLOBAL_CACHE,
 	/* DNS cache timeout */
 	OPT_DNS_CACHE_TIMEOUT,
@@ -1069,10 +1069,10 @@ CURLoption :: enum u32 {
 	     Note that this is used only for SSL certificate processing */
 	OPT_CONV_FROM_UTF8_FUNCTION,
 	/* if the connection proceeds too quickly then need to slow it down */
-	  /* limit-rate: maximum number of bytes per second to send or receive */
+	/* limit-rate: maximum number of bytes per second to send or receive */
 	OPT_MAX_SEND_SPEED_LARGE = 30145,
 	/* if the connection proceeds too quickly then need to slow it down */
-	  /* limit-rate: maximum number of bytes per second to send or receive */
+	/* limit-rate: maximum number of bytes per second to send or receive */
 	OPT_MAX_RECV_SPEED_LARGE,
 	/* Pointer to command string to send if USER/PASS fails. */
 	OPT_FTP_ALTERNATIVE_TO_USER = 10147,
@@ -1158,7 +1158,7 @@ CURLoption :: enum u32 {
 	/* block size for TFTP transfers */
 	OPT_TFTP_BLKSIZE = 178,
 	/* Socks Service */
-	  /* DEPRECATED, do not use! */
+	/* DEPRECATED, do not use! */
 	OPT_SOCKS5_GSSAPI_SERVICE = 10179,
 	/* Socks Service */
 	OPT_SOCKS5_GSSAPI_NEC = 180,
@@ -1589,7 +1589,7 @@ CURLformoption :: enum u32 {
 /* structure to be used as parameter for CURLFORM_ARRAY */
 forms :: struct {
 	option: CURLformoption,
-	value: cstring,
+	value:  cstring,
 }
 
 /* use this for multipart formpost building */
@@ -1659,7 +1659,7 @@ formget_callback :: proc "c" (_: rawptr, _: cstring, _: uint) -> uint
  * subsequent attempt to change it will result in a CURLSSLSET_TOO_LATE.
  */
 ssl_backend :: struct {
-	id: sslbackend,
+	id:   sslbackend,
 	name: cstring,
 }
 
@@ -1680,14 +1680,14 @@ certinfo :: struct {
 	                                   linked list with textual information for a
 	                                   certificate in the format "name:content".
 	                                   eg "Subject:foo", "Issuer:bar", etc. */
-	certinfo: ^^slist,
+	certinfo:     ^^slist,
 }
 
 /* Information about the SSL library used and the respective internal SSL
    handle, which can be used to obtain further information regarding the
    connection. Asked for with CURLINFO_TLS_SSL_PTR or CURLINFO_TLS_SESSION. */
 tlssessioninfo :: struct {
-	backend: sslbackend,
+	backend:   sslbackend,
 	internals: rawptr,
 }
 
@@ -1916,37 +1916,37 @@ CURLversion :: enum u32 {
 
 version_info_data :: struct {
 	/* age of the returned struct */
-	age: CURLversion,
+	age:             CURLversion,
 	/* LIBCURL_VERSION */
-	version: cstring,
+	version:         cstring,
 	/* LIBCURL_VERSION_NUM */
-	version_num: u32,
+	version_num:     u32,
 	/* OS/host/cpu/machine when configured */
-	host: cstring,
+	host:            cstring,
 	/* bitmask, see defines below */
-	features: i32,
+	features:        i32,
 	/* human readable string */
-	ssl_version: cstring,
+	ssl_version:     cstring,
 	/* not used anymore, always 0 */
 	ssl_version_num: i64,
 	/* human readable string */
-	libz_version: cstring,
+	libz_version:    cstring,
 	/* protocols is terminated by an entry with a NULL protoname */
-	protocols: ^cstring,
+	protocols:       ^cstring,
 	/* The fields below this were added in CURLVERSION_SECOND */
-	ares: cstring,
-	ares_num: i32,
+	ares:            cstring,
+	ares_num:        i32,
 	/* This field was added in CURLVERSION_THIRD */
-	libidn: cstring,
+	libidn:          cstring,
 	/* Same as '_libiconv_version' if built with HAVE_ICONV */
-	iconv_ver_num: i32,
+	iconv_ver_num:   i32,
 	/* human readable string */
-	libssh_version: cstring,
+	libssh_version:  cstring,
 	/* Numeric Brotli version
 	                                  (MAJOR << 24) | (MINOR << 12) | PATCH */
-	brotli_ver_num: u32,
+	brotli_ver_num:  u32,
 	/* human readable string. */
-	brotli_version: cstring,
+	brotli_version:  cstring,
 	/* Numeric nghttp2 version
 	                                   (MAJOR << 16) | (MINOR << 8) | PATCH */
 	nghttp2_ver_num: u32,
@@ -1954,27 +1954,27 @@ version_info_data :: struct {
 	nghttp2_version: cstring,
 	/* human readable quic (+ HTTP/3) library +
 	                                  version or NULL */
-	quic_version: cstring,
+	quic_version:    cstring,
 	/* the built-in default CURLOPT_CAINFO, might
 	                                  be NULL */
-	cainfo: cstring,
+	cainfo:          cstring,
 	/* the built-in default CURLOPT_CAPATH, might
 	                                  be NULL */
-	capath: cstring,
+	capath:          cstring,
 	/* Numeric Zstd version
 	                                  (MAJOR << 24) | (MINOR << 12) | PATCH */
-	zstd_ver_num: u32,
+	zstd_ver_num:    u32,
 	/* human readable string. */
-	zstd_version: cstring,
+	zstd_version:    cstring,
 	/* human readable string. */
-	hyper_version: cstring,
+	hyper_version:   cstring,
 	/* human readable string. */
-	gsasl_version: cstring,
+	gsasl_version:   cstring,
 	/* These fields were added in CURLVERSION_ELEVENTH */
-	  /* feature_names is terminated by an entry with a NULL feature name */
-	feature_names: ^cstring,
+	/* feature_names is terminated by an entry with a NULL feature name */
+	feature_names:   ^cstring,
 	/* human readable string. */
-	rtmp_version: cstring,
+	rtmp_version:    cstring,
 }
 
 /* This is the curl_ssls_export_cb callback prototype. It
@@ -2095,7 +2095,7 @@ foreign lib {
 	 * CURLOPT_HTTPPOST to send it off to libcurl.
 	 */
 	@(deprecated = "since 7.56.0. Use curl_mime_init()")
-	formadd :: proc(httppost: ^^httppost, last_post: ^^httppost, #c_vararg _: ..any) -> CURLFORMcode ---
+	formadd :: proc(httppost_: ^^httppost, last_post: ^^httppost, #c_vararg _: ..any) -> CURLFORMcode ---
 	/*
 	 * NAME curl_formget()
 	 *

@@ -55,6 +55,7 @@ Each pass gets a file, aligned with the config section it serves:
 | `transform_members.odin` | `structs.fields` / `structs.field` / `structs.align`, `procs.params` / `.results` adjustments. |
 | `transform_foreign.odin` | Foreign (system-header) types: the built-in POSIX/libc map, incomplete stubs, by-value diagnostics, typedef peel (spec 0010). |
 | `transform_foreign_unix.odin` / `transform_foreign_windows.odin` | Build-tagged width source for the map: `size_of` on the real Odin type. `core:sys/posix` is Unix-only and Odin imports cannot be conditional, so the split is a build tag, not a `when`. |
+| `transform_validate.odin` | Post-rename symbol validation (spec 0008): package/member collisions and field/param type shadowing. |
 | `transform_output.odin` | `plan_outputs` — partition live decls into output units by layout. |
 
 ### `extract.odin` — done

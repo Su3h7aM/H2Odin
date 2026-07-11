@@ -277,15 +277,11 @@ The items below come out of the 2026-07 external code review (findings
 verified against the code before being recorded; the review's symlink-escape
 claim was *disproven* on Linux and survives only as the Windows note below).
 
-- [ ] **Bug — symbol collisions after renaming are undetected.**
-      `apply_renames` is the last transformation pass; nothing checks final
-      Odin names for uniqueness, so `glOpen`/`vkOpen` + `strip_prefixes` both
-      become `Open` and the output fails `odin check` (or worse, enum members
-      silently merge). `.Symbol_Collision` is registered in
-      `src/diagnostics.odin` but never emitted. Design in
-      [`docs/specs/0008-symbol-collision-validation.md`](docs/specs/0008-symbol-collision-validation.md)
-      (proposed): scope-aware `validate_symbol_names` pass, detect-and-report,
-      default severity `error`.
+- [x] **Bug — symbol collisions after renaming are undetected.**
+      Fixed by spec 0008: `validate_symbol_names` runs after `apply_renames`,
+      detects package/member collisions and field/param type shadowing, emits
+      `symbol_collision` (default severity `error`). Never auto-renames.
+
 - [x] **Bug — package and foreign-lib names are emitted unvalidated.**
       `emit.odin` printed `package %s` raw and `foreign import lib "system:%s"`
       unescaped; stem defaults like `my-library.h` yielded `package my-library`.
@@ -390,33 +386,23 @@ default rather than a panic or an apparently successful generation.
 
 ### P0 — Restore valid, non-panicking output
 
-- [ ] **Freeze reduced regression fixtures first.** Before implementation, add
-      focused cases for bare-void typedefs, opaque references nested in proc
-      types, package collisions, field/type shadowing, and input records that
-      reference external records. Assert the current structured failure where
-      one exists; a panic is never an acceptable baseline.
-- [ ] **Pure `typedef void Name` opaque handles.** libcurl (`CURL`, `CURLM`,
-      `CURLSH`) and miniaudio (`ma_data_source`, `ma_node`, `ma_vfs`, …) panic
-      at `write_type` because bare C `void` has no Odin spelling. Define this
-      declaration pattern explicitly, emit a type-safe opaque handle, and
-      preserve the correct pointer depth at every reference. Remove the
-      `symbols.remove.names` workarounds only after direct, callback-typedef,
-      field, parameter, and result uses are covered by tests. Dogfood:
-      `examples/curl`, `examples/miniaudio`.
-- [ ] **Post-transform Odin name validation (spec 0008).** Implement the
-      proposed package/member/parameter collision pass, then extend its
-      acceptance cases to lexical binding conflicts such as `format: format`
-      and `thread: thread`, where a renamed field shadows the referenced type.
-      Detection must fail before claiming successful output; it must not
-      silently invent a rename. Dogfood: `curl_sockaddr` → `sockaddr` colliding
-      with system `struct sockaddr`; stripped cgltf/miniaudio type names
-      colliding with fields.
-- [ ] **Resolve field/type shadowing through policy.** Once detected, curate
-      miniaudio with targeted `naming.override` decisions (the callback has
-      symbol kind and parent context) or retain a disambiguating type spelling.
-      Cgltf may keep its official-style `cgltf_` type names, but a reduced
-      fixture must prove that enabling the conflicting strip fails clearly
-      rather than emitting an illegal cycle.
+- [x] **Freeze reduced regression fixtures first.** Fixtures cover bare-void
+      typedefs (`void_opaque`), foreign records (`foreign_ref`,
+      `posix_sockaddr`), package collisions (`symbol_collision`), field
+      shadowing (`field_shadow`), and param shadowing (`param_shadow`).
+- [x] **Pure `typedef void Name` opaque handles.** Emit
+      `Name :: distinct rawptr` (parent commit + `void_opaque` fixture). Curl
+      and miniaudio emit `CURL` / `data_source` / `node` / `vfs` as distinct
+      handles without panicking.
+- [x] **Post-transform Odin name validation (spec 0008).**
+      `validate_symbol_names` after `apply_renames`: package scope, per-record
+      fields, per-enum members, per-proc params, and field/param type
+      shadowing. Default `symbol_collision = error`; never auto-renames.
+- [x] **Resolve field/type shadowing through policy.** Miniaudio renames
+      fields `format`/`thread` → `format_`/`thread_` via `naming.override`;
+      curl renames param `httppost` → `httppost_`. Fixtures prove the
+      unconfigured case fails with `symbol_collision`.
+
 
 ### P1 — Make transitive C types honest and portable
 
@@ -464,12 +450,15 @@ default rather than a panic or an apparently successful generation.
 
 ### Exit gate
 
-- [ ] `./build/h2odin examples/{fff,sqlite3,bit_fields,raylib,box3d,cgltf,curl,miniaudio}`
+- [x] `./build/h2odin examples/{fff,sqlite3,bit_fields,raylib,box3d,cgltf,curl,miniaudio}`
       completes without panic or error-severity diagnostics.
-- [ ] All eight generated packages pass `odin check`; curl and miniaudio no
+- [x] All eight generated packages pass `odin check`; curl and miniaudio no
       longer depend on dropping declarations that remain referenced.
 - [ ] Every fixed root cause has a minimal regression test, and the example
       READMEs contain no temporary-workaround status for these issues.
+      (Regression fixtures for void opaques, foreign types, collisions, and
+      shadowing are in place; example README cleanup still open.)
+
 
 ## Later
 
@@ -512,14 +501,10 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-Code health items for specs 0005–0007, deprecated-declaration propagation
-(spec 0009), and foreign-type provenance + POSIX/libc mapping (spec 0010) are
-done. **Milestone 15 is now the only immediate feature priority:** close the
-structural failures exposed by curl/miniaudio, make all validation examples
-green, and automate that gate. Six of the eight examples pass `odin check`;
-what remains is **curl's `^^httppost`** (a pointer-to-opaque-handle spelling)
-and **miniaudio's declaration cycles** (`thread: thread`, `format: format` —
-a post-rename field-vs-type collision, which is exactly spec 0008's
-scope-aware validation). Do those two next, then automate the gate. Broader
-hardening, wrappers, full pointer-lowering curation, and Windows multi-lib
-emission resume only after the Milestone 15 exit gate is met.
+Code health items for specs 0005–0010 (including foreign-type provenance and
+post-rename symbol validation) are done. **All eight validation examples pass
+`odin check`.** What remains of Milestone 15 is automating that gate (P2) and
+cleaning example README workaround notes. Broader hardening, wrappers, full
+pointer-lowering curation, and Windows multi-lib emission can resume once the
+regeneration gate is in CI.
+

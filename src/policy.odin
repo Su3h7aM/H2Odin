@@ -293,6 +293,8 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 policy_set_diag_defaults :: proc(policy: ^Policy) {
 	// types.opaque applied to a complete record would change layout (spec 0007).
 	policy.diag_severity[.Opaque_Record_Complete] = .Error
+	// Colliding or self-shadowing Odin names produce broken output (spec 0008).
+	policy.diag_severity[.Symbol_Collision] = .Error
 }
 
 policy_config_dir :: proc(path: string) -> (dir: string, ok: bool) {

@@ -294,8 +294,8 @@ diag_verbose_guidance :: proc(c: Diag_Category) -> (cause: string, fix: string) 
 		return "This macro form is not emitted as an Odin constant or group member.",
 			"Ignore it, group related integer macros with macros.groups, or handle it outside the generator."
 	case .Symbol_Collision:
-		return "Two declarations would emit under the same Odin name.",
-			"Disambiguate with naming.overrides, strip_prefixes, or symbols.remove so only one symbol keeps the name."
+		return "After renaming, two symbols share an Odin name, or a field/parameter name shadows a type used in the same declaration.",
+			"Disambiguate with naming.overrides / naming.override (kind-aware for fields and params), adjust strip_prefixes, or symbols.remove."
 	}
 	return "", ""
 }
