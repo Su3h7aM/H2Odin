@@ -40,15 +40,17 @@ policy_string_list_field :: proc(L: ^lua.State, table_name: string, field_key: c
 		return nil, false
 	}
 	defer lua.pop(L, 1)
+	return policy_read_string_list_at_top(L, table_name, field_key)
+}
 
+// Table at stack top is a string list. Validates a pure dense array (keys
+// exactly 1..n, no hybrid string keys) and clones the string values.
+policy_read_string_list_at_top :: proc(L: ^lua.State, table_name: string, field_key: cstring) -> (list: []string, ok: bool) {
 	n := int(lua.L_len(L, -1))
+	if !policy_require_pure_list(L, table_name, field_key, n) {
+		return nil, false
+	}
 	if n == 0 {
-		lua.pushnil(L)
-		if lua.next(L, -2) != 0 {
-			fmt.eprintfln("h2odin: config: %s.%s must be a list of strings", table_name, field_key)
-			lua.pop(L, 2)
-			return nil, false
-		}
 		return nil, true
 	}
 	out := make([]string, n)
@@ -63,6 +65,33 @@ policy_string_list_field :: proc(L: ^lua.State, table_name: string, field_key: c
 		lua.pop(L, 1)
 	}
 	return out, true
+}
+
+// Table at stack top must be a dense sequence of length n: only integer keys
+// 1..n (no holes, no hybrid string keys like { "a", typo = "b" }).
+policy_require_pure_list :: proc(L: ^lua.State, table_name: string, field_key: cstring, n: int) -> bool {
+	count := 0
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		if !bool(lua.isinteger(L, -2)) {
+			fmt.eprintfln("h2odin: config: %s.%s must be a pure list of strings (got a non-integer key)", table_name, field_key)
+			lua.pop(L, 2)
+			return false
+		}
+		idx := int(lua.tointeger(L, -2))
+		if idx < 1 || idx > n {
+			fmt.eprintfln("h2odin: config: %s.%s must be a dense list of strings (unexpected index %d; expected 1..%d)", table_name, field_key, idx, n)
+			lua.pop(L, 2)
+			return false
+		}
+		count += 1
+		lua.pop(L, 1) // value; leave key for next
+	}
+	if count != n {
+		fmt.eprintfln("h2odin: config: %s.%s must be a dense list of strings (length %d but %d entries)", table_name, field_key, n, count)
+		return false
+	}
+	return true
 }
 
 // Read a map of "Parent.child" (or bare name for results) → action tables.
@@ -270,6 +299,8 @@ policy_strip_kinds_from :: proc(L: ^lua.State, field_key: cstring) -> (kinds: St
 }
 
 // Copies into context.allocator (generation arena during a normal run).
+// A bare string is accepted as a one-element list; tables must be pure dense
+// arrays (shared validation with policy_string_list_field).
 policy_string_or_list_field :: proc(L: ^lua.State, table_name: string, field_key: cstring) -> (list: []string, ok: bool) {
 	field_type := lua.getfield(L, -1, field_key)
 	#partial switch lua.Type(field_type) {
@@ -290,31 +321,7 @@ policy_string_or_list_field :: proc(L: ^lua.State, table_name: string, field_key
 		return nil, false
 	}
 	defer lua.pop(L, 1)
-
-	n := int(lua.L_len(L, -1))
-	if n == 0 {
-		// Empty list is fine; a non-array table (string keys only) is not.
-		lua.pushnil(L)
-		if lua.next(L, -2) != 0 {
-			fmt.eprintfln("h2odin: config: %s.%s must be a list of strings", table_name, field_key)
-			lua.pop(L, 2)
-			return nil, false
-		}
-		return nil, true
-	}
-
-	out := make([]string, n)
-	for i in 0 ..< n {
-		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
-		if elem_type != c.int(lua.Type.STRING) {
-			fmt.eprintfln("h2odin: config: %s.%s[%d] must be a string", table_name, field_key, i + 1)
-			lua.pop(L, 1)
-			return nil, false
-		}
-		out[i] = strings.clone(string(lua.tostring(L, -1)))
-		lua.pop(L, 1)
-	}
-	return out, true
+	return policy_read_string_list_at_top(L, table_name, field_key)
 }
 
 push_string_field :: proc(L: ^lua.State, key: cstring, value: string) {

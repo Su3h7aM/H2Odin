@@ -311,12 +311,12 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       Real ambiguity is competing segmentations (`ABC = AB+C` vs `A+BC`),
       which needs a different detection. Implement that, or retire the
       diagnostic and the doc comment promising it (`src/naming.odin`).
-- [ ] **Validation gap — Lua list fields accept hybrid tables.**
+- [x] **Validation gap — Lua list fields accept hybrid tables.**
       `policy_string_list_field` / `policy_string_or_list_field`
-      (`src/policy_lua.odin`) only scan non-index keys when `luaL_len` is 0,
-      so `{ "a.h", typo = "b.h" }` passes silently. Validate every key as a
-      dense 1..n integer index, and consolidate the two near-duplicate
-      parsers while there.
+      (`src/policy_lua.odin`) only scanned non-index keys when `luaL_len` is 0,
+      so `{ "a.h", typo = "b.h" }` passed silently. Fixed: shared
+      `policy_require_pure_list` demands dense integer keys 1..n; both parsers
+      use `policy_read_string_list_at_top`.
 - [x] **`resolve_path` silently falls back on join failure**
       (`src/main.odin`): a config-relative path degrades to cwd-relative,
       which can select the wrong header or output dir. Fixed: join failure

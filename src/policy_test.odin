@@ -608,6 +608,28 @@ return config
 }
 
 @(test)
+test_policy_rejects_hybrid_string_list :: proc(t: ^testing.T) {
+	// { "a.h", typo = "b.h" } used to pass silently (L_len == 1, string keys
+	// ignored). Pure-list validation must fail closed.
+	path, path_ok := write_test_config(
+		t,
+		"hybrid-list",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h", typo = "b.h" }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
 test_policy_remove_deprecated_and_sym_view :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(
 		t,
