@@ -192,6 +192,76 @@ keyword_safe_default :: proc(name: string) -> string {
 	return strings.concatenate({name, "_"})
 }
 
+// Legal non-keyword Odin identifier: [A-Za-z_][A-Za-z0-9_]*.
+is_odin_identifier :: proc(name: string) -> bool {
+	if name == "" || is_odin_keyword(name) {
+		return false
+	}
+	if !is_ascii_alpha(name[0]) && name[0] != '_' {
+		return false
+	}
+	for i in 1 ..< len(name) {
+		c := name[i]
+		if !is_ascii_alpha(c) && !is_ascii_digit(c) && c != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+// Default package name from a header stem (e.g. "my-library.h" → "my_library").
+// Hyphens and other non-identifier characters become underscores; leading
+// digits get a leading underscore; empty collapses later to "bindings";
+// keyword collisions get a trailing underscore.
+sanitize_package_stem :: proc(stem: string) -> string {
+	if stem == "" {
+		return ""
+	}
+	b := make([dynamic]u8, 0, len(stem) + 1, context.temp_allocator)
+	for i in 0 ..< len(stem) {
+		c := stem[i]
+		if is_ascii_alpha(c) || is_ascii_digit(c) || c == '_' {
+			append(&b, c)
+		} else {
+			// my-library, lib.foo → underscores rather than dropping
+			if len(b) == 0 || b[len(b) - 1] != '_' {
+				append(&b, '_')
+			}
+		}
+	}
+	// Trim trailing underscores from consecutive junk at the end.
+	for len(b) > 0 && b[len(b) - 1] == '_' {
+		pop(&b)
+	}
+	if len(b) == 0 {
+		return ""
+	}
+	// Identifiers cannot start with a digit.
+	if is_ascii_digit(b[0]) {
+		inject_at(&b, 0, '_')
+	}
+	name := string(b[:])
+	if is_odin_keyword(name) {
+		return strings.concatenate({name, "_"}, context.temp_allocator)
+	}
+	return name
+}
+
+// foreign.import_lib content (after "system:"). Empty and control/quote
+// characters would make invalid or surprising Odin; reject them.
+is_safe_foreign_lib :: proc(name: string) -> bool {
+	if name == "" {
+		return false
+	}
+	for i in 0 ..< len(name) {
+		c := name[i]
+		if c < 0x20 || c == 0x7f || c == '"' || c == '\\' {
+			return false
+		}
+	}
+	return true
+}
+
 is_odin_keyword :: proc(name: string) -> bool {
 	switch name {
 	case "asm",

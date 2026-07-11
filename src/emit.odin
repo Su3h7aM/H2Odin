@@ -61,7 +61,9 @@ emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, uses_core_c:
 	// -vet treats that as an error and per_header layout emits one file per
 	// input (macros-only headers become package-only files).
 	if needs_foreign {
-		fmt.sbprintfln(b, "foreign import lib \"system:%s\"", opts.foreign_lib)
+		// %q escapes the full system: path so foreign.import_lib content
+		// cannot break out of the string literal.
+		fmt.sbprintfln(b, "foreign import lib %q", fmt.tprintf("system:%s", opts.foreign_lib))
 		strings.write_string(b, "\n")
 	}
 }

@@ -286,12 +286,13 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       [`docs/specs/0008-symbol-collision-validation.md`](docs/specs/0008-symbol-collision-validation.md)
       (proposed): scope-aware `validate_symbol_names` pass, detect-and-report,
       default severity `error`.
-- [ ] **Bug — package and foreign-lib names are emitted unvalidated.**
-      `emit.odin` prints `package %s` raw and `foreign import lib "system:%s"`
-      unescaped; both default to the first header's filename stem, so
-      `my-library.h` yields `package my-library` — invalid Odin. Validate the
-      package name as a legal non-keyword identifier (sanitize the stem
-      default), and validate/escape `foreign.import_lib`.
+- [x] **Bug — package and foreign-lib names are emitted unvalidated.**
+      `emit.odin` printed `package %s` raw and `foreign import lib "system:%s"`
+      unescaped; stem defaults like `my-library.h` yielded `package my-library`.
+      Fixed: `config.package` must be a legal non-keyword identifier; stem
+      defaults are sanitized (`my-library` → `my_library`); `foreign.import_lib`
+      rejects empty/control/quote content; emission uses `%q` for the full
+      `system:…` string.
 - [x] **Determinism gap — the sandbox exposes `math.random`.**
       `policy_open_sandbox_libs` opens the whole `math` library, so a callback
       can rename nondeterministically, contradicting the determinism claim.

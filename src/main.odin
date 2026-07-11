@@ -75,11 +75,16 @@ main :: proc() {
 		os.exit(1)
 	}
 
-	// Package and foreign library default to the first header's stem.
+	// Package and foreign library default to the first header's stem
+	// (sanitized / validated — see resolve_emit_names).
 	stem := filepath.stem(filepath.base(headers[0]))
+	package_name, foreign_lib, names_ok := resolve_emit_names(&policy, stem)
+	if !names_ok {
+		os.exit(1)
+	}
 	opts := Emit_Options {
-		package_name      = policy.package_name if policy.package_name != "" else stem,
-		foreign_lib       = policy.foreign_lib if policy.foreign_lib != "" else stem,
+		package_name      = package_name,
+		foreign_lib       = foreign_lib,
 		link_prefix       = policy.foreign_link_prefix,
 		procedures_at_end = policy.procedures_at_end,
 		emit_comments     = policy.emit_comments,
@@ -265,6 +270,39 @@ resolve_path_list :: proc(paths: []string, base_dir: string) -> (out: []string, 
 		out[i] = resolved
 	}
 	return out, true
+}
+
+// Resolve package and foreign-lib names for emission. Explicit config values
+// fail closed when invalid; stem defaults are sanitized into legal forms.
+resolve_emit_names :: proc(policy: ^Policy, stem: string) -> (package_name, foreign_lib: string, ok: bool) {
+	if policy.package_name != "" {
+		if !is_odin_identifier(policy.package_name) {
+			fmt.eprintfln(
+				"h2odin: config.package %q is not a valid Odin package identifier (letter/underscore then alphanumerics/underscores, not a keyword)",
+				policy.package_name,
+			)
+			return "", "", false
+		}
+		package_name = policy.package_name
+	} else {
+		package_name = sanitize_package_stem(stem)
+		if package_name == "" {
+			package_name = "bindings"
+		}
+	}
+
+	if policy.foreign_lib != "" {
+		if !is_safe_foreign_lib(policy.foreign_lib) {
+			fmt.eprintfln("h2odin: config.foreign.import_lib %q is empty or contains a quote, backslash, or control character", policy.foreign_lib)
+			return "", "", false
+		}
+		foreign_lib = policy.foreign_lib
+	} else {
+		// system: path is a string, not an identifier — keep the stem as-is
+		// when non-empty (hyphens are fine); fall back to a generic name.
+		foreign_lib = stem if is_safe_foreign_lib(stem) else "lib"
+	}
+	return package_name, foreign_lib, true
 }
 
 // Absolute paths stay as-is; relative paths join base_dir when non-empty.
