@@ -47,18 +47,20 @@ against the checked-in package and regenerates it in place (see
 ## Usage
 
 ```sh
-./build/h2odin -config:file.lua [-quiet]
+./build/h2odin <project-dir> [options]
+./build/h2odin -config:file.lua [options]
 ```
 
-- A **Lua config is required.** Headers, type mode, naming, output path, and other policy live there (`config.inputs`, `config.type_mode`, `config.output_folder`, …).
-- Generated Odin goes to **stdout**, or to files under `config.output_folder` when set (relative paths resolve against the config directory).
-- Non-certain decisions go to **stderr** as a single diagnostics report; `-quiet` / `-q` suppresses that report (error severities still fail the run).
+- **Common case:** pass a project directory. H2Odin loads `H2Odin.lua` from that directory; headers, type mode, naming, output path, and other policy live there (`config.inputs`, `config.type_mode`, `config.output_folder`, …).
+- **`-config:path`:** explicit Lua config path when you cannot use the default filename (naming conflicts, shared configs, fixtures).
+- **Bindings** are written under `config.output_folder` by default (relative paths resolve against the config directory). Missing `output_folder` is an error — not a silent fallback to stdout. Use `-destination:stdout` / `-d:stdout` when you want a single merged unit on stdout.
+- **Diagnostics** (warnings and errors) go to stderr only. `-quiet` / `-q` suppresses them (error severities still fail the run). `-verbose` / `-v` adds probable cause and Lua-config fix guidance for each issue.
 - `-help` / `-h` prints usage.
 
 Example (writes `examples/sqlite3/sqlite3.odin` via `config.output_folder = "."`):
 
 ```sh
-./build/h2odin -config:examples/sqlite3/config.lua
+./build/h2odin examples/sqlite3
 ```
 
 Check generated examples:

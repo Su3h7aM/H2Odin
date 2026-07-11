@@ -32,7 +32,7 @@ A dry run against `clang-c/Index.h` already produces ~6k lines that pass
 
 2. **The generated package uses the Odin naming convention**, not the C
    names and not the hand package's hybrid. Concretely, driven by a
-   checked-in `config.lua` using the same approach as the sqlite3 example
+   checked-in `H2Odin.lua` using the same approach as the sqlite3 example
    (strip affixes + `h2o.naming.snake_case` / `ada_case`):
 
    | C | Generated Odin |

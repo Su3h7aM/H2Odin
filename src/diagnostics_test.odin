@@ -88,3 +88,15 @@ test_diag_category_roundtrip_names :: proc(t: ^testing.T) {
 	_, bad := diag_category_from_name("not_a_category")
 	testing.expect(t, !bad)
 }
+
+@(test)
+test_diag_verbose_guidance_covers_active_categories :: proc(t: ^testing.T) {
+	// Active categories should document cause + config fix for -verbose.
+	// Reserved categories may return empty until their emitters land.
+	active := [?]Diag_Category{.Pointer_Lowering_Guess, .Bit_Field_Layout_Fallback, .Naming_Ambiguity, .Incomplete_Extern_Array, .Opaque_Record_Complete}
+	for c in active {
+		cause, fix := diag_verbose_guidance(c)
+		testing.expectf(t, cause != "", "category %v should have a cause", c)
+		testing.expectf(t, fix != "", "category %v should have a fix", c)
+	}
+}

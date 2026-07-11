@@ -180,7 +180,7 @@ Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaqu
       typedef declared in a sibling input header is resolved transparently at
       use sites (its name is lost), which breaks the `clang-c/*.h` family
       (`Index.h` includes `CXString.h`, …).
-- [x] A checked-in `config.lua` for the pinned headers under
+- [x] A checked-in `H2Odin.lua` for the pinned headers under
       `vendored/libclang/headers/` (flat): multi-header inputs, include
       paths (`-I headers`; pin `#include`s use local `"Foo.h"` form),
       Odin-convention naming (strip `clang_`/`CX*`, recase via
@@ -235,8 +235,10 @@ opportunistically or alongside the milestone that touches the same area.
       `if num_tokens > 0 { }` block; Odin's `defer` is block-scoped, so the
       token array was freed before the loop below read it. Fixed by deferring
       dispose at procedure scope.
-- [x] **CLI is config-only**: drop `-mode:` and positional headers; require
-      `-config:` with `config.inputs`. Keep process knobs (`-help`, `-quiet`).
+- [x] **CLI is config-driven**: drop `-mode:` and positional headers; load
+      `H2Odin.lua` from a project directory (or `-config:` as fallback) with
+      `config.inputs`. Process knobs: `-help`, `-quiet`, `-verbose`,
+      `-destination`.
 - [x] **Split oversized source files** into files with one well-defined scope
       each — `policy_*`, `transform_*`, `extract_*`, `emit_*` per
       [`docs/source-layout.md`](docs/source-layout.md).

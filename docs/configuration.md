@@ -50,7 +50,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `package` | string | Odin package name (default: first header stem) |
 | `type_mode` | `"abi"` \| `"idiomatic"` | leaf type spelling family |
 | `inputs` | list of strings | multi-header inputs (paths relative to the config dir) |
-| `output_folder` | string | write `.odin` files here instead of stdout (relative to the config dir) |
+| `output_folder` | string | directory for generated `.odin` files (relative to the config dir; required unless `-destination:stdout`) |
 | `preprocess.include_paths` | list of strings | `-I` paths (relative to the config dir) |
 | `preprocess.defines` | string → string | `-DNAME=value` (empty value → `-DNAME`) |
 | `foreign.import_lib` | string | `foreign import` system library name (default: first header stem) |
@@ -94,9 +94,9 @@ Removed nested keys are also rejected by name: `output.imports_file` (spec 0006 
 
 Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dirs`, `defines`, `wrappers`.
 
-**Inputs / output.** `config.inputs` is required (list at least one header). Relative `inputs`, `preprocess.include_paths`, and `output_folder` resolve against the config file's directory. Without `output_folder`, generated code goes to stdout. `output.layout = "per_header"` writes one `.odin` file per input under `output_folder` (same package); each file repeats the imports and `foreign import` it needs because those names are file-local. See [spec 0003](specs/0003-multi-file-odin-emission.md).
+**Inputs / output.** `config.inputs` is required (list at least one header). Relative `inputs`, `preprocess.include_paths`, and `output_folder` resolve against the config file's directory. By default the CLI writes under `config.output_folder`; if that field is unset the run fails (use `-destination:stdout` for a single merged unit on stdout). `output.layout = "per_header"` writes one `.odin` file per input under `output_folder` (same package); each file repeats the imports and `foreign import` it needs because those names are file-local. See [spec 0003](specs/0003-multi-file-odin-emission.md).
 
-**CLI.** The only generation entry point is `-config:file.lua`. Process knobs: `-quiet` / `-q` (suppress the diagnostics report), `-help` / `-h`. Type mode, package name, headers, and all other policy are config fields — not flags.
+**CLI.** Common case: `h2odin <project-dir>` loads `H2Odin.lua` from that directory. `-config:file.lua` selects an explicit config path when the default name is unavailable. Process knobs: `-destination:config|stdout` / `-d:` (default `config`), `-quiet` / `-q` (suppress diagnostics on stderr), `-verbose` / `-v` (detailed cause + config fix guidance), `-help` / `-h`. Type mode, package name, headers, and all other policy are config fields — not flags.
 
 ## Naming convention (foreign porting)
 

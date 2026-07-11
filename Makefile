@@ -59,9 +59,9 @@ test-e2e: build
 
 # Bootstrap: generation N is produced by a binary linked against generation N−1
 # (the checked-in vendored/libclang package). Headers stay pinned under
-# vendored/libclang/headers/; config is vendored/libclang/config.lua.
+# vendored/libclang/headers/; config is vendored/libclang/H2Odin.lua.
 regen-libclang: build
-	./$(BIN) -config:vendored/libclang/config.lua
+	./$(BIN) vendored/libclang
 	$(RUN_ODIN) check vendored/libclang -no-entry-point $(COLLECTION_FLAGS)
 
 format:

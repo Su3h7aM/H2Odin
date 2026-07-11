@@ -6,36 +6,22 @@ import "core:os"
 import "core:path/filepath"
 import "core:strings"
 
+// Default config filename looked up inside a project directory.
+DEFAULT_CONFIG_NAME :: "H2Odin.lua"
+
+// Where generated bindings are written.
+Output_Destination :: enum {
+	Config, // use config.output_folder (default)
+	Stdout, // write a single merged unit to stdout
+}
+
 // H2Odin is a pipeline: Extraction → Analysis → Transformation → Emission.
 // main owns the generation arena and the stage order; the stages own
-// everything else. Generation is steered by a Lua config file — the CLI
-// only selects the config and a few process-level knobs (help, quiet).
+// everything else. Generation is steered by a Lua config — the CLI selects
+// that config (directory/H2Odin.lua or -config:) and process-level knobs.
 main :: proc() {
-	config_path: string
-	quiet := false
-	for arg in os.args[1:] {
-		switch {
-		case arg == "-h" || arg == "-help" || arg == "--help":
-			usage()
-		case arg == "-q" || arg == "-quiet" || arg == "--quiet":
-			quiet = true
-		case strings.has_prefix(arg, "-config:"):
-			if config_path != "" {
-				fmt.eprintln("h2odin: -config: specified more than once")
-				usage()
-			}
-			config_path = arg[len("-config:"):]
-			if config_path == "" {
-				fmt.eprintln("h2odin: -config: requires a path")
-				usage()
-			}
-		case:
-			fmt.eprintfln("h2odin: unknown argument %q", arg)
-			usage()
-		}
-	}
-	if config_path == "" {
-		fmt.eprintln("h2odin: -config: is required")
+	cli, cli_ok := parse_cli(os.args[1:])
+	if !cli_ok {
 		usage()
 	}
 
@@ -50,7 +36,7 @@ main :: proc() {
 	defer vmem.arena_destroy(&arena)
 	context.allocator = vmem.arena_allocator(&arena)
 
-	policy, policy_ok := policy_load(config_path)
+	policy, policy_ok := policy_load(cli.config_path)
 	if !policy_ok {
 		os.exit(1)
 	}
@@ -101,14 +87,148 @@ main :: proc() {
 	report_pointer_lowering_guesses(&ir, bit_field_plan.opaque_records)
 	result := emit(&ir, plan, opts)
 
-	if !write_emit_result(result, &policy) {
+	if !write_emit_result(result, &policy, cli.destination) {
 		os.exit(1)
 	}
-	// Emit first, then report: errors still leave usable output on stdout /
-	// disk, but a non-zero exit marks the run as failed.
-	if !report_diagnostics(&ir, &policy, quiet) {
+	// Emit first, then report: errors still leave usable output on disk /
+	// stdout when requested, but a non-zero exit marks the run as failed.
+	if !report_diagnostics(&ir, &policy, cli.quiet, cli.verbose) {
 		os.exit(1)
 	}
+}
+
+CLI :: struct {
+	config_path: string,
+	destination: Output_Destination,
+	quiet:       bool,
+	verbose:     bool,
+}
+
+// Parse process-level flags and resolve the config path. Returns false on
+// usage errors (caller should print usage and exit 2).
+parse_cli :: proc(args: []string) -> (cli: CLI, ok: bool) {
+	config_path: string
+	project_dir: string
+	destination := Output_Destination.Config
+	destination_set := false
+	quiet := false
+	verbose := false
+
+	for arg in args {
+		switch {
+		case arg == "-h" || arg == "-help" || arg == "--help":
+			usage()
+		case arg == "-q" || arg == "-quiet" || arg == "--quiet":
+			quiet = true
+		case arg == "-v" || arg == "-verbose" || arg == "--verbose":
+			verbose = true
+		case strings.has_prefix(arg, "-config:"), strings.has_prefix(arg, "--config:"):
+			if config_path != "" {
+				fmt.eprintln("h2odin: -config: specified more than once")
+				return {}, false
+			}
+			prefix_len := 8 // "-config:"
+			if strings.has_prefix(arg, "--config:") {
+				prefix_len = 9
+			}
+			config_path = arg[prefix_len:]
+			if config_path == "" {
+				fmt.eprintln("h2odin: -config: requires a path")
+				return {}, false
+			}
+		case strings.has_prefix(arg, "-destination:"), strings.has_prefix(arg, "--destination:"), strings.has_prefix(arg, "-d:"):
+			if destination_set {
+				fmt.eprintln("h2odin: -destination: specified more than once")
+				return {}, false
+			}
+			value: string
+			switch {
+			case strings.has_prefix(arg, "--destination:"):
+				value = arg[len("--destination:"):]
+			case strings.has_prefix(arg, "-destination:"):
+				value = arg[len("-destination:"):]
+			case:
+				value = arg[len("-d:"):]
+			}
+			dest, dest_ok := parse_destination(value)
+			if !dest_ok {
+				fmt.eprintfln("h2odin: -destination: unknown value %q (want config or stdout)", value)
+				return {}, false
+			}
+			destination = dest
+			destination_set = true
+		case strings.has_prefix(arg, "-"):
+			fmt.eprintfln("h2odin: unknown argument %q", arg)
+			return {}, false
+		case:
+			// Positional: project directory containing H2Odin.lua.
+			if project_dir != "" {
+				fmt.eprintfln("h2odin: unexpected argument %q (only one project directory is accepted)", arg)
+				return {}, false
+			}
+			project_dir = arg
+		}
+	}
+
+	if quiet && verbose {
+		fmt.eprintln("h2odin: -quiet and -verbose are mutually exclusive")
+		return {}, false
+	}
+
+	resolved, resolved_ok := resolve_config_path(config_path, project_dir)
+	if !resolved_ok {
+		return {}, false
+	}
+
+	return CLI{config_path = resolved, destination = destination, quiet = quiet, verbose = verbose}, true
+}
+
+parse_destination :: proc(value: string) -> (Output_Destination, bool) {
+	switch value {
+	case "config":
+		return .Config, true
+	case "stdout":
+		return .Stdout, true
+	}
+	return {}, false
+}
+
+// Resolve the Lua config path from -config: and/or a project directory.
+// -config: is explicit; a directory implies directory/H2Odin.lua.
+resolve_config_path :: proc(config_path: string, project_dir: string) -> (path: string, ok: bool) {
+	if config_path != "" && project_dir != "" {
+		fmt.eprintln("h2odin: pass either a project directory or -config:, not both")
+		return "", false
+	}
+	if config_path != "" {
+		return config_path, true
+	}
+	if project_dir == "" {
+		fmt.eprintln("h2odin: pass a project directory (containing H2Odin.lua) or -config:path")
+		return "", false
+	}
+	if !os.exists(project_dir) {
+		fmt.eprintfln("h2odin: project directory %q does not exist", project_dir)
+		return "", false
+	}
+	if !os.is_dir(project_dir) {
+		fmt.eprintfln("h2odin: %q is not a directory (use -config: for a Lua file path)", project_dir)
+		return "", false
+	}
+	joined, jerr := filepath.join({project_dir, DEFAULT_CONFIG_NAME})
+	if jerr != nil {
+		fmt.eprintfln("h2odin: cannot join config path under %q: %v", project_dir, jerr)
+		return "", false
+	}
+	if !os.exists(joined) {
+		fmt.eprintfln("h2odin: no %s in %q (create one or pass -config:path)", DEFAULT_CONFIG_NAME, project_dir)
+		return "", false
+	}
+	if !os.is_file(joined) {
+		fmt.eprintfln("h2odin: %q is not a file", joined)
+		return "", false
+	}
+	return joined, true
 }
 
 // config.inputs is the sole source of headers (paths relative to the config dir).
@@ -147,25 +267,40 @@ resolve_path :: proc(path: string, base_dir: string) -> string {
 	return joined
 }
 
-write_emit_result :: proc(result: Emit_Result, policy: ^Policy) -> bool {
+write_emit_result :: proc(result: Emit_Result, policy: ^Policy, destination: Output_Destination) -> bool {
+	switch destination {
+	case .Stdout:
+		return write_emit_to_stdout(result, policy)
+	case .Config:
+		return write_emit_to_config_folder(result, policy)
+	}
+	return false
+}
+
+write_emit_to_stdout :: proc(result: Emit_Result, policy: ^Policy) -> bool {
+	// Stdout only makes sense for a single merged unit.
+	if len(result.files) != 1 {
+		fmt.eprintln("h2odin: -destination:stdout requires a single output unit (use output.layout = \"merged\")")
+		return false
+	}
+	text := result.files[0].content
+	if policy.footer_per_header {
+		footer := load_footer(policy, result.files[0].stem)
+		if footer != "" {
+			text = strings.concatenate({text, footer})
+		}
+	}
+	fmt.print(text)
+	return true
+}
+
+write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> bool {
 	// Relative output_folder resolves against the config directory (same as inputs).
 	output_folder := resolve_path(policy.output_folder, policy.config_dir)
 
 	if output_folder == "" {
-		// Stdout only makes sense for a single merged unit.
-		if len(result.files) != 1 {
-			fmt.eprintln("h2odin: multi-file emission requires config.output_folder")
-			return false
-		}
-		text := result.files[0].content
-		if policy.footer_per_header {
-			footer := load_footer(policy, result.files[0].stem)
-			if footer != "" {
-				text = strings.concatenate({text, footer})
-			}
-		}
-		fmt.print(text)
-		return true
+		fmt.eprintln("h2odin: no config.output_folder set; set it in the Lua config or use -destination:stdout")
+		return false
 	}
 
 	if err := os.make_directory_all(output_folder); err != nil {
@@ -196,8 +331,8 @@ write_emit_result :: proc(result: Emit_Result, policy: ^Policy) -> bool {
 	return true
 }
 
-// footer_per_header: look for {stem}_footer.odin next to the output (or CWD
-// when writing to stdout) and append its contents unchanged.
+// footer_per_header: look for {stem}_footer.odin next to the output (or next
+// to the config / CWD when writing to stdout) and append its contents unchanged.
 load_footer :: proc(policy: ^Policy, stem: string) -> string {
 	name := fmt.tprintf("%s_footer.odin", stem)
 	try_read :: proc(path: string) -> string {
@@ -226,9 +361,18 @@ load_footer :: proc(policy: ^Policy, stem: string) -> string {
 }
 
 usage :: proc() -> ! {
-	fmt.eprintln("usage: h2odin -config:file.lua [-quiet]")
-	fmt.eprintln("  -config:path   Lua config (required); set config.inputs for headers")
-	fmt.eprintln("  -quiet, -q     suppress the diagnostics report on stderr")
-	fmt.eprintln("  -help, -h      show this help")
+	fmt.eprintln("usage: h2odin <project-dir> [options]")
+	fmt.eprintln("       h2odin -config:file.lua [options]")
+	fmt.eprintln("")
+	fmt.eprintln("  <project-dir>         directory containing H2Odin.lua (common case)")
+	fmt.eprintln("  -config:path          explicit Lua config path (when not using H2Odin.lua)")
+	fmt.eprintln("  -destination:dest     where to write bindings: config (default) or stdout")
+	fmt.eprintln("  -d:dest               short for -destination")
+	fmt.eprintln("  -quiet, -q            suppress warnings and errors on stderr")
+	fmt.eprintln("  -verbose, -v          detailed diagnostic reports (cause + config fixes)")
+	fmt.eprintln("  -help, -h             show this help")
+	fmt.eprintln("")
+	fmt.eprintln("By default, bindings are written under config.output_folder.")
+	fmt.eprintln("Use -destination:stdout to print a single merged unit to stdout.")
 	os.exit(2)
 }

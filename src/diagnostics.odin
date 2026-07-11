@@ -185,10 +185,11 @@ ir_diag_with_local :: proc(ir: ^IR, local: Diag_Local_Overrides, category: Diag_
 }
 
 // Print the end-of-run report on stderr. Quiet when empty or when `quiet` is
-// set (process-level -quiet still fails the run on error severities).
-// Returns false when any diagnostic resolved to error (caller should exit
-// non-zero after still having emitted output).
-report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false) -> bool {
+// set (process-level -quiet still fails the run on error severities). When
+// `verbose` is set, each entry is followed by probable cause and config fix
+// guidance. Returns false when any diagnostic resolved to error (caller
+// should exit non-zero after still having emitted output).
+report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false, verbose := false) -> bool {
 	n := len(ir.diagnostics)
 	if n == 0 {
 		return true
@@ -228,11 +229,77 @@ report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false) -> bool {
 		for d, i in ir.diagnostics {
 			sev := severities[i]
 			fmt.eprintfln("  - %s[%s]: %s", diag_severity_name(sev), diag_category_name(d.category), d.message)
+			if verbose {
+				cause, fix := diag_verbose_guidance(d.category)
+				if cause != "" {
+					fmt.eprintfln("      cause: %s", cause)
+				}
+				if fix != "" {
+					fmt.eprintfln("      fix:   %s", fix)
+				}
+			}
 		}
 	}
 
 	return n_err == 0
 }
+
+// Probable cause and Lua-config resolution for a category. Empty strings
+// mean "no extra guidance" (reserved / rare categories).
+diag_verbose_guidance :: proc(c: Diag_Category) -> (cause: string, fix: string) {
+	switch c {
+	case .Pointer_Lowering_Guess:
+		return "C does not distinguish single pointers, arrays, and out-params; H2Odin defaulted this site to ^T.",
+			"Set procs.params[\"Proc.param\"] = { type = \"…\" } (or procs.param / procs.results callbacks) to the intended spelling, or use types.overrides / types.map for named types."
+	case .Unresolved_Idiomatic_Leaf:
+		return "Idiomatic mode could not prove a native Odin leaf type for this C type on the current target.",
+			"Keep type_mode = \"abi\", or map the C type via types.map / types.overrides to an explicit Odin spelling."
+	case .Opaque_Layout_Fallback:
+		return "The record layout could not be proven safe to emit field-by-field (incomplete or unrepresentable).",
+			"Emit as an opaque handle with types.opaque[\"Name\"] = true (idiomatic default for incomplete tags), or leave faithful empty/opaque struct emission."
+	case .Bit_Field_Layout_Fallback:
+		return "libclang's target layout for this bit-field run could not be proven (size, alignment, or offsets).",
+			"Accept the opaque-record fallback, or reshape the C type so bit-fields form a contiguous, measured run."
+	case .Naming_Ambiguity:
+		return "The identifier tokenizer could not split this C name into words with certainty.",
+			"Add a naming.known_tokens entry for the domain vocabulary, or set naming.overrides[\"CName\"] = \"Odin_Name\"."
+	case .Macro_Group_Conflict:
+		return "A macro matched more than one macros.groups rule (or conflicted with another claimed name).",
+			"Tighten include/exclude filters on h2o.macro_group.enum { … } so each macro is claimed by exactly one group."
+	case .Macro_Group_Empty:
+		return "A macros.groups entry matched no macros after filters.",
+			"Check the group's prefix/include/exclude against the header, or remove the empty group."
+	case .Bit_Set_Non_Power_Of_Two:
+		return "enums.bit_sets mode \"log2\" requires every member value to be a power of two; at least one is not.",
+			"Exclude non-power-of-two members (masks like _ALL / _NONE) via the bit_set rule filters, or drop the bit_set transform for this enum."
+	case .Bit_Set_Target_Missing:
+		return "enums.bit_sets named an enum that is missing or has no members after transforms.",
+			"Fix the enum_name to match a C enum still present after symbols.remove / enums.member filtering."
+	case .Bit_Set_Backing_Mismatch:
+		return "A flag value does not fit the measured C enum integer width used as the bit_set backing type.",
+			"Exclude oversized flags, or do not convert this enum to a bit_set."
+	case .Incomplete_Extern_Array:
+		return "An extern array has no known size in the header; H2Odin emitted [0]T as a conservative placeholder.",
+			"If the real bound is known, override the variable type via a types/symbols policy when available, or patch the binding after generation."
+	case .Opaque_Record_Complete:
+		return "types.opaque forced handle style on a complete (sized) record; collapsing it would change layout, so emission stayed faithful.",
+			"Remove the types.opaque entry for that name, or set types.opaque[\"Name\"] = false if you only meant incomplete tags."
+	case .Duplicate_Enum_Value:
+		return "Two enum members share the same numeric value after transforms.",
+			"Drop one via enums.member, or rename via naming.overrides if both must remain as distinct Odin names."
+	case .Unresolved_Type:
+		return "A type reference could not be resolved to a known IR type.",
+			"Ensure the defining header is listed in config.inputs / preprocess.include_paths, or map the name with types.map."
+	case .Unsupported_Macro:
+		return "This macro form is not emitted as an Odin constant or group member.",
+			"Ignore it, group related integer macros with macros.groups, or handle it outside the generator."
+	case .Symbol_Collision:
+		return "Two declarations would emit under the same Odin name.",
+			"Disambiguate with naming.overrides, strip_prefixes, or symbols.remove so only one symbol keeps the name."
+	}
+	return "", ""
+}
+
 
 // Format known category names for error messages (comma-separated).
 diag_known_category_list :: proc(allocator := context.temp_allocator) -> string {

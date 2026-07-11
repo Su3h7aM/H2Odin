@@ -59,12 +59,12 @@ make regen-libclang  # rebuild + regenerate vendored/libclang (self-host package
 ```
 
 After emission changes, regenerate and check the checked-in examples
-(`-config:` is required; headers/output come from the Lua config):
+(project directory loads `H2Odin.lua`; headers/output come from the Lua config):
 
 ```sh
-./build/h2odin -config:examples/sqlite3/config.lua
-./build/h2odin -config:examples/fff/config.lua
-./build/h2odin -config:examples/bit_fields/config.lua
+./build/h2odin examples/sqlite3
+./build/h2odin examples/fff
+./build/h2odin examples/bit_fields
 odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
 odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
 odin check examples/bit_fields -no-entry-point -collection:vendored=$(pwd)/vendored

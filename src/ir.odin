@@ -383,10 +383,11 @@ IR :: struct {
 	input_headers: [dynamic]string,
 
 	// Non-certain decisions and honesty notes collected during the run.
-	// Messages are arena-owned; main prints them as a single report after
-	// the pipeline so stdout stays pure generated code. Each entry carries
-	// a named category; severity is resolved at report time from policy
-	// (and any local constructor override stored on the entry).
+	// Messages are arena-owned; main prints them as a single report on
+	// stderr after the pipeline (bindings go to config.output_folder or
+	// -destination:stdout). Each entry carries a named category; severity
+	// is resolved at report time from policy (and any local constructor
+	// override stored on the entry).
 	diagnostics:   [dynamic]Diagnostic,
 
 	// Interning table for the pre-seeded, unqualified builtin types.

@@ -2,16 +2,17 @@
 
 Example headers and Lua configs used while developing H2Odin.
 
-Each example contains the source header, the Lua config, and the generated
-Odin binding. Headers and output live in the config (`config.inputs`,
-`config.output_folder`); the CLI only takes `-config:`. Regenerate after
-changing H2Odin or the configs:
+Each example contains the source header, an `H2Odin.lua` config, and the
+generated Odin binding. Headers and output live in the config
+(`config.inputs`, `config.output_folder`); the CLI takes the project
+directory and loads `H2Odin.lua`. Regenerate after changing H2Odin or the
+configs:
 
 ```sh
 make build
 
-./build/h2odin -config:examples/fff/config.lua
-./build/h2odin -config:examples/sqlite3/config.lua
+./build/h2odin examples/fff
+./build/h2odin examples/sqlite3
 
 odin check examples/fff -no-entry-point -collection:vendored=$(pwd)/vendored
 odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
