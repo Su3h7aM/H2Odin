@@ -23,9 +23,18 @@ The current priority is **Milestone 15: real-world validation closure**. New
 benchmarks copied from Odin's `vendor:` collection proved raylib, Box3D, and
 cgltf can already generate checkable bindings, while curl and miniaudio exposed
 bare-`void` opaque-handle panics, post-rename Odin binding conflicts, and an
-unsettled rule for transitively referenced system types. Broader features and
-polish are paused until all eight examples generate without panic and pass
-`odin check`. Evidence and ordering live in
+unsettled rule for transitively referenced system types. That last one is now
+settled and shipped:
+[spec 0010](docs/specs/0010-posix-libc-type-mapping.md) defines *foreign* as
+"declared in a system header" (libclang's `isInSystemHeader`, not "absent from
+`config.inputs`" — a library's own umbrella-included headers stay ours), keeps
+foreign declarations out of the output, and maps the POSIX/libc names to their
+defining package with one spelling in both type modes (`off_t`→`posix.off_t`,
+`time_t`→`libc.time_t`, `sockaddr`→`posix.sockaddr`). Six of the eight
+examples now pass `odin check`; curl's `^^httppost` and miniaudio's
+post-rename declaration cycles remain. Broader features and polish are paused
+until all eight examples generate without panic and pass `odin check`.
+Evidence and ordering live in
 [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md)
 and [`ROADMAP.md`](ROADMAP.md).
 

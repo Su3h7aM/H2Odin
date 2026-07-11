@@ -143,6 +143,20 @@ cursor_home :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Input_Header
 	return location_home(state, clang.get_cursor_location(cursor))
 }
 
+// Is this declaration the system's rather than the library's? clang knows: a
+// header reached through the system search path (<sys/socket.h>, <time.h>) is
+// flagged, while the library's own headers — including the ones an umbrella
+// input pulls in via -I but config.inputs never lists — are not.
+//
+// This is the ownership fact, and it is not the same question as `home`. Home
+// answers "which configured input places this declaration in the output", so
+// a project header reached transitively has no home yet is still ours to emit.
+// Foreignness answers "is this someone else's declaration", which is what
+// decides whether we may claim its layout (spec 0010).
+cursor_is_foreign :: proc(cursor: clang.Cursor) -> bool {
+	return clang.location_is_in_system_header(clang.get_cursor_location(cursor)) != 0
+}
+
 // Path clang reports for a source location, normalized like input_files keys.
 location_source_path :: proc(location: clang.Source_Location, allocator := context.allocator) -> string {
 	file: clang.File

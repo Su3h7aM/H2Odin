@@ -224,10 +224,23 @@ The sequence below is ordered by dependency and by the shortest path from crashi
 1. **Freeze minimal red fixtures and baselines.** Add reduced fixtures for (a) pure `typedef void Name` through ordinary and callback signatures, (b) a type/field post-rename cycle, and (c) input-owned `lib_sockaddr` containing foreign `struct sockaddr`. Until fixes land, assert structured failure/diagnostic behavior rather than a panic or unreviewed malformed output.
 2. **Eliminate the pure-void panic and design named opaque-void semantics.** Preserve the named type in IR, define ABI and idiomatic representations, rewrite every nested reference coherently, and make unsupported emission return a diagnostic instead of panicking. This unblocks both curl and miniaudio.
 3. **Implement final-name, scope-aware validation (spec 0008).** Run after all transformations and before output planning/writes. Cover package names, record fields, enum members, proc parameters, synthesized declarations, and field-versus-referenced-type cycles. Default `symbol_collision` to error and report original C names plus final Odin scope/name.
-4. **Fix foreign declaration provenance/capture.** Apply the `config.inputs` ownership rule to every recursive materialization path. Close the curl case specifically: retain input-owned `curl_sockaddr` (subject to naming policy), but do not append the transitively referenced system `struct sockaddr` as an input-owned package declaration.
-5. **Turn the reduced red fixtures green.** Require generation without workarounds, no panic, no dangling names, correct diagnostics, and `odin check`. Keep focused tests separate enough to identify which layer regressed.
-6. **Close real examples in dependency order.** Keep cgltf green in its official-style prefixed configuration while a reduced fixture verifies the conflicting strip is diagnosed; then close curl (remove the pure-void deletion workaround and verify provenance); then close miniaudio (remove the pure-void deletion workaround and resolve all naming scopes at scale). Reconfirm raylib and box3d after each shared naming/type change.
-7. **Automate the full acceptance matrix.** Add a Make target that regenerates into temporary locations, compares or reviews deterministic output, and runs `odin check` for every expected-green example. Pin the Odin version and add CI before making this a required merge gate (`ROADMAP.md:370-375`).
+4. ~~**Fix foreign declaration provenance/capture.**~~ **Done (spec 0010).**
+   The ownership rule turned out *not* to be `config.inputs` membership: a
+   library's own headers reached through an umbrella input are still its own
+   (Box3D lists only `box3d.h`). Foreignness is what libclang reports —
+   declared in a system header. Foreign declarations are captured pool-only
+   and never emitted with a system layout; curl keeps its own `curl_sockaddr`
+   and no longer leaks `struct sockaddr`.
+5. ~~**POSIX / libc mapping.**~~ **Done (spec 0010):**
+   [`docs/specs/0010-posix-libc-type-mapping.md`](specs/0010-posix-libc-type-mapping.md).
+   System compounds (`sockaddr`) and named POSIX/libc scalars map to
+   `posix.*` / `libc.*` through the **defining package**, one spelling in both
+   modes; dual ABI/idiomatic stays ISO-C-only (`std_mappings`); `types.map`
+   beats the built-in map. Curl now emits `addr: posix.sockaddr`, matching the
+   hand-written `vendor:curl`.
+6. **Turn the reduced red fixtures green.** Require generation without workarounds, no panic, no dangling names, correct diagnostics, and `odin check`. Keep focused tests separate enough to identify which layer regressed.
+7. **Close real examples in dependency order.** Keep cgltf green in its official-style prefixed configuration while a reduced fixture verifies the conflicting strip is diagnosed; then close curl (remove the pure-void deletion workaround and verify provenance); then close miniaudio (remove the pure-void deletion workaround and resolve all naming scopes at scale). Reconfirm raylib and box3d after each shared naming/type change.
+8. **Automate the full acceptance matrix.** Add a Make target that regenerates into temporary locations, compares or reviews deterministic output, and runs `odin check` for every expected-green example. Pin the Odin version and add CI before making this a required merge gate (`ROADMAP.md:370-375`).
 8. **Capture calling conventions as extraction facts.** Do this before Windows parity, then add targeted callback ABI tests. It need not block the initial Linux green matrix unless an example requires a non-default convention.
 9. **Curate pointer/callback shapes and diagnostics.** Improve faithful ABI usability without pulling forward arity-changing wrappers.
 10. **Harden output transactions.** Render and validate all units before atomic replacement; add stale-file cleanup/manifest behavior.

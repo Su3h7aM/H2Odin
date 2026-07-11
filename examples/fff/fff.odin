@@ -33,15 +33,15 @@ Result :: struct {
 	/**
 	   * Whether the operation succeeded.
 	   */
-	success:   bool,
+	success: bool,
 	/**
 	   * Error message on failure. Null on success.
 	   */
-	error:     cstring,
+	error: cstring,
 	/**
 	   * Opaque pointer payload. May be null.
 	   */
-	handle:    rawptr,
+	handle: rawptr,
 	/**
 	   * Integer payload for simple return values (bool as 0/1, counts, etc.).
 	   */
@@ -59,55 +59,55 @@ Create_Options :: struct {
 	   * Set to [`FFF_CREATE_OPTIONS_VERSION`] when allocating. Used by the
 	   * library to determine which trailing fields are populated.
 	   */
-	version:                    u32,
+	version: u32,
 	/**
 	   * Directory to index (required, non-NULL).
 	   */
-	base_path:                  cstring,
+	base_path: cstring,
 	/**
 	   * Frecency LMDB database path. NULL/empty to skip frecency tracking.
 	   */
-	frecency_db_path:           cstring,
+	frecency_db_path: cstring,
 	/**
 	   * Query history LMDB database path. NULL/empty to skip query tracking.
 	   */
-	history_db_path:            cstring,
+	history_db_path: cstring,
 	/**
 	   * Pre-populate mmap caches for top-frecency files after the initial scan.
 	   */
-	enable_mmap_cache:          bool,
+	enable_mmap_cache: bool,
 	/**
 	   * Build content index after the initial scan for faster grep.
 	   */
-	enable_content_indexing:    bool,
+	enable_content_indexing: bool,
 	/**
 	   * Start a background file-system watcher for live updates.
 	   */
-	watch:                      bool,
+	watch: bool,
 	/**
 	   * Enable AI-agent optimizations.
 	   */
-	ai_mode:                    bool,
+	ai_mode: bool,
 	/**
 	   * Path-shape hint for the per-session log file. Each call writes a fresh
 	   * sibling file `<stem>+<UTC-timestamp>+<pid>.<ext>` next to this path.
 	   * The literal path is never written to, so concurrent processes get
 	   * unique per-pid files. NULL/empty to skip log init.
 	   */
-	log_file_path:              cstring,
+	log_file_path: cstring,
 	/**
 	   * Log level: `"trace" | "debug" | "info" | "warn" | "error"`.
 	   * NULL/empty defaults to `"info"`. Ignored when `log_file_path` is unset.
 	   */
-	log_level:                  cstring,
+	log_level: cstring,
 	/**
 	   * Content cache file-count cap. 0 = auto.
 	   */
-	cache_budget_max_files:     u64,
+	cache_budget_max_files: u64,
 	/**
 	   * Content cache byte cap. 0 = auto.
 	   */
-	cache_budget_max_bytes:     u64,
+	cache_budget_max_bytes: u64,
 	/**
 	   * Per-file byte cap inside the content cache. 0 = auto.
 	   */
@@ -116,12 +116,12 @@ Create_Options :: struct {
 	   * Allow indexing the filesystem root (`/`). Off by default — root is
 	   * rarely the intended target and floods the watcher with churn.
 	   */
-	enable_fs_root_scanning:    bool,
+	enable_fs_root_scanning: bool,
 	/**
 	   * Allow indexing the user's home directory. Same trade-off as
 	   * `enable_fs_root_scanning`.
 	   */
-	enable_home_dir_scanning:   bool,
+	enable_home_dir_scanning: bool,
 }
 
 /**
@@ -131,32 +131,32 @@ Create_Options :: struct {
  * Free the entire result with `fff_free_search_result`.
  */
 File_Item :: struct {
-	relative_path:               cstring,
-	file_name:                   cstring,
-	git_status:                  cstring,
-	size:                        u64,
-	modified:                    u64,
-	access_frecency_score:       i64,
+	relative_path: cstring,
+	file_name: cstring,
+	git_status: cstring,
+	size: u64,
+	modified: u64,
+	access_frecency_score: i64,
 	modification_frecency_score: i64,
-	total_frecency_score:        i64,
-	is_binary:                   bool,
+	total_frecency_score: i64,
+	is_binary: bool,
 }
 
 /**
  * Score breakdown for a search result.
  */
 Score :: struct {
-	total:                  i32,
-	base_score:             i32,
-	filename_bonus:         i32,
+	total: i32,
+	base_score: i32,
+	filename_bonus: i32,
 	special_filename_bonus: i32,
-	frecency_boost:         i32,
-	distance_penalty:       i32,
-	current_file_penalty:   i32,
-	combo_match_boost:      i32,
-	path_alignment_bonus:   i32,
-	exact_match:            bool,
-	match_type:             cstring,
+	frecency_boost: i32,
+	distance_penalty: i32,
+	current_file_penalty: i32,
+	combo_match_boost: i32,
+	path_alignment_bonus: i32,
+	exact_match: bool,
+	match_type: cstring,
 }
 
 /**
@@ -169,11 +169,11 @@ Score :: struct {
  *   3 = range (`line`/`col` = start, `end_line`/`end_col` = end).
  */
 Location :: struct {
-	tag:      u8,
-	line:     i32,
-	col:      i32,
+	tag: u8,
+	line: i32,
+	col: i32,
 	end_line: i32,
-	end_col:  i32,
+	end_col: i32,
 }
 
 /**
@@ -185,15 +185,15 @@ Search_Result :: struct {
 	/**
 	   * Pointer to a heap-allocated array of `FffFileItem` (length = `count`).
 	   */
-	items:         ^File_Item,
+	items: ^File_Item,
 	/**
 	   * Pointer to a heap-allocated array of `FffScore` (length = `count`).
 	   */
-	scores:        ^Score,
+	scores: ^Score,
 	/**
 	   * Number of items/scores in the arrays.
 	   */
-	count:         u32,
+	count: u32,
 	/**
 	   * Total number of files that matched the query.
 	   */
@@ -201,11 +201,11 @@ Search_Result :: struct {
 	/**
 	   * Total number of indexed files.
 	   */
-	total_files:   u32,
+	total_files: u32,
 	/**
 	   * Location parsed from the query string.
 	   */
-	location:      Location,
+	location: Location,
 }
 
 /**
@@ -213,7 +213,7 @@ Search_Result :: struct {
  */
 Match_Range :: struct {
 	start: u32,
-	end:   u32,
+	end: u32,
 }
 
 /**
@@ -223,28 +223,28 @@ Match_Range :: struct {
  * `FffGrepResult` with `fff_free_grep_result` to release everything.
  */
 Grep_Match :: struct {
-	relative_path:               cstring,
-	file_name:                   cstring,
-	git_status:                  cstring,
-	line_content:                cstring,
-	match_ranges:                ^Match_Range,
-	context_before:              [^]cstring,
-	context_after:               [^]cstring,
-	size:                        u64,
-	modified:                    u64,
-	total_frecency_score:        i64,
-	access_frecency_score:       i64,
+	relative_path: cstring,
+	file_name: cstring,
+	git_status: cstring,
+	line_content: cstring,
+	match_ranges: ^Match_Range,
+	context_before: [^]cstring,
+	context_after: [^]cstring,
+	size: u64,
+	modified: u64,
+	total_frecency_score: i64,
+	access_frecency_score: i64,
 	modification_frecency_score: i64,
-	line_number:                 u64,
-	byte_offset:                 u64,
-	col:                         u32,
-	match_ranges_count:          u32,
-	context_before_count:        u32,
-	context_after_count:         u32,
-	fuzzy_score:                 u16,
-	has_fuzzy_score:             bool,
-	is_binary:                   bool,
-	is_definition:               bool,
+	line_number: u64,
+	byte_offset: u64,
+	col: u32,
+	match_ranges_count: u32,
+	context_before_count: u32,
+	context_after_count: u32,
+	fuzzy_score: u16,
+	has_fuzzy_score: bool,
+	is_binary: bool,
+	is_definition: bool,
 }
 
 /**
@@ -256,15 +256,15 @@ Grep_Result :: struct {
 	/**
 	   * Pointer to a heap-allocated array of `FffGrepMatch` (length = `count`).
 	   */
-	items:                ^Grep_Match,
+	items: ^Grep_Match,
 	/**
 	   * Number of matches in the `items` array.
 	   */
-	count:                u32,
+	count: u32,
 	/**
 	   * Total number of matches (always equal to `count`).
 	   */
-	total_matched:        u32,
+	total_matched: u32,
 	/**
 	   * Number of files actually opened and searched in this call.
 	   */
@@ -272,15 +272,15 @@ Grep_Result :: struct {
 	/**
 	   * Total number of indexed files (before any filtering).
 	   */
-	total_files:          u32,
+	total_files: u32,
 	/**
 	   * Number of files eligible for search after filtering.
 	   */
-	filtered_file_count:  u32,
+	filtered_file_count: u32,
 	/**
 	   * File offset for the next page. 0 if all files have been searched.
 	   */
-	next_file_offset:     u32,
+	next_file_offset: u32,
 	/**
 	   * Regex compilation error when falling back to literal matching. Null if none.
 	   */
@@ -293,9 +293,9 @@ Grep_Result :: struct {
  */
 Scan_Progress :: struct {
 	scanned_files_count: u64,
-	is_scanning:         bool,
-	is_watcher_ready:    bool,
-	is_warmup_complete:  bool,
+	is_scanning: bool,
+	is_watcher_ready: bool,
+	is_warmup_complete: bool,
 }
 
 /**
@@ -305,8 +305,8 @@ Scan_Progress :: struct {
  * Free the entire result with `fff_free_dir_search_result`.
  */
 Dir_Item :: struct {
-	relative_path:       cstring,
-	dir_name:            cstring,
+	relative_path: cstring,
+	dir_name: cstring,
 	max_access_frecency: i32,
 }
 
@@ -319,15 +319,15 @@ Dir_Search_Result :: struct {
 	/**
 	   * Pointer to a heap-allocated array of `FffDirItem` (length = `count`).
 	   */
-	items:         ^Dir_Item,
+	items: ^Dir_Item,
 	/**
 	   * Pointer to a heap-allocated array of `FffScore` (length = `count`).
 	   */
-	scores:        ^Score,
+	scores: ^Score,
 	/**
 	   * Number of items/scores in the arrays.
 	   */
-	count:         u32,
+	count: u32,
 	/**
 	   * Total number of directories that matched the query.
 	   */
@@ -335,7 +335,7 @@ Dir_Search_Result :: struct {
 	/**
 	   * Total number of indexed directories.
 	   */
-	total_dirs:    u32,
+	total_dirs: u32,
 }
 
 /**
@@ -348,20 +348,20 @@ Mixed_Item :: struct {
 	/**
 	   * 0 = file, 1 = directory.
 	   */
-	item_type:                   u8,
-	relative_path:               cstring,
+	item_type: u8,
+	relative_path: cstring,
 	/**
 	   * Filename for files, last directory segment for directories.
 	   */
-	display_name:                cstring,
-	git_status:                  cstring,
-	size:                        u64,
-	modified:                    u64,
+	display_name: cstring,
+	git_status: cstring,
+	size: u64,
+	modified: u64,
 	/**
 	   * The access frecency score for files, or max access frecency among all the immediate
 	   * children for directories.
 	   */
-	access_frecency_score:       i64,
+	access_frecency_score: i64,
 	/**
 	   * Always 0 for directories
 	   */
@@ -369,11 +369,11 @@ Mixed_Item :: struct {
 	/**
 	   * Always 0 for directories
 	   */
-	total_frecency_score:        i64,
+	total_frecency_score: i64,
 	/**
 	   * Always 0 for directories
 	   */
-	is_binary:                   bool,
+	is_binary: bool,
 }
 
 /**
@@ -385,15 +385,15 @@ Mixed_Search_Result :: struct {
 	/**
 	   * Pointer to a heap-allocated array of `FffMixedItem` (length = `count`).
 	   */
-	items:         ^Mixed_Item,
+	items: ^Mixed_Item,
 	/**
 	   * Pointer to a heap-allocated array of `FffScore` (length = `count`).
 	   */
-	scores:        ^Score,
+	scores: ^Score,
 	/**
 	   * Number of items/scores in the arrays.
 	   */
-	count:         u32,
+	count: u32,
 	/**
 	   * Total number of items (files + dirs) that matched the query.
 	   */
@@ -401,15 +401,15 @@ Mixed_Search_Result :: struct {
 	/**
 	   * Total number of indexed files.
 	   */
-	total_files:   u32,
+	total_files: u32,
 	/**
 	   * Total number of indexed directories.
 	   */
-	total_dirs:    u32,
+	total_dirs: u32,
 	/**
 	   * Location parsed from the query string.
 	   */
-	location:      Location,
+	location: Location,
 }
 
 @(link_prefix = "fff_")

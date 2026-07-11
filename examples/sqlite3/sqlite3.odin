@@ -37,25 +37,25 @@ File :: struct {
 }
 
 Io_Methods :: struct {
-	i_version:                i32,
-	x_close:                  proc "c" (_: ^File) -> i32,
-	x_read:                   proc "c" (_: ^File, _: rawptr, _: i32, _: i64) -> i32,
-	x_write:                  proc "c" (_: ^File, _: rawptr, _: i32, _: i64) -> i32,
-	x_truncate:               proc "c" (_: ^File, _: i64) -> i32,
-	x_sync:                   proc "c" (_: ^File, _: i32) -> i32,
-	x_file_size:              proc "c" (_: ^File, _: ^i64) -> i32,
-	x_lock:                   proc "c" (_: ^File, _: i32) -> i32,
-	x_unlock:                 proc "c" (_: ^File, _: i32) -> i32,
-	x_check_reserved_lock:    proc "c" (_: ^File, _: ^i32) -> i32,
-	x_file_control:           proc "c" (_: ^File, _: i32, _: rawptr) -> i32,
-	x_sector_size:            proc "c" (_: ^File) -> i32,
+	i_version: i32,
+	x_close: proc "c" (_: ^File) -> i32,
+	x_read: proc "c" (_: ^File, _: rawptr, _: i32, _: i64) -> i32,
+	x_write: proc "c" (_: ^File, _: rawptr, _: i32, _: i64) -> i32,
+	x_truncate: proc "c" (_: ^File, _: i64) -> i32,
+	x_sync: proc "c" (_: ^File, _: i32) -> i32,
+	x_file_size: proc "c" (_: ^File, _: ^i64) -> i32,
+	x_lock: proc "c" (_: ^File, _: i32) -> i32,
+	x_unlock: proc "c" (_: ^File, _: i32) -> i32,
+	x_check_reserved_lock: proc "c" (_: ^File, _: ^i32) -> i32,
+	x_file_control: proc "c" (_: ^File, _: i32, _: rawptr) -> i32,
+	x_sector_size: proc "c" (_: ^File) -> i32,
 	x_device_characteristics: proc "c" (_: ^File) -> i32,
-	x_shm_map:                proc "c" (_: ^File, _: i32, _: i32, _: i32, _: ^rawptr) -> i32,
-	x_shm_lock:               proc "c" (_: ^File, _: i32, _: i32, _: i32) -> i32,
-	x_shm_barrier:            proc "c" (_: ^File),
-	x_shm_unmap:              proc "c" (_: ^File, _: i32) -> i32,
-	x_fetch:                  proc "c" (_: ^File, _: i64, _: i32, _: ^rawptr) -> i32,
-	x_unfetch:                proc "c" (_: ^File, _: i64, _: rawptr) -> i32,
+	x_shm_map: proc "c" (_: ^File, _: i32, _: i32, _: i32, _: ^rawptr) -> i32,
+	x_shm_lock: proc "c" (_: ^File, _: i32, _: i32, _: i32) -> i32,
+	x_shm_barrier: proc "c" (_: ^File),
+	x_shm_unmap: proc "c" (_: ^File, _: i32) -> i32,
+	x_fetch: proc "c" (_: ^File, _: i64, _: i32, _: ^rawptr) -> i32,
+	x_unfetch: proc "c" (_: ^File, _: i64, _: rawptr) -> i32,
 }
 
 Mutex :: distinct rawptr
@@ -65,48 +65,50 @@ Api_Routines :: distinct rawptr
 Filename :: cstring
 
 Vfs :: struct {
-	i_version:            i32,
-	sz_os_file:           i32,
-	mx_pathname:          i32,
-	p_next:               ^Vfs,
-	z_name:               cstring,
-	p_app_data:           rawptr,
-	x_open:               proc "c" (_: ^Vfs, _: Filename, _: ^File, _: i32, _: ^i32) -> i32,
-	x_delete:             proc "c" (_: ^Vfs, _: cstring, _: i32) -> i32,
-	x_access:             proc "c" (_: ^Vfs, _: cstring, _: i32, _: ^i32) -> i32,
-	x_full_pathname:      proc "c" (_: ^Vfs, _: cstring, _: i32, _: ^u8) -> i32,
-	x_dl_open:            proc "c" (_: ^Vfs, _: cstring) -> rawptr,
-	x_dl_error:           proc "c" (_: ^Vfs, _: i32, _: ^u8),
-	x_dl_sym:             proc "c" (_: ^Vfs, _: rawptr, _: cstring) -> proc "c" (),
-	x_dl_close:           proc "c" (_: ^Vfs, _: rawptr),
-	x_randomness:         proc "c" (_: ^Vfs, _: i32, _: ^u8) -> i32,
-	x_sleep:              proc "c" (_: ^Vfs, _: i32) -> i32,
-	x_current_time:       proc "c" (_: ^Vfs, _: ^f64) -> i32,
-	x_get_last_error:     proc "c" (_: ^Vfs, _: i32, _: ^u8) -> i32,
+	i_version: i32,
+	sz_os_file: i32,
+	mx_pathname: i32,
+	p_next: ^Vfs,
+	z_name: cstring,
+	p_app_data: rawptr,
+	x_open: proc "c" (_: ^Vfs, _: Filename, _: ^File, _: i32, _: ^i32) -> i32,
+	x_delete: proc "c" (_: ^Vfs, _: cstring, _: i32) -> i32,
+	x_access: proc "c" (_: ^Vfs, _: cstring, _: i32, _: ^i32) -> i32,
+	x_full_pathname: proc "c" (_: ^Vfs, _: cstring, _: i32, _: ^u8) -> i32,
+	x_dl_open: proc "c" (_: ^Vfs, _: cstring) -> rawptr,
+	x_dl_error: proc "c" (_: ^Vfs, _: i32, _: ^u8),
+	x_dl_sym: proc "c" (_: ^Vfs, _: rawptr, _: cstring) -> proc "c" (),
+	x_dl_close: proc "c" (_: ^Vfs, _: rawptr),
+	x_randomness: proc "c" (_: ^Vfs, _: i32, _: ^u8) -> i32,
+	x_sleep: proc "c" (_: ^Vfs, _: i32) -> i32,
+	x_current_time: proc "c" (_: ^Vfs, _: ^f64) -> i32,
+	x_get_last_error: proc "c" (_: ^Vfs, _: i32, _: ^u8) -> i32,
 	x_current_time_int64: proc "c" (_: ^Vfs, _: ^i64) -> i32,
-	x_set_system_call:    proc "c" (_: ^Vfs, _: cstring, _: Syscall_Ptr) -> i32,
-	x_get_system_call:    proc "c" (_: ^Vfs, _: cstring) -> Syscall_Ptr,
-	x_next_system_call:   proc "c" (_: ^Vfs, _: cstring) -> cstring,
+	x_set_system_call: proc "c" (_: ^Vfs, _: cstring, _: Syscall_Ptr) -> i32,
+	x_get_system_call: proc "c" (_: ^Vfs, _: cstring) -> Syscall_Ptr,
+	x_next_system_call: proc "c" (_: ^Vfs, _: cstring) -> cstring,
 }
 
 Syscall_Ptr :: proc "c" ()
 
 Mem_Methods :: struct {
-	x_malloc:   proc "c" (_: i32) -> rawptr,
-	x_free:     proc "c" (_: rawptr),
-	x_realloc:  proc "c" (_: rawptr, _: i32) -> rawptr,
-	x_size:     proc "c" (_: rawptr) -> i32,
-	x_roundup:  proc "c" (_: i32) -> i32,
-	x_init:     proc "c" (_: rawptr) -> i32,
+	x_malloc: proc "c" (_: i32) -> rawptr,
+	x_free: proc "c" (_: rawptr),
+	x_realloc: proc "c" (_: rawptr, _: i32) -> rawptr,
+	x_size: proc "c" (_: rawptr) -> i32,
+	x_roundup: proc "c" (_: i32) -> i32,
+	x_init: proc "c" (_: rawptr) -> i32,
 	x_shutdown: proc "c" (_: rawptr),
 	p_app_data: rawptr,
 }
 
+Builtin_Va_List :: [1]Va_List_Tag
+
 Va_List_Tag :: struct {
-	gp_offset:         u32,
-	fp_offset:         u32,
+	gp_offset: u32,
+	fp_offset: u32,
 	overflow_arg_area: rawptr,
-	reg_save_area:     rawptr,
+	reg_save_area: rawptr,
 }
 
 Stmt :: distinct rawptr
@@ -118,25 +120,25 @@ Context :: distinct rawptr
 Destructor_Type :: proc "c" (_: rawptr)
 
 Vtab :: struct {
-	p_module:  ^Module,
-	n_ref:     i32,
+	p_module: ^Module,
+	n_ref: i32,
 	z_err_msg: ^u8,
 }
 
 Index_Info :: struct {
-	n_constraint:         i32,
-	a_constraint:         ^Index_Constraint,
-	n_order_by:           i32,
-	a_order_by:           ^Index_Orderby,
-	a_constraint_usage:   ^Index_Constraint_Usage,
-	idx_num:              i32,
-	idx_str:              ^u8,
+	n_constraint: i32,
+	a_constraint: ^Index_Constraint,
+	n_order_by: i32,
+	a_order_by: ^Index_Orderby,
+	a_constraint_usage: ^Index_Constraint_Usage,
+	idx_num: i32,
+	idx_str: ^u8,
 	need_to_free_idx_str: i32,
-	order_by_consumed:    i32,
-	estimated_cost:       f64,
-	estimated_rows:       i64,
-	idx_flags:            i32,
-	col_used:             u64,
+	order_by_consumed: i32,
+	estimated_cost: f64,
+	estimated_rows: i64,
+	idx_flags: i32,
+	col_used: u64,
 }
 
 Vtab_Cursor :: struct {
@@ -144,61 +146,61 @@ Vtab_Cursor :: struct {
 }
 
 Module :: struct {
-	i_version:       i32,
-	x_create:        proc "c" (_: Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
-	x_connect:       proc "c" (_: Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
-	x_best_index:    proc "c" (_: ^Vtab, _: ^Index_Info) -> i32,
-	x_disconnect:    proc "c" (_: ^Vtab) -> i32,
-	x_destroy:       proc "c" (_: ^Vtab) -> i32,
-	x_open:          proc "c" (_: ^Vtab, _: ^^Vtab_Cursor) -> i32,
-	x_close:         proc "c" (_: ^Vtab_Cursor) -> i32,
-	x_filter:        proc "c" (_: ^Vtab_Cursor, _: i32, _: cstring, _: i32, _: ^Value) -> i32,
-	x_next:          proc "c" (_: ^Vtab_Cursor) -> i32,
-	x_eof:           proc "c" (_: ^Vtab_Cursor) -> i32,
-	x_column:        proc "c" (_: ^Vtab_Cursor, _: Context, _: i32) -> i32,
-	x_rowid:         proc "c" (_: ^Vtab_Cursor, _: ^i64) -> i32,
-	x_update:        proc "c" (_: ^Vtab, _: i32, _: ^Value, _: ^i64) -> i32,
-	x_begin:         proc "c" (_: ^Vtab) -> i32,
-	x_sync:          proc "c" (_: ^Vtab) -> i32,
-	x_commit:        proc "c" (_: ^Vtab) -> i32,
-	x_rollback:      proc "c" (_: ^Vtab) -> i32,
+	i_version: i32,
+	x_create: proc "c" (_: Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
+	x_connect: proc "c" (_: Sqlite3, _: rawptr, _: i32, _: ^cstring, _: ^^Vtab, _: ^^u8) -> i32,
+	x_best_index: proc "c" (_: ^Vtab, _: ^Index_Info) -> i32,
+	x_disconnect: proc "c" (_: ^Vtab) -> i32,
+	x_destroy: proc "c" (_: ^Vtab) -> i32,
+	x_open: proc "c" (_: ^Vtab, _: ^^Vtab_Cursor) -> i32,
+	x_close: proc "c" (_: ^Vtab_Cursor) -> i32,
+	x_filter: proc "c" (_: ^Vtab_Cursor, _: i32, _: cstring, _: i32, _: ^Value) -> i32,
+	x_next: proc "c" (_: ^Vtab_Cursor) -> i32,
+	x_eof: proc "c" (_: ^Vtab_Cursor) -> i32,
+	x_column: proc "c" (_: ^Vtab_Cursor, _: Context, _: i32) -> i32,
+	x_rowid: proc "c" (_: ^Vtab_Cursor, _: ^i64) -> i32,
+	x_update: proc "c" (_: ^Vtab, _: i32, _: ^Value, _: ^i64) -> i32,
+	x_begin: proc "c" (_: ^Vtab) -> i32,
+	x_sync: proc "c" (_: ^Vtab) -> i32,
+	x_commit: proc "c" (_: ^Vtab) -> i32,
+	x_rollback: proc "c" (_: ^Vtab) -> i32,
 	x_find_function: proc "c" (_: ^Vtab, _: i32, _: cstring, _: ^proc "c" (_: Context, _: i32, _: ^Value), _: ^rawptr) -> i32,
-	x_rename:        proc "c" (_: ^Vtab, _: cstring) -> i32,
-	x_savepoint:     proc "c" (_: ^Vtab, _: i32) -> i32,
-	x_release:       proc "c" (_: ^Vtab, _: i32) -> i32,
-	x_rollback_to:   proc "c" (_: ^Vtab, _: i32) -> i32,
-	x_shadow_name:   proc "c" (_: cstring) -> i32,
-	x_integrity:     proc "c" (_: ^Vtab, _: cstring, _: cstring, _: i32, _: ^^u8) -> i32,
+	x_rename: proc "c" (_: ^Vtab, _: cstring) -> i32,
+	x_savepoint: proc "c" (_: ^Vtab, _: i32) -> i32,
+	x_release: proc "c" (_: ^Vtab, _: i32) -> i32,
+	x_rollback_to: proc "c" (_: ^Vtab, _: i32) -> i32,
+	x_shadow_name: proc "c" (_: cstring) -> i32,
+	x_integrity: proc "c" (_: ^Vtab, _: cstring, _: cstring, _: i32, _: ^^u8) -> i32,
 }
 
 Index_Constraint :: struct {
-	i_column:      i32,
-	op:            u8,
-	usable:        u8,
+	i_column: i32,
+	op: u8,
+	usable: u8,
 	i_term_offset: i32,
 }
 
 Index_Orderby :: struct {
 	i_column: i32,
-	desc:     u8,
+	desc: u8,
 }
 
 Index_Constraint_Usage :: struct {
 	argv_index: i32,
-	omit:       u8,
+	omit: u8,
 }
 
 Blob :: distinct rawptr
 
 Mutex_Methods :: struct {
-	x_mutex_init:    proc "c" () -> i32,
-	x_mutex_end:     proc "c" () -> i32,
-	x_mutex_alloc:   proc "c" (_: i32) -> Mutex,
-	x_mutex_free:    proc "c" (_: Mutex),
-	x_mutex_enter:   proc "c" (_: Mutex),
-	x_mutex_try:     proc "c" (_: Mutex) -> i32,
-	x_mutex_leave:   proc "c" (_: Mutex),
-	x_mutex_held:    proc "c" (_: Mutex) -> i32,
+	x_mutex_init: proc "c" () -> i32,
+	x_mutex_end: proc "c" () -> i32,
+	x_mutex_alloc: proc "c" (_: i32) -> Mutex,
+	x_mutex_free: proc "c" (_: Mutex),
+	x_mutex_enter: proc "c" (_: Mutex),
+	x_mutex_try: proc "c" (_: Mutex) -> i32,
+	x_mutex_leave: proc "c" (_: Mutex),
+	x_mutex_held: proc "c" (_: Mutex) -> i32,
 	x_mutex_notheld: proc "c" (_: Mutex) -> i32,
 }
 
@@ -207,38 +209,38 @@ Str :: distinct rawptr
 Pcache :: distinct rawptr
 
 Pcache_Page :: struct {
-	p_buf:   rawptr,
+	p_buf: rawptr,
 	p_extra: rawptr,
 }
 
 Pcache_Methods2 :: struct {
-	i_version:   i32,
-	p_arg:       rawptr,
-	x_init:      proc "c" (_: rawptr) -> i32,
-	x_shutdown:  proc "c" (_: rawptr),
-	x_create:    proc "c" (_: i32, _: i32, _: i32) -> Pcache,
+	i_version: i32,
+	p_arg: rawptr,
+	x_init: proc "c" (_: rawptr) -> i32,
+	x_shutdown: proc "c" (_: rawptr),
+	x_create: proc "c" (_: i32, _: i32, _: i32) -> Pcache,
 	x_cachesize: proc "c" (_: Pcache, _: i32),
 	x_pagecount: proc "c" (_: Pcache) -> i32,
-	x_fetch:     proc "c" (_: Pcache, _: u32, _: i32) -> ^Pcache_Page,
-	x_unpin:     proc "c" (_: Pcache, _: ^Pcache_Page, _: i32),
-	x_rekey:     proc "c" (_: Pcache, _: ^Pcache_Page, _: u32, _: u32),
-	x_truncate:  proc "c" (_: Pcache, _: u32),
-	x_destroy:   proc "c" (_: Pcache),
-	x_shrink:    proc "c" (_: Pcache),
+	x_fetch: proc "c" (_: Pcache, _: u32, _: i32) -> ^Pcache_Page,
+	x_unpin: proc "c" (_: Pcache, _: ^Pcache_Page, _: i32),
+	x_rekey: proc "c" (_: Pcache, _: ^Pcache_Page, _: u32, _: u32),
+	x_truncate: proc "c" (_: Pcache, _: u32),
+	x_destroy: proc "c" (_: Pcache),
+	x_shrink: proc "c" (_: Pcache),
 }
 
 Pcache_Methods :: struct {
-	p_arg:       rawptr,
-	x_init:      proc "c" (_: rawptr) -> i32,
-	x_shutdown:  proc "c" (_: rawptr),
-	x_create:    proc "c" (_: i32, _: i32) -> Pcache,
+	p_arg: rawptr,
+	x_init: proc "c" (_: rawptr) -> i32,
+	x_shutdown: proc "c" (_: rawptr),
+	x_create: proc "c" (_: i32, _: i32) -> Pcache,
 	x_cachesize: proc "c" (_: Pcache, _: i32),
 	x_pagecount: proc "c" (_: Pcache) -> i32,
-	x_fetch:     proc "c" (_: Pcache, _: u32, _: i32) -> rawptr,
-	x_unpin:     proc "c" (_: Pcache, _: rawptr, _: i32),
-	x_rekey:     proc "c" (_: Pcache, _: rawptr, _: u32, _: u32),
-	x_truncate:  proc "c" (_: Pcache, _: u32),
-	x_destroy:   proc "c" (_: Pcache),
+	x_fetch: proc "c" (_: Pcache, _: u32, _: i32) -> rawptr,
+	x_unpin: proc "c" (_: Pcache, _: rawptr, _: i32),
+	x_rekey: proc "c" (_: Pcache, _: rawptr, _: u32, _: u32),
+	x_truncate: proc "c" (_: Pcache, _: u32),
+	x_destroy: proc "c" (_: Pcache),
 }
 
 Backup :: distinct rawptr
@@ -248,73 +250,59 @@ Snapshot :: struct {
 }
 
 Rtree_Geometry :: struct {
-	p_context:  rawptr,
-	n_param:    i32,
-	a_param:    ^Rtree_Dbl,
-	p_user:     rawptr,
+	p_context: rawptr,
+	n_param: i32,
+	a_param: ^Rtree_Dbl,
+	p_user: rawptr,
 	x_del_user: proc "c" (_: rawptr),
 }
 
 Rtree_Query_Info :: struct {
-	p_context:       rawptr,
-	n_param:         i32,
-	a_param:         ^Rtree_Dbl,
-	p_user:          rawptr,
-	x_del_user:      proc "c" (_: rawptr),
-	a_coord:         ^Rtree_Dbl,
-	an_queue:        ^u32,
-	n_coord:         i32,
-	i_level:         i32,
-	mx_level:        i32,
-	i_rowid:         i64,
-	r_parent_score:  Rtree_Dbl,
+	p_context: rawptr,
+	n_param: i32,
+	a_param: ^Rtree_Dbl,
+	p_user: rawptr,
+	x_del_user: proc "c" (_: rawptr),
+	a_coord: ^Rtree_Dbl,
+	an_queue: ^u32,
+	n_coord: i32,
+	i_level: i32,
+	mx_level: i32,
+	i_rowid: i64,
+	r_parent_score: Rtree_Dbl,
 	e_parent_within: i32,
-	e_within:        i32,
-	r_score:         Rtree_Dbl,
-	ap_sql_param:    ^Value,
+	e_within: i32,
+	r_score: Rtree_Dbl,
+	ap_sql_param: ^Value,
 }
 
 Rtree_Dbl :: f64
 
 Fts5_Extension_Api :: struct {
-	i_version:             i32,
-	x_user_data:           proc "c" (_: Fts5_Context) -> rawptr,
-	x_column_count:        proc "c" (_: Fts5_Context) -> i32,
-	x_row_count:           proc "c" (_: Fts5_Context, _: ^i64) -> i32,
-	x_column_total_size:   proc "c" (_: Fts5_Context, _: i32, _: ^i64) -> i32,
-	x_tokenize:            proc "c" (
-		_: Fts5_Context,
-		_: cstring,
-		_: i32,
-		_: rawptr,
-		_: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32,
-	) -> i32,
-	x_phrase_count:        proc "c" (_: Fts5_Context) -> i32,
-	x_phrase_size:         proc "c" (_: Fts5_Context, _: i32) -> i32,
-	x_inst_count:          proc "c" (_: Fts5_Context, _: ^i32) -> i32,
-	x_inst:                proc "c" (_: Fts5_Context, _: i32, _: ^i32, _: ^i32, _: ^i32) -> i32,
-	x_rowid:               proc "c" (_: Fts5_Context) -> i64,
-	x_column_text:         proc "c" (_: Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
-	x_column_size:         proc "c" (_: Fts5_Context, _: i32, _: ^i32) -> i32,
-	x_query_phrase:        proc "c" (_: Fts5_Context, _: i32, _: rawptr, _: proc "c" (_: ^Fts5_Extension_Api, _: Fts5_Context, _: rawptr) -> i32) -> i32,
-	x_set_auxdata:         proc "c" (_: Fts5_Context, _: rawptr, _: proc "c" (_: rawptr)) -> i32,
-	x_get_auxdata:         proc "c" (_: Fts5_Context, _: i32) -> rawptr,
-	x_phrase_first:        proc "c" (_: Fts5_Context, _: i32, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32) -> i32,
-	x_phrase_next:         proc "c" (_: Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32),
+	i_version: i32,
+	x_user_data: proc "c" (_: Fts5_Context) -> rawptr,
+	x_column_count: proc "c" (_: Fts5_Context) -> i32,
+	x_row_count: proc "c" (_: Fts5_Context, _: ^i64) -> i32,
+	x_column_total_size: proc "c" (_: Fts5_Context, _: i32, _: ^i64) -> i32,
+	x_tokenize: proc "c" (_: Fts5_Context, _: cstring, _: i32, _: rawptr, _: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32) -> i32,
+	x_phrase_count: proc "c" (_: Fts5_Context) -> i32,
+	x_phrase_size: proc "c" (_: Fts5_Context, _: i32) -> i32,
+	x_inst_count: proc "c" (_: Fts5_Context, _: ^i32) -> i32,
+	x_inst: proc "c" (_: Fts5_Context, _: i32, _: ^i32, _: ^i32, _: ^i32) -> i32,
+	x_rowid: proc "c" (_: Fts5_Context) -> i64,
+	x_column_text: proc "c" (_: Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_column_size: proc "c" (_: Fts5_Context, _: i32, _: ^i32) -> i32,
+	x_query_phrase: proc "c" (_: Fts5_Context, _: i32, _: rawptr, _: proc "c" (_: ^Fts5_Extension_Api, _: Fts5_Context, _: rawptr) -> i32) -> i32,
+	x_set_auxdata: proc "c" (_: Fts5_Context, _: rawptr, _: proc "c" (_: rawptr)) -> i32,
+	x_get_auxdata: proc "c" (_: Fts5_Context, _: i32) -> rawptr,
+	x_phrase_first: proc "c" (_: Fts5_Context, _: i32, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32) -> i32,
+	x_phrase_next: proc "c" (_: Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32, _: ^i32),
 	x_phrase_first_column: proc "c" (_: Fts5_Context, _: i32, _: ^Fts5_Phrase_Iter, _: ^i32) -> i32,
-	x_phrase_next_column:  proc "c" (_: Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32),
-	x_query_token:         proc "c" (_: Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
-	x_inst_token:          proc "c" (_: Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
-	x_column_locale:       proc "c" (_: Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
-	x_tokenize_v2:         proc "c" (
-		_: Fts5_Context,
-		_: cstring,
-		_: i32,
-		_: cstring,
-		_: i32,
-		_: rawptr,
-		_: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32,
-	) -> i32,
+	x_phrase_next_column: proc "c" (_: Fts5_Context, _: ^Fts5_Phrase_Iter, _: ^i32),
+	x_query_token: proc "c" (_: Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_inst_token: proc "c" (_: Fts5_Context, _: i32, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_column_locale: proc "c" (_: Fts5_Context, _: i32, _: ^cstring, _: ^i32) -> i32,
+	x_tokenize_v2: proc "c" (_: Fts5_Context, _: cstring, _: i32, _: cstring, _: i32, _: rawptr, _: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32) -> i32,
 }
 
 Fts5_Context :: distinct rawptr
@@ -329,41 +317,25 @@ Fts5_Extension_Function :: proc "c" (_: ^Fts5_Extension_Api, _: Fts5_Context, _:
 Fts5_Tokenizer :: distinct rawptr
 
 Fts5_Tokenizer_V2 :: struct {
-	i_version:  i32,
-	x_create:   proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^Fts5_Tokenizer) -> i32,
-	x_delete:   proc "c" (_: Fts5_Tokenizer),
-	x_tokenize: proc "c" (
-		_: Fts5_Tokenizer,
-		_: rawptr,
-		_: i32,
-		_: cstring,
-		_: i32,
-		_: cstring,
-		_: i32,
-		_: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32,
-	) -> i32,
+	i_version: i32,
+	x_create: proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^Fts5_Tokenizer) -> i32,
+	x_delete: proc "c" (_: Fts5_Tokenizer),
+	x_tokenize: proc "c" (_: Fts5_Tokenizer, _: rawptr, _: i32, _: cstring, _: i32, _: cstring, _: i32, _: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32) -> i32,
 }
 
 Fts5_Tokenizer_Methods :: struct {
-	x_create:   proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^Fts5_Tokenizer) -> i32,
-	x_delete:   proc "c" (_: Fts5_Tokenizer),
-	x_tokenize: proc "c" (
-		_: Fts5_Tokenizer,
-		_: rawptr,
-		_: i32,
-		_: cstring,
-		_: i32,
-		_: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32,
-	) -> i32,
+	x_create: proc "c" (_: rawptr, _: ^cstring, _: i32, _: ^Fts5_Tokenizer) -> i32,
+	x_delete: proc "c" (_: Fts5_Tokenizer),
+	x_tokenize: proc "c" (_: Fts5_Tokenizer, _: rawptr, _: i32, _: cstring, _: i32, _: proc "c" (_: rawptr, _: i32, _: cstring, _: i32, _: i32, _: i32) -> i32) -> i32,
 }
 
 Fts5_Api :: struct {
-	i_version:             i32,
-	x_create_tokenizer:    proc "c" (_: ^Fts5_Api, _: cstring, _: rawptr, _: ^Fts5_Tokenizer_Methods, _: proc "c" (_: rawptr)) -> i32,
-	x_find_tokenizer:      proc "c" (_: ^Fts5_Api, _: cstring, _: ^rawptr, _: ^Fts5_Tokenizer_Methods) -> i32,
-	x_create_function:     proc "c" (_: ^Fts5_Api, _: cstring, _: rawptr, _: Fts5_Extension_Function, _: proc "c" (_: rawptr)) -> i32,
+	i_version: i32,
+	x_create_tokenizer: proc "c" (_: ^Fts5_Api, _: cstring, _: rawptr, _: ^Fts5_Tokenizer_Methods, _: proc "c" (_: rawptr)) -> i32,
+	x_find_tokenizer: proc "c" (_: ^Fts5_Api, _: cstring, _: ^rawptr, _: ^Fts5_Tokenizer_Methods) -> i32,
+	x_create_function: proc "c" (_: ^Fts5_Api, _: cstring, _: rawptr, _: Fts5_Extension_Function, _: proc "c" (_: rawptr)) -> i32,
 	x_create_tokenizer_v2: proc "c" (_: ^Fts5_Api, _: cstring, _: rawptr, _: ^Fts5_Tokenizer_V2, _: proc "c" (_: rawptr)) -> i32,
-	x_find_tokenizer_v2:   proc "c" (_: ^Fts5_Api, _: cstring, _: ^rawptr, _: ^^Fts5_Tokenizer_V2) -> i32,
+	x_find_tokenizer_v2: proc "c" (_: ^Fts5_Api, _: cstring, _: ^rawptr, _: ^^Fts5_Tokenizer_V2) -> i32,
 }
 
 Result_Code :: enum i32 {
@@ -850,8 +822,8 @@ Text_Encoding :: enum i32 {
 
 Conflict_Action :: enum i32 {
 	Rollback = 1,
-	Fail     = 3,
-	Replace  = 5,
+	Fail = 3,
+	Replace = 5,
 }
 
 @(link_prefix = "sqlite3_")
@@ -889,9 +861,9 @@ foreign lib {
 	get_table :: proc(db: Sqlite3, zSql: cstring, pazResult: ^^^u8, pnRow: ^i32, pnColumn: ^i32, pzErrmsg: ^^u8) -> i32 ---
 	free_table :: proc(result: ^^u8) ---
 	mprintf :: proc(_: cstring, #c_vararg _: ..any) -> ^u8 ---
-	vmprintf :: proc(_: cstring, _: ^Va_List_Tag) -> ^u8 ---
+	vmprintf :: proc(_: cstring, _: Builtin_Va_List) -> ^u8 ---
 	snprintf :: proc(_: i32, _: ^u8, _: cstring, #c_vararg _: ..any) -> ^u8 ---
-	vsnprintf :: proc(_: i32, _: ^u8, _: cstring, _: ^Va_List_Tag) -> ^u8 ---
+	vsnprintf :: proc(_: i32, _: ^u8, _: cstring, _: Builtin_Va_List) -> ^u8 ---
 	malloc :: proc(_: i32) -> rawptr ---
 	malloc64 :: proc(_: u64) -> rawptr ---
 	realloc :: proc(_: rawptr, _: i32) -> rawptr ---
@@ -1103,7 +1075,7 @@ foreign lib {
 	str_finish :: proc(_: Str) -> ^u8 ---
 	str_free :: proc(_: Str) ---
 	str_appendf :: proc(_: Str, zFormat: cstring, #c_vararg _: ..any) ---
-	str_vappendf :: proc(_: Str, zFormat: cstring, _: ^Va_List_Tag) ---
+	str_vappendf :: proc(_: Str, zFormat: cstring, _: Builtin_Va_List) ---
 	str_append :: proc(_: Str, zIn: cstring, N: i32) ---
 	str_appendall :: proc(_: Str, zIn: cstring) ---
 	str_appendchar :: proc(_: Str, N: i32, C: u8) ---

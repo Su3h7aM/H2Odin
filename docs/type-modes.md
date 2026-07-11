@@ -34,6 +34,19 @@ modes (`^Stmt` vs `Stmt`) — modes are not drop-in interchangeable.
 meaning (e.g. inferring array-ness from a lone pointer). That remains
 configuration or deferred wrapper work (Milestone 6).
 
+### Named POSIX / libc types (one spelling, both modes)
+
+ISO C scalars dual-map (`size_t` → `c.size_t` / `uint`). **Named POSIX and
+libc typedefs** (`off_t`, `pid_t`, `time_t`, `sockaddr`, …) are a separate
+class and do **not**: Odin’s `core:sys/posix` / `core:c/libc` spellings are
+`distinct`, OS-width-specific, and sometimes not integers at all (`mode_t`
+is a `bit_set`), so peeling them to bare `i32`/`i64` by mode would break
+interop with every package that uses them correctly. Spec 0010 fixes a
+**single** spelling in both modes, named through the **defining package**:
+`posix.off_t`, `posix.sockaddr`, `libc.time_t`, `libc.timespec`. Users who
+want a raw integer opt in per-name via `types.map`; mode is not the lever.
+See [spec 0010](specs/0010-posix-libc-type-mapping.md).
+
 ## Guidelines for choosing idiomatic types
 
 A few principles guide what idiomatic mode may and may not do:

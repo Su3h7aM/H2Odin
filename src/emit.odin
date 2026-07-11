@@ -20,6 +20,13 @@ Emit_Options :: struct {
 	emit_comments:     bool, // false: suppress doc-comment passthrough
 }
 
+// Imports the body may need; prelude writes only those that were used.
+Emit_Imports :: struct {
+	core_c: bool, // import "core:c"
+	posix:  bool, // import "core:sys/posix" (for posix.* spellings, spec 0010)
+	libc:   bool, // import "core:c/libc"    (for libc.* spellings, spec 0010)
+}
+
 // One self-contained generated Odin file (package + prelude + decls).
 Generated_File :: struct {
 	filename: string, // relative basename, e.g. "Index.odin"
@@ -50,11 +57,20 @@ emit_close_foreign :: proc(b: ^strings.Builder, in_foreign: ^bool) {
 	in_foreign^ = false
 }
 
-emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, uses_core_c: bool, needs_foreign: bool) {
+emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, imports: Emit_Imports, needs_foreign: bool) {
 	fmt.sbprintfln(b, "package %s", opts.package_name)
 	strings.write_string(b, "\n")
-	if uses_core_c {
+	if imports.core_c {
 		strings.write_string(b, "import \"core:c\"\n")
+	}
+	if imports.libc {
+		// Package name is the last path segment: spellings use libc.T.
+		strings.write_string(b, "import \"core:c/libc\"\n")
+	}
+	if imports.posix {
+		strings.write_string(b, "import \"core:sys/posix\"\n")
+	}
+	if imports.core_c || imports.libc || imports.posix {
 		strings.write_string(b, "\n")
 	}
 	// Type-only / empty units must not declare an unused foreign import:
@@ -84,9 +100,9 @@ emit_write_foreign_block :: proc(b: ^strings.Builder, foreign_body: string, link
 emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
 	files := make([]Generated_File, len(plan.units))
 	for unit, ui in plan.units {
-		content, uses_core_c, needs_foreign := emit_unit_body(ir, unit.decls, opts)
+		content, imports, needs_foreign := emit_unit_body(ir, unit.decls, opts)
 		out: strings.Builder
-		emit_write_prelude(&out, opts, uses_core_c, needs_foreign)
+		emit_write_prelude(&out, opts, imports, needs_foreign)
 		strings.write_string(&out, content)
 		files[ui] = Generated_File {
 			filename = unit.filename,
@@ -98,13 +114,13 @@ emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
 }
 
 // Build the declaration body for one unit (no package/prelude). Returns
-// whether the body needs core:c and whether it declares foreign symbols
+// which imports the body needs and whether it declares foreign symbols
 // (so the prelude can omit an unused `foreign import` under -vet).
-emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body: string, uses_core_c: bool, needs_foreign: bool) {
+emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body: string, imports: Emit_Imports, needs_foreign: bool) {
 	types_body: strings.Builder
 	foreign_body: strings.Builder
 	interleaved: strings.Builder
-	uses_core_c = false
+	imports = {}
 	in_foreign := false
 	needs_foreign = false
 
@@ -114,26 +130,26 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 			case .Invalid:
 			case .Func:
 				needs_foreign = true
-				emit_func(&foreign_body, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
+				emit_func(&foreign_body, ir, ir.funcs[ref.index], opts.emit_comments, &imports)
 			case .Record:
-				emit_record(&types_body, ir, ir.records[ref.index], opts.emit_comments, &uses_core_c)
+				emit_record(&types_body, ir, ir.records[ref.index], opts.emit_comments, &imports)
 			case .Enum:
-				emit_enum(&types_body, ir, ir.enums[ref.index], opts.emit_comments, &uses_core_c)
+				emit_enum(&types_body, ir, ir.enums[ref.index], opts.emit_comments, &imports)
 			case .Typedef:
-				emit_typedef(&types_body, ir, ir.typedefs[ref.index], opts.emit_comments, &uses_core_c)
+				emit_typedef(&types_body, ir, ir.typedefs[ref.index], opts.emit_comments, &imports)
 			case .Var:
 				needs_foreign = true
-				emit_var(&foreign_body, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
+				emit_var(&foreign_body, ir, ir.vars[ref.index], opts.emit_comments, &imports)
 			case .Macro:
 				emit_macro(&types_body, ir.macros[ref.index], opts.emit_comments)
 			case .Bit_Set:
-				emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], opts.emit_comments, &uses_core_c)
+				emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], opts.emit_comments, &imports)
 			}
 		}
 		out: strings.Builder
 		strings.write_string(&out, strings.to_string(types_body))
 		emit_write_foreign_block(&out, strings.to_string(foreign_body), opts.link_prefix)
-		return strings.to_string(out), uses_core_c, needs_foreign
+		return strings.to_string(out), imports, needs_foreign
 	}
 
 	for ref in decls {
@@ -142,28 +158,28 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 		case .Func:
 			needs_foreign = true
 			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
-			emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &uses_core_c)
+			emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &imports)
 		case .Var:
 			needs_foreign = true
 			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
-			emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &uses_core_c)
+			emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &imports)
 		case .Record:
 			emit_close_foreign(&interleaved, &in_foreign)
-			emit_record(&interleaved, ir, ir.records[ref.index], opts.emit_comments, &uses_core_c)
+			emit_record(&interleaved, ir, ir.records[ref.index], opts.emit_comments, &imports)
 		case .Enum:
 			emit_close_foreign(&interleaved, &in_foreign)
-			emit_enum(&interleaved, ir, ir.enums[ref.index], opts.emit_comments, &uses_core_c)
+			emit_enum(&interleaved, ir, ir.enums[ref.index], opts.emit_comments, &imports)
 		case .Typedef:
 			emit_close_foreign(&interleaved, &in_foreign)
-			emit_typedef(&interleaved, ir, ir.typedefs[ref.index], opts.emit_comments, &uses_core_c)
+			emit_typedef(&interleaved, ir, ir.typedefs[ref.index], opts.emit_comments, &imports)
 		case .Macro:
 			emit_close_foreign(&interleaved, &in_foreign)
 			emit_macro(&interleaved, ir.macros[ref.index], opts.emit_comments)
 		case .Bit_Set:
 			emit_close_foreign(&interleaved, &in_foreign)
-			emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], opts.emit_comments, &uses_core_c)
+			emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], opts.emit_comments, &imports)
 		}
 	}
 	emit_close_foreign(&interleaved, &in_foreign)
-	return strings.to_string(interleaved), uses_core_c, needs_foreign
+	return strings.to_string(interleaved), imports, needs_foreign
 }

@@ -25,8 +25,8 @@ test_write_enum_body_omits_default_sequential_values :: proc(t: ^testing.T) {
 	}
 
 	b: strings.Builder
-	uses_core_c := false
-	write_enum_body(&b, &ir, decl, 0, false, &uses_core_c)
+	imports: Emit_Imports
+	write_enum_body(&b, &ir, decl, 0, false, &imports)
 	text := strings.to_string(b)
 
 	testing.expect(t, strings.contains(text, "None,\n"))
@@ -65,8 +65,8 @@ test_write_enum_body_emits_gaps_and_non_zero_start :: proc(t: ^testing.T) {
 	}
 
 	b: strings.Builder
-	uses_core_c := false
-	write_enum_body(&b, &ir, decl, 0, false, &uses_core_c)
+	imports: Emit_Imports
+	write_enum_body(&b, &ir, decl, 0, false, &imports)
 	text := strings.to_string(b)
 
 	// 1 ≠ expected 0 → explicit; next expected 2 so Second omits; 100 explicit;
@@ -102,8 +102,8 @@ test_write_enum_body_gap_after_sequential_prefix :: proc(t: ^testing.T) {
 	}
 
 	b: strings.Builder
-	uses_core_c := false
-	write_enum_body(&b, &ir, decl, 0, false, &uses_core_c)
+	imports: Emit_Imports
+	write_enum_body(&b, &ir, decl, 0, false, &imports)
 	text := strings.to_string(b)
 
 	testing.expect(t, strings.contains(text, "OK,\n") || strings.contains(text, "\tOK,\n"))

@@ -118,14 +118,21 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 	}
 
 	deprecated, deprecated_message := cursor_deprecation(cursor)
+	is_foreign := cursor_is_foreign(cursor)
 	decl := Typedef_Decl {
 		name               = clone_clang_string(clang.get_cursor_spelling(cursor)),
 		deprecated         = deprecated,
 		deprecated_message = deprecated_message,
 		doc                = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 		home               = cursor_home(state, cursor),
+		is_foreign         = is_foreign,
 	}
-	handle := ir_add_typedef(state.ir, decl)
+	// System-header typedefs enter the pool so the type graph resolves and the
+	// C name survives for Transformation, but not the ordering list: their
+	// declaration is not ours to emit. Transformation resolves every reference
+	// to one — built-in map, config, or peel (see resolve_foreign_typedefs) —
+	// so no dangling name can reach Emission.
+	handle := ir_create_typedef(state.ir, decl) if is_foreign else ir_add_typedef(state.ir, decl)
 	if usr != "" {
 		state.decl_map[usr] = Decl_Ref {
 			kind  = .Typedef,
@@ -171,34 +178,45 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 			state.ir.enums[int(handle)].deprecated, state.ir.enums[int(handle)].deprecated_message = cursor_deprecation(cursor)
 		}
 		if clang.is_cursor_definition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
-			// Definition becomes home when it lands in a configured input.
-			if home := cursor_home(state, cursor); home != 0 {
-				state.ir.enums[int(handle)].home = home
+			if !cursor_is_foreign(cursor) {
+				if home := cursor_home(state, cursor); home != 0 {
+					state.ir.enums[int(handle)].home = home
+				}
+				ir_promote_enum(state.ir, handle)
+				fill_enum(state, handle, cursor)
 			}
-			fill_enum(state, handle, cursor)
+			// System-header enum definitions are not filled into emission.
 		}
 		return handle
 	}
 
+	home := cursor_home(state, cursor)
+	is_foreign := cursor_is_foreign(cursor)
 	decl: Enum_Decl
 	if clang.cursor_is_anonymous(cursor) == 0 {
 		decl.name = clone_clang_string(clang.get_cursor_spelling(cursor))
 	}
 	decl.deprecated, decl.deprecated_message = cursor_deprecation(cursor)
 	decl.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
-	decl.home = cursor_home(state, cursor)
+	decl.home = home
+	decl.is_foreign = is_foreign
 	// The backing integer type is known for any enum cursor — clang answers
 	// with the target's ABI choice — so capture it even for a declaration
 	// that never gets a definition in this header.
 	decl.backing, _ = capture_type(state, clang.get_enum_decl_integer_type(cursor))
-	handle := ir_add_enum(state.ir, decl)
+	// System-header enums enter the pool for type-graph resolution but not the
+	// ordering list — mirrors record_decl_for_cursor.
+	handle := ir_create_enum(state.ir, decl)
+	if !is_foreign {
+		ir_promote_enum(state.ir, handle)
+	}
 	if usr != "" {
 		state.decl_map[usr] = Decl_Ref {
 			kind  = .Enum,
 			index = u32(handle),
 		}
 	}
-	if clang.is_cursor_definition(cursor) != 0 {
+	if clang.is_cursor_definition(cursor) != 0 && !is_foreign {
 		fill_enum(state, handle, cursor)
 	}
 	return handle
@@ -287,19 +305,31 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 				state.ir.records[int(handle)].deprecated, state.ir.records[int(handle)].deprecated_message = cursor_deprecation(cursor)
 			}
 			if clang.is_cursor_definition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
-				// Definition becomes home when it lands in a configured input.
-				if home := cursor_home(state, cursor); home != 0 {
-					state.ir.records[int(handle)].home = home
+				if cursor_is_foreign(cursor) {
+					// A system header's layout is not ours to copy into the IR
+					// as if we had bound it (spec 0010). Stays a pool-only,
+					// incomplete entry for Transformation to resolve.
+				} else {
+					// Ours: the definition site wins for output placement, and
+					// a record first seen through another type now becomes a
+					// real emitted declaration with its layout.
+					if home := cursor_home(state, cursor); home != 0 {
+						state.ir.records[int(handle)].home = home
+					}
+					ir_promote_record(state.ir, handle)
+					fill_record(state, handle, cursor)
 				}
-				fill_record(state, handle, cursor)
 			}
 			return handle
 		}
 	}
 
+	home := cursor_home(state, cursor)
+	is_foreign := cursor_is_foreign(cursor)
 	record := Record_Decl {
-		is_union = clang.get_cursor_kind(cursor) == .Union_Decl,
-		home     = cursor_home(state, cursor),
+		is_union   = clang.get_cursor_kind(cursor) == .Union_Decl,
+		home       = home,
+		is_foreign = is_foreign,
 	}
 	// Anonymous records keep "" as their name: recent libclang spells them
 	// as "struct (unnamed at file:line)", which is a description, not a name.
@@ -308,7 +338,13 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	}
 	record.deprecated, record.deprecated_message = cursor_deprecation(cursor)
 	record.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
-	handle := ir_add_record(state.ir, record)
+	// System-header records enter the pool for type-graph resolution but not
+	// the ordering list — they must not be emitted as full standalone decls.
+	// Transformation maps them (posix.sockaddr) or promotes an incomplete stub.
+	handle := ir_create_record(state.ir, record)
+	if !is_foreign {
+		ir_promote_record(state.ir, handle)
+	}
 	// Only named records enter decl_map. Anonymous ones must not: shared USRs
 	// would alias distinct nested types (see is_anonymous note above).
 	if !is_anonymous && usr != "" {
@@ -317,7 +353,9 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 			index = u32(handle),
 		}
 	}
-	if clang.is_cursor_definition(cursor) != 0 {
+	// Only fill layout for records that are ours. System tags stay incomplete
+	// so we never claim a system header's field list as our binding.
+	if clang.is_cursor_definition(cursor) != 0 && !is_foreign {
 		fill_record(state, handle, cursor)
 	}
 	return handle

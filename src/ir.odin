@@ -117,6 +117,11 @@ Idiomatic_Reason :: enum {
 	// or a void* typedef opted in via types.distinct. Spelling is
 	// `distinct rawptr` (spec 0005).
 	Opaque_Handle,
+	// Foreign C type mapped to its Odin defining package (spec 0010): POSIX
+	// names to core:sys/posix (sockaddr → posix.sockaddr), ISO C library
+	// names to core:c/libc (time_t → libc.time_t). Emission imports the
+	// package the spelling names. One spelling in both type modes.
+	Platform_Type,
 }
 
 // Transformation's decision to spell a C type with an explicit Odin
@@ -294,6 +299,10 @@ Record_Decl :: struct {
 	// collapsed at references.
 	emit_as_handle:             bool,
 	is_typedef_named:           bool, // anonymous tag that a typedef gives a name to
+	// Declared in a system header: someone else's type. Its layout is not
+	// ours to claim (spec 0010); Transformation maps it, stubs it, or
+	// diagnoses it. Distinct from `home`, which is about output placement.
+	is_foreign:                 bool,
 	// Spec 0009: C deprecation fact.
 	deprecated:                 bool,
 	deprecated_message:         string,
@@ -313,6 +322,7 @@ Enum_Decl :: struct {
 	backing:            Type_Handle,
 	members:            []Enum_Member,
 	is_typedef_named:   bool,
+	is_foreign:         bool, // declared in a system header (see Record_Decl)
 	// Spec 0009: C deprecation fact.
 	deprecated:         bool,
 	deprecated_message: string,
@@ -329,6 +339,7 @@ Typedef_Decl :: struct {
 	// so is anything that uses it — emitting a dangling name would just move
 	// the failure into the generated code.
 	is_unresolvable:    bool,
+	is_foreign:         bool, // declared in a system header (see Record_Decl)
 	// Spec 0009: C deprecation fact.
 	deprecated:         bool,
 	deprecated_message: string,
@@ -526,6 +537,27 @@ ir_add_record :: proc(ir: ^IR, decl: Record_Decl) -> Decl_Handle {
 	return handle
 }
 
+// Create a record pool entry without adding it to the ordering list. Used for
+// foreign (non-input) records captured transitively through type references:
+// they must exist in the pool so handles resolve, but they must not be emitted
+// as standalone declarations. A later definition in a configured input promotes
+// the record into order via ir_promote_record.
+ir_create_record :: proc(ir: ^IR, decl: Record_Decl) -> Decl_Handle {
+	append(&ir.records, decl)
+	return Decl_Handle(len(ir.records) - 1)
+}
+
+// Promote a pool-only record into the ordering list (emission). Called when a
+// foreign record's definition lands in a configured input header.
+ir_promote_record :: proc(ir: ^IR, handle: Decl_Handle) {
+	for ref in ir.order {
+		if ref.kind == .Record && ref.index == u32(handle) {
+			return // already in order
+		}
+	}
+	append(&ir.order, Decl_Ref{kind = .Record, index = u32(handle)})
+}
+
 ir_add_enum :: proc(ir: ^IR, decl: Enum_Decl) -> Decl_Handle {
 	append(&ir.enums, decl)
 	handle := Decl_Handle(len(ir.enums) - 1)
@@ -533,11 +565,37 @@ ir_add_enum :: proc(ir: ^IR, decl: Enum_Decl) -> Decl_Handle {
 	return handle
 }
 
+// Create an enum pool entry without adding it to the ordering list. Mirrors
+// ir_create_record for foreign enums captured transitively.
+ir_create_enum :: proc(ir: ^IR, decl: Enum_Decl) -> Decl_Handle {
+	append(&ir.enums, decl)
+	return Decl_Handle(len(ir.enums) - 1)
+}
+
+// Promote a pool-only enum into the ordering list (emission).
+ir_promote_enum :: proc(ir: ^IR, handle: Decl_Handle) {
+	for ref in ir.order {
+		if ref.kind == .Enum && ref.index == u32(handle) {
+			return // already in order
+		}
+	}
+	append(&ir.order, Decl_Ref{kind = .Enum, index = u32(handle)})
+}
+
 ir_add_typedef :: proc(ir: ^IR, decl: Typedef_Decl) -> Decl_Handle {
 	append(&ir.typedefs, decl)
 	handle := Decl_Handle(len(ir.typedefs) - 1)
 	append(&ir.order, Decl_Ref{kind = .Typedef, index = u32(handle)})
 	return handle
+}
+
+// Create a typedef pool entry without adding it to the ordering list. Mirrors
+// ir_create_record for foreign typedefs captured transitively: the name and
+// underlying type stay available to Transformation, but the declaration is
+// not ours to emit.
+ir_create_typedef :: proc(ir: ^IR, decl: Typedef_Decl) -> Decl_Handle {
+	append(&ir.typedefs, decl)
+	return Decl_Handle(len(ir.typedefs) - 1)
 }
 
 ir_add_var :: proc(ir: ^IR, decl: Var_Decl) {

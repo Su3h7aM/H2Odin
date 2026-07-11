@@ -420,15 +420,24 @@ default rather than a panic or an apparently successful generation.
 
 ### P1 — Make transitive C types honest and portable
 
-- [ ] **External/system type provenance.** A field in configured
-      `struct curl_sockaddr` references unconfigured system `struct sockaddr`;
-      the generated package contains that external record despite it not being
-      in `config.inputs`. Determine which recursive capture/promotion path adds
-      it, then decide and document the rule for reachable
-      declarations outside `config.inputs`: intentionally emit a dependency,
-      map it to an Odin/platform type, or fail with an unresolved-external-type
-      diagnostic. Do not misclassify the configured `curl_sockaddr` record as
-      a second leaked system declaration.
+- [x] **External/system type provenance + POSIX/libc mapping (spec 0010).**
+      Foreignness is now the fact libclang provides —
+      `clang_Location_isInSystemHeader`, captured in Extraction as
+      `is_foreign` — not "absent from `config.inputs`". A library's own
+      headers reached through an umbrella input stay ours (Box3D's `types.h`);
+      only system headers are foreign. Foreign records/enums/typedefs are
+      captured pool-only, and Transformation resolves every reference: the
+      built-in POSIX/libc map (single spelling in both type modes, defining
+      package — `posix.off_t`, `libc.time_t`), a config spelling
+      (`types.overrides` > `types.map` > built-in), an incomplete stub for
+      pointer-only use, or a peel for unmapped typedefs. By-value use of an
+      unmapped foreign record diagnoses instead of emitting a wrong-sized
+      `struct {}`. Scalars are width-guarded via `size_of` on the real Odin
+      type (per-OS build-tagged); compounds rely on the verified allowlist.
+      Curl now emits `addr: posix.sockaddr` — the `vendor:curl` shape — and
+      `libc.time_t`; the sockaddr leak and by-value size bug are gone.
+      Extraction no longer peels foreign typedefs at capture (it was deciding,
+      and destroying the name the map needs).
 - [ ] **Capture C calling conventions during Extraction.** curl's cross-platform
       callbacks reinforce the existing gap: `clang_getFunctionTypeCallingConv`
       is still unused. Record this config-independent fact now; emission and
@@ -503,12 +512,14 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-Code health items for specs 0005–0007 and deprecated-declaration propagation
-(spec 0009) are done. **Milestone 15 is now the only immediate feature
-priority:** close the structural failures exposed by curl/miniaudio, make all
-validation examples green, and automate that gate. Start with reduced fixtures
-for bare-void opaques, final-name/binding conflicts (spec 0008), and external
-type provenance; then implement those fixes in that order. Broader hardening,
-wrappers, full pointer-lowering
-curation, and Windows multi-lib emission resume only after the Milestone 15
-exit gate is met.
+Code health items for specs 0005–0007, deprecated-declaration propagation
+(spec 0009), and foreign-type provenance + POSIX/libc mapping (spec 0010) are
+done. **Milestone 15 is now the only immediate feature priority:** close the
+structural failures exposed by curl/miniaudio, make all validation examples
+green, and automate that gate. Six of the eight examples pass `odin check`;
+what remains is **curl's `^^httppost`** (a pointer-to-opaque-handle spelling)
+and **miniaudio's declaration cycles** (`thread: thread`, `format: format` —
+a post-rename field-vs-type collision, which is exactly spec 0008's
+scope-aware validation). Do those two next, then automate the gate. Broader
+hardening, wrappers, full pointer-lowering curation, and Windows multi-lib
+emission resume only after the Milestone 15 exit gate is met.

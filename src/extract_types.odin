@@ -76,10 +76,11 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 
 	case .Typedef:
 		decl_cursor := clang.get_type_declaration(type)
-		// Typedefs from config.inputs keep their name (including siblings
-		// included from another input). Everything else is not ours: C
-		// standard names stay via core:c; other foreign aliases peel to the
-		// underlying type so we never claim a name we did not bind.
+		// C standard names stay recognizable via core:c (Type_Std). Every
+		// other typedef — ours or foreign — is captured with its name and its
+		// underlying type; whether a foreign name survives as posix.off_t,
+		// as a config spelling, or peels away to c.long is Transformation's
+		// decision (spec 0010), not a fact Extraction may destroy here.
 		if !location_is_ours(state, clang.get_cursor_location(decl_cursor)) {
 			name := clone_clang_string(clang.get_cursor_spelling(decl_cursor))
 			if is_std_c_type(name) {
@@ -92,7 +93,6 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 					),
 					true
 			}
-			return capture_type(state, clang.get_typedef_decl_underlying_type(decl_cursor))
 		}
 		decl := typedef_decl_for_cursor(state, decl_cursor)
 		if ir.typedefs[int(decl)].is_unresolvable {

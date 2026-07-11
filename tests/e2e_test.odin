@@ -38,6 +38,40 @@ expect_not_contains :: proc(t: ^testing.T, haystack: []byte, needle: string) {
 	testing.expectf(t, !strings.contains(string(haystack), needle), "expected output not to contain %q", needle)
 }
 
+// Generate a project fixture (tests/fixtures/configs/<name>/H2Odin.lua) to
+// stdout. Caller owns the returned bytes.
+generate_fixture :: proc(t: ^testing.T, name: string) -> (stdout: []byte, ok: bool) {
+	cwd, cwd_err := os.get_working_directory(context.allocator)
+	testing.expect(t, cwd_err == nil)
+	defer delete(cwd)
+	proj := strings.concatenate({cwd, "/tests/fixtures/configs/", name})
+	defer delete(proj)
+
+	cmd := [?]string{"build/h2odin", "-destination:stdout", proj}
+	out, stderr, run_ok := run_h2odin(t, cmd[:])
+	defer delete(stderr)
+	if !run_ok {
+		delete(out)
+		return nil, false
+	}
+	return out, true
+}
+
+// Generated bindings must compile: `odin check` the emitted package.
+check_generated_output :: proc(t: ^testing.T, content: []byte, out_dir: string) {
+	_ = os.remove_all(out_dir)
+	testing.expect_value(t, os.make_directory_all(out_dir), nil)
+	path := strings.concatenate({out_dir, "/generated.odin"})
+	defer delete(path)
+	testing.expect_value(t, os.write_entire_file(path, content), nil)
+
+	cmd := [?]string{"odin", "check", out_dir, "-no-entry-point"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	testing.expect(t, ok)
+}
+
 @(test)
 test_add_fixture_abi_mode :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/add.lua"}
@@ -426,8 +460,12 @@ test_m13_sibling_input_typedef_keeps_name :: proc(t: ^testing.T) {
 	testing.expect_value(t, count, 1)
 }
 
+// A project header that config.inputs does not list is still ours: the
+// umbrella-header pattern (Box3D lists box3d.h and reaches types.h through
+// it) depends on it. Only system headers are foreign (spec 0010), so
+// Hidden_Id keeps its name instead of peeling to the underlying builtin.
 @(test)
-test_m13_non_input_include_typedef_peels :: proc(t: ^testing.T) {
+test_unlisted_project_header_typedef_is_ours :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/m13_peel.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
@@ -437,8 +475,8 @@ test_m13_non_input_include_typedef_peels :: proc(t: ^testing.T) {
 	}
 
 	expect_contains(t, stdout, "package m13p")
-	expect_not_contains(t, stdout, "Hidden_Id")
-	expect_contains(t, stdout, "m13_use_hidden :: proc(id: c.int)")
+	expect_contains(t, stdout, "Hidden_Id :: c.int")
+	expect_contains(t, stdout, "m13_use_hidden :: proc(id: Hidden_Id)")
 }
 
 @(test)
@@ -1166,6 +1204,106 @@ test_void_opaque_typedef_emits_distinct_rawptr :: proc(t: ^testing.T) {
 	defer delete(check_stdout)
 	defer delete(check_stderr)
 	testing.expect(t, check_ok)
+}
+
+@(test)
+test_foreign_record_emitted_as_incomplete_stub :: proc(t: ^testing.T) {
+	// A system type the built-in map does not know (FILE), used only behind a
+	// pointer: incomplete stub, never a copy of the system layout.
+	stdout, ok := generate_fixture(t, "foreign_ref")
+	defer delete(stdout)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "log_sink :: struct")
+	expect_contains(t, stdout, ":: struct {}")
+	// The system header's fields must not appear in our package.
+	expect_not_contains(t, stdout, "_IO_read_ptr")
+	expect_not_contains(t, stdout, "_flags")
+
+	check_generated_output(t, stdout, "/tmp/h2odin-foreign-ref")
+}
+
+@(test)
+test_foreign_sockaddr_maps_to_posix :: proc(t: ^testing.T) {
+	// Known system type sockaddr → core:sys/posix.sockaddr (vendor:curl style).
+	// Embedded by value, so a struct {} stub would have the wrong size.
+	stdout, ok := generate_fixture(t, "posix_sockaddr")
+	defer delete(stdout)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "import \"core:sys/posix\"")
+	expect_contains(t, stdout, "addr: posix.sockaddr")
+	expect_contains(t, stdout, "curl_sockaddr :: struct")
+	// Must not emit a local sockaddr claiming the system layout. The newline
+	// anchors the declaration: "curl_sockaddr :: struct" ends the same way.
+	expect_not_contains(t, stdout, "\nsockaddr :: struct")
+	expect_not_contains(t, stdout, "sa_family")
+
+	check_generated_output(t, stdout, "/tmp/h2odin-posix-sockaddr")
+}
+
+// Spec 0010: named POSIX/libc scalars keep one spelling in both type modes —
+// they are distinct, OS-width-specific Odin types, not an integer ladder rung.
+// ISO C names (size_t) still follow the mode.
+@(test)
+test_posix_scalars_same_spelling_in_abi_mode :: proc(t: ^testing.T) {
+	stdout, ok := generate_fixture(t, "posix_scalars_abi")
+	defer delete(stdout)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "import \"core:sys/posix\"")
+	expect_contains(t, stdout, "import \"core:c/libc\"")
+	expect_contains(t, stdout, "offset: posix.off_t) -> posix.off_t")
+	expect_contains(t, stdout, "lib_owner :: proc() -> posix.pid_t")
+	expect_contains(t, stdout, "out: ^libc.time_t) -> libc.time_t")
+	// ISO C stays on the c.* ladder in ABI mode, and no foreign typedef
+	// declaration leaks into our package.
+	expect_contains(t, stdout, "-> c.size_t")
+	expect_not_contains(t, stdout, "off_t ::")
+	expect_not_contains(t, stdout, "time_t ::")
+
+	check_generated_output(t, stdout, "/tmp/h2odin-posix-scalars-abi")
+}
+
+@(test)
+test_posix_scalars_same_spelling_in_idiomatic_mode :: proc(t: ^testing.T) {
+	stdout, ok := generate_fixture(t, "posix_scalars_idiomatic")
+	defer delete(stdout)
+	if !ok {
+		return
+	}
+
+	// Identical to ABI mode: no peel to i64/i32.
+	expect_contains(t, stdout, "offset: posix.off_t) -> posix.off_t")
+	expect_contains(t, stdout, "lib_owner :: proc() -> posix.pid_t")
+	expect_contains(t, stdout, "out: ^libc.time_t) -> libc.time_t")
+	// ISO C size_t does follow the mode.
+	expect_contains(t, stdout, "-> uint")
+
+	check_generated_output(t, stdout, "/tmp/h2odin-posix-scalars-idiomatic")
+}
+
+@(test)
+test_types_map_beats_builtin_posix_map :: proc(t: ^testing.T) {
+	stdout, ok := generate_fixture(t, "posix_scalars_override")
+	defer delete(stdout)
+	if !ok {
+		return
+	}
+
+	// types.map = { pid_t = "i32" } wins over the built-in posix.pid_t;
+	// unmapped names still take the built-in spelling.
+	expect_contains(t, stdout, "lib_owner :: proc() -> i32")
+	expect_not_contains(t, stdout, "posix.pid_t")
+	expect_contains(t, stdout, "offset: posix.off_t")
+
+	check_generated_output(t, stdout, "/tmp/h2odin-posix-scalars-override")
 }
 
 @(test)

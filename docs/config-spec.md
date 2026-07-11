@@ -283,6 +283,10 @@ sqlite3_int64 -> i64    is NOT naming — that is type mapping.
 config.types.map = {
     sqlite3_int64  = "i64",
     sqlite3_uint64 = "u64",
+    -- Portable POSIX/libc names get built-in defaults (spec 0010):
+    -- off_t → posix.off_t, time_t → libc.time_t, sockaddr → posix.sockaddr —
+    -- one spelling in both type modes, imports emitted automatically.
+    -- types.map always overrides the built-in map (e.g. pid_t = "i32").
 }
 
 -- Declaration override: replace the emitted representation of a type.

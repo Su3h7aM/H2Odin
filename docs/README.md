@@ -12,4 +12,4 @@ Start here:
 - [Memory](memory.md) — how the generator owns its memory.
 - [Source Layout](source-layout.md) — what each `src/` file is for, and the planned splits.
 - [Vendor example audit (2026-07-11)](vendor-example-audit-2026-07-11.md) — evidence from raylib, Box3D, cgltf, curl, and miniaudio; current failures and the closure plan.
-- [`specs/`](specs/) — numbered design specs for major decisions (bit-field emission, self-hosted libclang, multi-file emission, bit_set backing width, opaque handles, imports_file removal, opaque tag records, symbol-collision validation, deprecated declarations).
+- [`specs/`](specs/) — numbered design specs for major decisions (bit-field emission, self-hosted libclang, multi-file emission, bit_set backing width, opaque handles, imports_file removal, opaque tag records, symbol-collision validation, deprecated declarations, POSIX/libc type mapping).

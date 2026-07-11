@@ -3,7 +3,7 @@ package h2odin
 import "core:fmt"
 import "core:strings"
 
-emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comments: bool, uses_core_c: ^bool) {
+emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	if record.name == "" {
 		// Anonymous records are spelled inline where they are used (a field,
 		// or the typedef that names them); they have no standalone form.
@@ -20,11 +20,11 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comm
 		strings.write_string(b, "\n\n")
 		return
 	}
-	write_record_body(b, ir, record, 0, emit_comments, uses_core_c)
+	write_record_body(b, ir, record, 0, emit_comments, imports)
 	strings.write_string(b, "\n\n")
 }
 
-write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, emit_comments: bool, uses_core_c: ^bool) {
+write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, emit_comments: bool, imports: ^Emit_Imports) {
 	bit_field_layout, bit_fields_ok := prove_record_bit_field_layout(record, ir, context.temp_allocator)
 	if !record.is_complete || record.has_unrepresentable_fields || !bit_fields_ok {
 		// No layout to preserve (forward-declared), or a layout the IR
@@ -68,9 +68,10 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 			fmt.sbprintf(b, "%s: ", field.name)
 		}
 		if field.type_spelling != "" {
+			note_import_for_spelling(imports, field.type_spelling)
 			strings.write_string(b, field.type_spelling)
 		} else {
-			write_type(b, ir, field.type, indent + 1, emit_comments, uses_core_c)
+			write_type(b, ir, field.type, indent + 1, emit_comments, imports)
 		}
 		if field.tag != "" {
 			fmt.sbprintf(b, " `%s`", field.tag)
@@ -133,7 +134,7 @@ write_deprecated_doc_line :: proc(b: ^strings.Builder, deprecated: bool, message
 	fmt.sbprintfln(b, "Deprecated: %s", msg)
 }
 
-emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: bool, uses_core_c: ^bool) {
+emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	if decl.members == nil {
 		// Never defined in this header (or its backing type was
 		// unsupported); nothing faithful to emit.
@@ -160,13 +161,13 @@ emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: 
 	write_doc(b, decl.doc, 0, emit_comments)
 	write_deprecated_attr(b, decl.deprecated, decl.deprecated_message, 0)
 	fmt.sbprintf(b, "%s :: ", decl.name)
-	write_enum_body(b, ir, decl, 0, emit_comments, uses_core_c)
+	write_enum_body(b, ir, decl, 0, emit_comments, imports)
 	strings.write_string(b, "\n\n")
 }
 
-write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: int, emit_comments: bool, uses_core_c: ^bool) {
+write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: int, emit_comments: bool, imports: ^Emit_Imports) {
 	strings.write_string(b, "enum ")
-	write_type(b, ir, decl.backing, indent, emit_comments, uses_core_c)
+	write_type(b, ir, decl.backing, indent, emit_comments, imports)
 	strings.write_string(b, " {\n")
 	// Odin defaults the first member to 0 and each following to previous+1.
 	// Emit `= N` only when the C value differs from that sequence so dense
@@ -212,7 +213,7 @@ builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
 	return false
 }
 
-emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comments: bool, uses_core_c: ^bool) {
+emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	if decl.is_unresolvable {
 		// Reported during extraction; nothing faithful to emit.
 		return
@@ -233,11 +234,11 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comm
 	write_doc(b, decl.doc, 0, emit_comments)
 	write_deprecated_attr(b, decl.deprecated, decl.deprecated_message, 0)
 	fmt.sbprintf(b, "%s :: ", decl.name)
-	write_type(b, ir, decl.aliased, 0, emit_comments, uses_core_c)
+	write_type(b, ir, decl.aliased, 0, emit_comments, imports)
 	strings.write_string(b, "\n\n")
 }
 
-emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, emit_comments: bool, uses_core_c: ^bool) {
+emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	// Spec 0009: no @(deprecated) on variables — semantic Deprecated: line.
 	write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 1)
 	write_doc(b, decl.doc, 1, emit_comments)
@@ -245,7 +246,7 @@ emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, emit_comments: bo
 		fmt.sbprintfln(b, "\t@(link_name = %q)", decl.link_name)
 	}
 	fmt.sbprintf(b, "\t%s: ", decl.name)
-	write_type(b, ir, decl.type, 1, emit_comments, uses_core_c)
+	write_type(b, ir, decl.type, 1, emit_comments, imports)
 	strings.write_string(b, "\n")
 }
 
@@ -265,10 +266,10 @@ emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl, emit_comments: bool) {
 	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
 }
 
-emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, emit_comments: bool, uses_core_c: ^bool) {
+emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: bit_set[", decl.name)
-	write_type(b, ir, decl.elem, 0, emit_comments, uses_core_c)
+	write_type(b, ir, decl.elem, 0, emit_comments, imports)
 	// Explicit backing from the measured C enum width (spec 0004). Bare
 	// bit_set[E] sizes from the highest flag bit and is not ABI-faithful.
 	backing := bit_set_backing_spelling(decl.backing_bits)
@@ -295,21 +296,21 @@ macro_literal_can_emit :: proc(s: string) -> bool {
 	return true
 }
 
-emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: bool, uses_core_c: ^bool) {
+emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	write_doc(b, func.doc, 1, emit_comments)
 	write_deprecated_attr(b, func.deprecated, func.deprecated_message, 1)
 	if func.link_name != "" {
 		fmt.sbprintfln(b, "\t@(link_name = %q)", func.link_name)
 	}
 	fmt.sbprintf(b, "\t%s :: proc(", func.name)
-	write_params(b, ir, func.params, func.is_variadic, emit_comments, uses_core_c)
+	write_params(b, ir, func.params, func.is_variadic, emit_comments, imports)
 	strings.write_string(b, ")")
 	if func.return_type_spelling != "" {
 		strings.write_string(b, " -> ")
 		strings.write_string(b, func.return_type_spelling)
 	} else if !type_is_void(ir, func.return_type) {
 		strings.write_string(b, " -> ")
-		write_type(b, ir, func.return_type, 1, emit_comments, uses_core_c)
+		write_type(b, ir, func.return_type, 1, emit_comments, imports)
 	}
 	strings.write_string(b, " ---\n")
 }

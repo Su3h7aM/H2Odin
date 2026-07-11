@@ -27,11 +27,11 @@ Color :: distinct [4]u8
 // Rectangle, 4 components
 Rectangle :: struct {
 	// Rectangle top-left corner position x
-	x:      f32,
+	x: f32,
 	// Rectangle top-left corner position y
-	y:      f32,
+	y: f32,
 	// Rectangle width
-	width:  f32,
+	width: f32,
 	// Rectangle height
 	height: f32,
 }
@@ -39,29 +39,29 @@ Rectangle :: struct {
 // Image, pixel data stored in CPU memory (RAM)
 Image :: struct {
 	// Image raw data
-	data:    rawptr,
+	data: rawptr,
 	// Image base width
-	width:   i32,
+	width: i32,
 	// Image base height
-	height:  i32,
+	height: i32,
 	// Mipmap levels, 1 by default
 	mipmaps: i32,
 	// Data format (PixelFormat type)
-	format:  i32,
+	format: i32,
 }
 
 // Texture, tex data stored in GPU memory (VRAM)
 Texture :: struct {
 	// OpenGL texture id
-	id:      u32,
+	id: u32,
 	// Texture base width
-	width:   i32,
+	width: i32,
 	// Texture base height
-	height:  i32,
+	height: i32,
 	// Mipmap levels, 1 by default
 	mipmaps: i32,
 	// Data format (PixelFormat type)
-	format:  i32,
+	format: i32,
 }
 
 // Texture2D, same as Texture
@@ -73,11 +73,11 @@ TextureCubemap :: Texture
 // RenderTexture, fbo for texture rendering
 RenderTexture :: struct {
 	// OpenGL framebuffer object id
-	id:      u32,
+	id: u32,
 	// Color buffer attachment texture
 	texture: Texture,
 	// Depth buffer attachment texture
-	depth:   Texture,
+	depth: Texture,
 }
 
 // RenderTexture2D, same as RenderTexture
@@ -88,11 +88,11 @@ NPatchInfo :: struct {
 	// Texture source rectangle
 	source: Rectangle,
 	// Left border offset
-	left:   i32,
+	left: i32,
 	// Top border offset
-	top:    i32,
+	top: i32,
 	// Right border offset
-	right:  i32,
+	right: i32,
 	// Bottom border offset
 	bottom: i32,
 	// Layout of the n-patch: 3x3, 1x3 or 3x1
@@ -102,43 +102,43 @@ NPatchInfo :: struct {
 // GlyphInfo, font characters glyphs info
 GlyphInfo :: struct {
 	// Character value (Unicode)
-	value:    i32,
+	value: i32,
 	// Character offset X when drawing
-	offsetX:  i32,
+	offsetX: i32,
 	// Character offset Y when drawing
-	offsetY:  i32,
+	offsetY: i32,
 	// Character advance position X
 	advanceX: i32,
 	// Character image data
-	image:    Image,
+	image: Image,
 }
 
 // Font, font texture and GlyphInfo array data
 Font :: struct {
 	// Base size (default chars height)
-	baseSize:     i32,
+	baseSize: i32,
 	// Number of glyph characters
-	glyphCount:   i32,
+	glyphCount: i32,
 	// Padding around the glyph characters
 	glyphPadding: i32,
 	// Texture atlas containing the glyphs
-	texture:      Texture2D,
+	texture: Texture2D,
 	// Rectangles in texture for the glyphs
-	recs:         ^Rectangle,
+	recs: ^Rectangle,
 	// Glyphs info data
-	glyphs:       ^GlyphInfo,
+	glyphs: ^GlyphInfo,
 }
 
 // Camera, defines position/orientation in 3d space
 Camera3D :: struct {
 	// Camera position
-	position:   Vector3,
+	position: Vector3,
 	// Camera target it looks-at
-	target:     Vector3,
+	target: Vector3,
 	// Camera up vector (rotation over its axis)
-	up:         Vector3,
+	up: Vector3,
 	// Camera field-of-view aperture in Y (degrees) in perspective, used as near plane height in world units in orthographic
-	fovy:       f32,
+	fovy: f32,
 	// Camera projection: CAMERA_PERSPECTIVE or CAMERA_ORTHOGRAPHIC
 	projection: i32,
 }
@@ -148,55 +148,55 @@ Camera :: Camera3D
 // Camera2D, defines position/orientation in 2d space
 Camera2D :: struct {
 	// Camera offset (screen space offset from window origin)
-	offset:   Vector2,
+	offset: Vector2,
 	// Camera target (world space target point that is mapped to screen space offset)
-	target:   Vector2,
+	target: Vector2,
 	// Camera rotation in degrees (pivots around target)
 	rotation: f32,
 	// Camera zoom (scaling around target), must not be set to 0, set to 1.0f for no scale
-	zoom:     f32,
+	zoom: f32,
 }
 
 // Mesh, vertex data and vao/vbo
 Mesh :: struct {
 	// Number of vertices stored in arrays
-	vertexCount:   i32,
+	vertexCount: i32,
 	// Number of triangles stored (indexed or not)
 	triangleCount: i32,
 	// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
-	vertices:      ^f32,
+	vertices: ^f32,
 	// Vertex texture coordinates (UV - 2 components per vertex) (shader-location = 1)
-	texcoords:     ^f32,
+	texcoords: ^f32,
 	// Vertex texture second coordinates (UV - 2 components per vertex) (shader-location = 5)
-	texcoords2:    ^f32,
+	texcoords2: ^f32,
 	// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
-	normals:       ^f32,
+	normals: ^f32,
 	// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
-	tangents:      ^f32,
+	tangents: ^f32,
 	// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
-	colors:        ^u8,
+	colors: ^u8,
 	// Vertex indices (in case vertex data comes indexed)
-	indices:       ^u16,
+	indices: ^u16,
 	// Number of bones (MAX: 256 bones)
-	boneCount:     i32,
+	boneCount: i32,
 	// Vertex bone indices, up to 4 bones influence by vertex (skinning) (shader-location = 6)
-	boneIndices:   ^u8,
+	boneIndices: ^u8,
 	// Vertex bone weight, up to 4 bones influence by vertex (skinning) (shader-location = 7)
-	boneWeights:   ^f32,
+	boneWeights: ^f32,
 	// Animated vertex positions (after bones transformations)
-	animVertices:  ^f32,
+	animVertices: ^f32,
 	// Animated normals (after bones transformations)
-	animNormals:   ^f32,
+	animNormals: ^f32,
 	// OpenGL Vertex Array Object id
-	vaoId:         u32,
+	vaoId: u32,
 	// OpenGL Vertex Buffer Objects id (default vertex data)
-	vboId:         ^u32,
+	vboId: ^u32,
 }
 
 // Shader
 Shader :: struct {
 	// Shader program id
-	id:   u32,
+	id: u32,
 	// Shader locations array (RL_MAX_SHADER_LOCATIONS)
 	locs: ^i32,
 }
@@ -206,9 +206,9 @@ MaterialMap :: struct {
 	// Material map texture
 	texture: Texture2D,
 	// Material map color
-	color:   Color,
+	color: Color,
 	// Material map value
-	value:   f32,
+	value: f32,
 }
 
 // Material, includes shader and maps
@@ -216,7 +216,7 @@ Material :: struct {
 	// Material shader
 	shader: Shader,
 	// Material maps array (MAX_MATERIAL_MAPS)
-	maps:   ^MaterialMap,
+	maps: ^MaterialMap,
 	// Material generic parameters (if required)
 	params: [4]f32,
 }
@@ -226,9 +226,9 @@ Transform :: struct {
 	// Translation
 	translation: Vector3,
 	// Rotation
-	rotation:    Quaternion,
+	rotation: Quaternion,
 	// Scale
-	scale:       Vector3,
+	scale: Vector3,
 }
 
 // Anim pose, an array of Transform[]
@@ -237,7 +237,7 @@ ModelAnimPose :: ^Transform
 // Bone, skeletal animation bone
 BoneInfo :: struct {
 	// Bone name
-	name:   [32]u8,
+	name: [32]u8,
 	// Bone parent
 	parent: i32,
 }
@@ -247,39 +247,39 @@ ModelSkeleton :: struct {
 	// Number of bones
 	boneCount: i32,
 	// Bones information (skeleton)
-	bones:     ^BoneInfo,
+	bones: ^BoneInfo,
 	// Bones base transformation (Transform[])
-	bindPose:  ModelAnimPose,
+	bindPose: ModelAnimPose,
 }
 
 // Model, meshes, materials and animation data
 Model :: struct {
 	// Local transform matrix
-	transform:     Matrix,
+	transform: Matrix,
 	// Number of meshes
-	meshCount:     i32,
+	meshCount: i32,
 	// Number of materials
 	materialCount: i32,
 	// Meshes array
-	meshes:        ^Mesh,
+	meshes: ^Mesh,
 	// Materials array
-	materials:     ^Material,
+	materials: ^Material,
 	// Mesh material number
-	meshMaterial:  ^i32,
+	meshMaterial: ^i32,
 	// Skeleton for animation
-	skeleton:      ModelSkeleton,
+	skeleton: ModelSkeleton,
 	// Current animation pose (Transform[])
-	currentPose:   ModelAnimPose,
+	currentPose: ModelAnimPose,
 	// Bones animated transformation matrices
-	boneMatrices:  ^Matrix,
+	boneMatrices: ^Matrix,
 }
 
 // ModelAnimation, contains a full animation sequence
 ModelAnimation :: struct {
 	// Animation name
-	name:          [32]u8,
+	name: [32]u8,
 	// Number of bones (per pose)
-	boneCount:     i32,
+	boneCount: i32,
 	// Number of animation key frames
 	keyframeCount: i32,
 	// Animation sequence keyframe poses [keyframe][pose]
@@ -289,7 +289,7 @@ ModelAnimation :: struct {
 // Ray, ray for raycasting
 Ray :: struct {
 	// Ray position (origin)
-	position:  Vector3,
+	position: Vector3,
 	// Ray direction (normalized)
 	direction: Vector3,
 }
@@ -297,13 +297,13 @@ Ray :: struct {
 // RayCollision, ray hit information
 RayCollision :: struct {
 	// Did the ray hit something?
-	hit:      bool,
+	hit: bool,
 	// Distance to the nearest hit
 	distance: f32,
 	// Point of the nearest hit
-	point:    Vector3,
+	point: Vector3,
 	// Surface normal of hit
-	normal:   Vector3,
+	normal: Vector3,
 }
 
 // BoundingBox
@@ -323,9 +323,9 @@ Wave :: struct {
 	// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
 	sampleSize: u32,
 	// Number of channels (1-mono, 2-stereo, ...)
-	channels:   u32,
+	channels: u32,
 	// Buffer data pointer
-	data:       rawptr,
+	data: rawptr,
 }
 
 rAudioBuffer :: distinct rawptr
@@ -335,21 +335,21 @@ rAudioProcessor :: distinct rawptr
 // AudioStream, custom audio stream
 AudioStream :: struct {
 	// Pointer to internal data used by the audio system
-	buffer:     rAudioBuffer,
+	buffer: rAudioBuffer,
 	// Pointer to internal data processor, useful for audio effects
-	processor:  rAudioProcessor,
+	processor: rAudioProcessor,
 	// Frequency (samples per second)
 	sampleRate: u32,
 	// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
 	sampleSize: u32,
 	// Number of channels (1-mono, 2-stereo, ...)
-	channels:   u32,
+	channels: u32,
 }
 
 // Sound
 Sound :: struct {
 	// Audio stream
-	stream:     AudioStream,
+	stream: AudioStream,
 	// Total number of frames (considering channels)
 	frameCount: u32,
 }
@@ -357,57 +357,57 @@ Sound :: struct {
 // Music, audio stream, anything longer than ~10 seconds should be streamed
 Music :: struct {
 	// Audio stream
-	stream:     AudioStream,
+	stream: AudioStream,
 	// Total number of frames (considering channels)
 	frameCount: u32,
 	// Music looping enable
-	looping:    bool,
+	looping: bool,
 	// Type of music context (audio filetype)
-	ctxType:    i32,
+	ctxType: i32,
 	// Audio context data, depends on type
-	ctxData:    rawptr,
+	ctxData: rawptr,
 }
 
 // VrDeviceInfo, Head-Mounted-Display device parameters
 VrDeviceInfo :: struct {
 	// Horizontal resolution in pixels
-	hResolution:            i32,
+	hResolution: i32,
 	// Vertical resolution in pixels
-	vResolution:            i32,
+	vResolution: i32,
 	// Horizontal size in meters
-	hScreenSize:            f32,
+	hScreenSize: f32,
 	// Vertical size in meters
-	vScreenSize:            f32,
+	vScreenSize: f32,
 	// Distance between eye and display in meters
-	eyeToScreenDistance:    f32,
+	eyeToScreenDistance: f32,
 	// Lens separation distance in meters
 	lensSeparationDistance: f32,
 	// IPD (distance between pupils) in meters
 	interpupillaryDistance: f32,
 	// Lens distortion constant parameters
-	lensDistortionValues:   [4]f32,
+	lensDistortionValues: [4]f32,
 	// Chromatic aberration correction parameters
-	chromaAbCorrection:     [4]f32,
+	chromaAbCorrection: [4]f32,
 }
 
 // VrStereoConfig, VR stereo rendering configuration for simulator
 VrStereoConfig :: struct {
 	// VR projection matrices (per eye)
-	projection:        [2]Matrix,
+	projection: [2]Matrix,
 	// VR view offset matrices (per eye)
-	viewOffset:        [2]Matrix,
+	viewOffset: [2]Matrix,
 	// VR left lens center
-	leftLensCenter:    [2]f32,
+	leftLensCenter: [2]f32,
 	// VR right lens center
-	rightLensCenter:   [2]f32,
+	rightLensCenter: [2]f32,
 	// VR left screen center
-	leftScreenCenter:  [2]f32,
+	leftScreenCenter: [2]f32,
 	// VR right screen center
 	rightScreenCenter: [2]f32,
 	// VR distortion scale
-	scale:             [2]f32,
+	scale: [2]f32,
 	// VR distortion scale in
-	scaleIn:           [2]f32,
+	scaleIn: [2]f32,
 }
 
 // File path list
@@ -421,9 +421,9 @@ FilePathList :: struct {
 // Automation event
 AutomationEvent :: struct {
 	// Event frame
-	frame:  u32,
+	frame: u32,
 	// Event type (AutomationEventType)
-	type:   u32,
+	type: u32,
 	// Event parameters (if required)
 	params: [4]i32,
 }
@@ -433,9 +433,9 @@ AutomationEventList :: struct {
 	// Events max entries (MAX_AUTOMATION_EVENTS)
 	capacity: u32,
 	// Events entries count
-	count:    u32,
+	count: u32,
 	// Events entries
-	events:   ^AutomationEvent,
+	events: ^AutomationEvent,
 }
 
 //----------------------------------------------------------------------------------
@@ -446,37 +446,37 @@ AutomationEventList :: struct {
 // By default all flags are set to 0
 ConfigFlags :: enum u32 {
 	// Set to try enabling V-Sync on GPU
-	FLAG_VSYNC_HINT               = 64,
+	FLAG_VSYNC_HINT = 64,
 	// Set to run program in fullscreen
-	FLAG_FULLSCREEN_MODE          = 2,
+	FLAG_FULLSCREEN_MODE = 2,
 	// Set to allow resizable window
-	FLAG_WINDOW_RESIZABLE         = 4,
+	FLAG_WINDOW_RESIZABLE = 4,
 	// Set to disable window decoration (frame and buttons)
-	FLAG_WINDOW_UNDECORATED       = 8,
+	FLAG_WINDOW_UNDECORATED = 8,
 	// Set to hide window
-	FLAG_WINDOW_HIDDEN            = 128,
+	FLAG_WINDOW_HIDDEN = 128,
 	// Set to minimize window (iconify)
-	FLAG_WINDOW_MINIMIZED         = 512,
+	FLAG_WINDOW_MINIMIZED = 512,
 	// Set to maximize window (expanded to monitor)
-	FLAG_WINDOW_MAXIMIZED         = 1024,
+	FLAG_WINDOW_MAXIMIZED = 1024,
 	// Set to window non focused
-	FLAG_WINDOW_UNFOCUSED         = 2048,
+	FLAG_WINDOW_UNFOCUSED = 2048,
 	// Set to window always on top
-	FLAG_WINDOW_TOPMOST           = 4096,
+	FLAG_WINDOW_TOPMOST = 4096,
 	// Set to allow windows running while minimized
-	FLAG_WINDOW_ALWAYS_RUN        = 256,
+	FLAG_WINDOW_ALWAYS_RUN = 256,
 	// Set to allow transparent framebuffer
-	FLAG_WINDOW_TRANSPARENT       = 16,
+	FLAG_WINDOW_TRANSPARENT = 16,
 	// Set to support HighDPI
-	FLAG_WINDOW_HIGHDPI           = 8192,
+	FLAG_WINDOW_HIGHDPI = 8192,
 	// Set to support mouse passthrough, only supported when FLAG_WINDOW_UNDECORATED
 	FLAG_WINDOW_MOUSE_PASSTHROUGH = 16384,
 	// Set to run program in borderless windowed mode
 	FLAG_BORDERLESS_WINDOWED_MODE = 32768,
 	// Set to try enabling MSAA 4X
-	FLAG_MSAA_4X_HINT             = 32,
+	FLAG_MSAA_4X_HINT = 32,
 	// Set to try enabling interlaced video format (for V3D)
-	FLAG_INTERLACED_HINT          = 65536,
+	FLAG_INTERLACED_HINT = 65536,
 }
 
 // Trace log level
@@ -1147,13 +1147,15 @@ NPatchLayout :: enum u32 {
 
 // Callbacks to hook some internal functions
 // WARNING: These callbacks are intended for advanced users
-TraceLogCallback :: proc "c" (_: i32, _: cstring, _: ^__va_list_tag)
+TraceLogCallback :: proc "c" (_: i32, _: cstring, _: __builtin_va_list)
+
+__builtin_va_list :: [1]__va_list_tag
 
 __va_list_tag :: struct {
-	gp_offset:         u32,
-	fp_offset:         u32,
+	gp_offset: u32,
+	fp_offset: u32,
 	overflow_arg_area: rawptr,
-	reg_save_area:     rawptr,
+	reg_save_area: rawptr,
 }
 
 LoadFileDataCallback :: proc "c" (_: cstring, _: ^i32) -> ^u8

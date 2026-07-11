@@ -339,7 +339,7 @@ test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_extract_peels_typedef_from_non_input_include :: proc(t: ^testing.T) {
+test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)
 	testing.expect_value(t, err, nil)
@@ -351,29 +351,31 @@ test_extract_peels_typedef_from_non_input_include :: proc(t: ^testing.T) {
 
 	ir: IR
 	ir_init(&ir)
-	// Only the main header is an input; Hidden_Id lives in an unlisted include
-	// and must peel to the underlying builtin at the use site.
+	// Hidden_Id lives in a project header that config.inputs does not list —
+	// the umbrella-header pattern (Box3D lists only box3d.h and reaches
+	// types.h through it). Ownership is "not a system header", not "listed in
+	// config.inputs": the typedef is ours, so it keeps its name and is
+	// emitted. Only system-header declarations are foreign (spec 0010).
 	ok := extract({"tests/fixtures/m13_peel_main.h"}, &ir)
 	testing.expect(t, ok)
 	if !ok {
 		return
 	}
 
-	for td in ir.typedefs {
-		testing.expect(t, td.name != "Hidden_Id")
-	}
-
 	found := false
-	for func in ir.funcs {
-		if func.name != "m13_use_hidden" {
+	for td, i in ir.typedefs {
+		if td.name != "Hidden_Id" {
 			continue
 		}
 		found = true
-		testing.expect_value(t, len(func.params), 1)
-		if len(func.params) == 1 {
-			_, is_builtin := ir_type(&ir, func.params[0].type).variant.(Type_Builtin)
-			testing.expect(t, is_builtin)
+		testing.expect(t, !td.is_foreign)
+		in_order := false
+		for ref in ir.order {
+			if ref.kind == .Typedef && ref.index == u32(i) {
+				in_order = true
+			}
 		}
+		testing.expect(t, in_order)
 	}
 	testing.expect(t, found)
 }

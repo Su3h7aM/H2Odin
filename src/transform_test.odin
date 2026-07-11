@@ -856,8 +856,8 @@ test_emit_bit_set_writes_explicit_backing :: proc(t: ^testing.T) {
 
 	b: strings.Builder
 	strings.builder_init(&b)
-	uses_core_c: bool
-	emit_bit_set(&b, &ir, decl, false, &uses_core_c)
+	imports: Emit_Imports
+	emit_bit_set(&b, &ir, decl, false, &imports)
 	out := strings.to_string(b)
 	testing.expect(t, strings.contains(out, "Flags :: bit_set[Flag; u32]"))
 }
