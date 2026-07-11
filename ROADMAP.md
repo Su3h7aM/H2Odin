@@ -292,12 +292,11 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       `my-library.h` yields `package my-library` — invalid Odin. Validate the
       package name as a legal non-keyword identifier (sanitize the stem
       default), and validate/escape `foreign.import_lib`.
-- [ ] **Determinism gap — the sandbox exposes `math.random`.**
+- [x] **Determinism gap — the sandbox exposes `math.random`.**
       `policy_open_sandbox_libs` opens the whole `math` library, so a callback
-      can rename nondeterministically, contradicting the determinism claim
-      (README now qualified until fixed; `docs/architecture.md` already
-      acknowledged the caveat). Remove `math.random`/`math.randomseed` from
-      the exposed table.
+      can rename nondeterministically, contradicting the determinism claim.
+      Fixed by nil-ing `math.random` / `math.randomseed` after `open_math`
+      while leaving pure helpers (`abs`, `floor`, …) available.
 - [ ] **Portability — `require` sandbox path check is lexical on Windows.**
       On Linux, `filepath.abs` resolves symlinks through an fd (verified: a
       symlink escaping the config dir is rejected) — pin that load-bearing

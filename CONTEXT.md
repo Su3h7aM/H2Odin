@@ -87,12 +87,12 @@ these, not by convenience.
    (a diagnostic), and lets config override it — it never silently guesses wrong.
 
 5. **Determinism.** Same headers + same config tree → byte-identical output. The Lua
-   config is sandboxed (no `io`/`os`/`debug`, raw loaders withheld), so host side
-   effects are blocked structurally; pure non-determinism inside allowed libs is
-   still a config convention. Once `require` lands (see `docs/config-spec.md`) a
-   config may read Lua beneath its own directory and nothing beyond it — hence
-   "config *tree*". Analysis, which consults no policy, is deterministic
-   unconditionally.
+   config is sandboxed (no `io`/`os`/`debug`, raw loaders withheld, no
+   `math.random`/`math.randomseed`), so host side effects and practical
+   entropy sources are blocked structurally. Once `require` lands (see
+   `docs/config-spec.md`) a config may read Lua beneath its own directory and
+   nothing beyond it — hence "config *tree*". Analysis, which consults no
+   policy, is deterministic unconditionally.
 
 ---
 

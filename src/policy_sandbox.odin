@@ -77,6 +77,9 @@ return h2o
 
 // Pure libraries only. package is opened by policy_install_require with
 // restricted searchers. Raw loaders stay nil.
+//
+// math is opened for abs/floor/… but math.random / math.randomseed are
+// stripped so a callback cannot rename nondeterministically.
 policy_open_sandbox_libs :: proc(L: ^lua.State) {
 	lua.L_requiref(L, "_G", lua.open_base, 1)
 	lua.pop(L, 1)
@@ -85,6 +88,11 @@ policy_open_sandbox_libs :: proc(L: ^lua.State) {
 	lua.L_requiref(L, "string", lua.open_string, 1)
 	lua.pop(L, 1)
 	lua.L_requiref(L, "math", lua.open_math, 1)
+	// stack: math
+	lua.pushnil(L)
+	lua.setfield(L, -2, "random")
+	lua.pushnil(L)
+	lua.setfield(L, -2, "randomseed")
 	lua.pop(L, 1)
 	lua.L_requiref(L, "utf8", lua.open_utf8, 1)
 	lua.pop(L, 1)

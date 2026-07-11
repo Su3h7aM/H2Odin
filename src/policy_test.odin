@@ -538,6 +538,8 @@ assert(package.loadlib == nil, "loadlib must be withheld")
 assert(type(string.find) == "function")
 assert(type(table.insert) == "function")
 assert(type(math.abs) == "function")
+assert(math.random == nil, "math.random must be withheld for determinism")
+assert(math.randomseed == nil, "math.randomseed must be withheld for determinism")
 
 local h2o = require "h2odin"
 assert(type(h2o.config) == "function")
