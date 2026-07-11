@@ -357,11 +357,10 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
       Fixed: when the enum backing is unsigned, capture via
       `get_enum_constant_decl_unsigned_value` and store the bit pattern as
       `i64` (emission already reinterprets with `u64` for unsigned backings).
-- [ ] **Capture calling convention at extraction.**
+- **Calling-convention capture is promoted to Milestone 15.**
       `clang_getFunctionTypeCallingConv` is unused; `__stdcall`/`__fastcall`
-      in Windows headers are silently dropped. Record the fact now (cheap,
-      config-independent); emission consumes it when the Windows-parity work
-      (see Later) happens.
+      in Windows headers are silently dropped. The authoritative checklist
+      item now lives with the validation work below.
 - [ ] **Flaky e2e observed (2026-07-11):**
       `test_opaque_tags_idiomatic_default_handle` once failed all four
       `expect_contains` (empty/truncated stdout?) under the 16-thread runner
@@ -374,40 +373,94 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
       `make regen-libclang` + `git diff --exit-code` and the example
       `odin check`s.
 
-## Validation findings (investigation backlog)
+## Milestone 15 — Close the real-world validation gaps (current priority)
 
-Surfaced while building the vendor-library validation corpus
-([`examples/`](examples/) — raylib, box3d, cgltf, curl, miniaudio). **Do not
-treat config workarounds in those examples as fixes.** Each item needs a
-dedicated investigation (and likely a small design note) before implementation.
+The five-library vendor corpus ([`examples/`](examples/) — raylib, box3d,
+cgltf, curl, miniaudio), together with the fff/sqlite3/bit-fields fixtures,
+changed the next milestone. Broad feature work, wrappers, and polish are paused
+until all eight packages generate without a panic and pass `odin check` with an
+honest config. See the investigation report,
+[`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md),
+for evidence, failure traces, and the acceptance matrix.
 
-- [ ] **Bug — pure `typedef void Name` opaque handles panic at emission.**
-      libcurl (`typedef void CURL;` / `CURLM` / `CURLSH`) and miniaudio
-      (`typedef void ma_data_source;`, `ma_node`, `ma_vfs`, …) hit
-      `panic: void type has no ABI spelling` in `emit_types.odin` when the
-      typedef is emitted. Incomplete-tag handles (sqlite3-style) work; pure
-      void tags do not. **Needs investigation:** emit as
-      `Name :: distinct rawptr` (or incomplete struct), peel `Name *` like
-      other opaques, and avoid panicking. Dogfood: `examples/curl`,
-      `examples/miniaudio` (configs currently drop the typedefs as a
-      temporary workaround and still fail `odin check` on dangling names).
+**Rules for this milestone:** a config workaround is not a generator fix;
+expected failures need regression fixtures before implementation; and an
+invalid binding must produce a structured error diagnostic/non-zero exit by
+default rather than a panic or an apparently successful generation.
 
-- [ ] **Bug — prefix strip can make a type and a field share one name.**
-      After stripping `cgltf_` / `ma_`, types such as `cgltf_size` → `size`
-      and `ma_format` → `format` collide with fields of the same spelling
-      (`size: size`, `format: format`), which Odin rejects as an illegal
-      declaration cycle. **Needs investigation:** detect strip collisions,
-      refuse the strip for that symbol, rename fields, or keep a disambiguating
-      type spelling. Dogfood: cgltf (types left unstripped in config to stay
-      green), miniaudio (fails `odin check` when strip is on).
+### P0 — Restore valid, non-panicking output
 
-- [ ] **Bug — system-header types can appear in generated packages.**
-      `examples/curl` emits two `sockaddr :: struct` declarations (from the
-      platform includes pulled by `curl.h`), which should not be part of a
-      binding limited to `config.inputs` homes. **Needs investigation:**
-      whether Extraction treats a system type as “ours”, or a nested capture
-      bypasses the home filter. Related: incomplete story once void CURL
-      typedefs are dropped — callback typedefs still name `^CURL`.
+- [ ] **Freeze reduced regression fixtures first.** Before implementation, add
+      focused cases for bare-void typedefs, opaque references nested in proc
+      types, package collisions, field/type shadowing, and input records that
+      reference external records. Assert the current structured failure where
+      one exists; a panic is never an acceptable baseline.
+- [ ] **Pure `typedef void Name` opaque handles.** libcurl (`CURL`, `CURLM`,
+      `CURLSH`) and miniaudio (`ma_data_source`, `ma_node`, `ma_vfs`, …) panic
+      at `write_type` because bare C `void` has no Odin spelling. Define this
+      declaration pattern explicitly, emit a type-safe opaque handle, and
+      preserve the correct pointer depth at every reference. Remove the
+      `symbols.remove.names` workarounds only after direct, callback-typedef,
+      field, parameter, and result uses are covered by tests. Dogfood:
+      `examples/curl`, `examples/miniaudio`.
+- [ ] **Post-transform Odin name validation (spec 0008).** Implement the
+      proposed package/member/parameter collision pass, then extend its
+      acceptance cases to lexical binding conflicts such as `format: format`
+      and `thread: thread`, where a renamed field shadows the referenced type.
+      Detection must fail before claiming successful output; it must not
+      silently invent a rename. Dogfood: `curl_sockaddr` → `sockaddr` colliding
+      with system `struct sockaddr`; stripped cgltf/miniaudio type names
+      colliding with fields.
+- [ ] **Resolve field/type shadowing through policy.** Once detected, curate
+      miniaudio with targeted `naming.override` decisions (the callback has
+      symbol kind and parent context) or retain a disambiguating type spelling.
+      Cgltf may keep its official-style `cgltf_` type names, but a reduced
+      fixture must prove that enabling the conflicting strip fails clearly
+      rather than emitting an illegal cycle.
+
+### P1 — Make transitive C types honest and portable
+
+- [ ] **External/system type provenance.** A field in configured
+      `struct curl_sockaddr` references unconfigured system `struct sockaddr`;
+      the generated package contains that external record despite it not being
+      in `config.inputs`. Determine which recursive capture/promotion path adds
+      it, then decide and document the rule for reachable
+      declarations outside `config.inputs`: intentionally emit a dependency,
+      map it to an Odin/platform type, or fail with an unresolved-external-type
+      diagnostic. Do not misclassify the configured `curl_sockaddr` record as
+      a second leaked system declaration.
+- [ ] **Capture C calling conventions during Extraction.** curl's cross-platform
+      callbacks reinforce the existing gap: `clang_getFunctionTypeCallingConv`
+      is still unused. Record this config-independent fact now; emission and
+      Windows foreign-library parity may consume it in a separate scoped
+      change.
+
+### P2 — Turn the corpus into a regression gate
+
+- [ ] Add one reproducible validation target that builds H2Odin, regenerates
+      every example, formats generated output consistently, and runs
+      `odin check` on all eight packages. Make it part of CI when CI lands.
+- [ ] Curate high-volume pointer diagnostics only after structural correctness
+      is green. The 2026-07-11 baseline is 111 (fff), 261 (sqlite3), 198
+      (raylib), 69 (box3d), 179 (cgltf), 82 (curl), and 1,637 (miniaudio)
+      non-certain decisions; reduction is quality work, not a precondition for
+      fixing invalid declarations.
+
+### Already fixed by the validation work
+
+- [x] High-bit unsigned enum members use libclang's unsigned value API
+      (`0xFFFFFFFF` no longer becomes `-1`).
+- [x] Multiple anonymous records in one parent are no longer interned under a
+      shared libclang USR (Box3D `TreeNode` keeps both anonymous unions).
+
+### Exit gate
+
+- [ ] `./build/h2odin examples/{fff,sqlite3,bit_fields,raylib,box3d,cgltf,curl,miniaudio}`
+      completes without panic or error-severity diagnostics.
+- [ ] All eight generated packages pass `odin check`; curl and miniaudio no
+      longer depend on dropping declarations that remain referenced.
+- [ ] Every fixed root cause has a minimal regression test, and the example
+      READMEs contain no temporary-workaround status for these issues.
 
 ## Later
 
@@ -451,8 +504,11 @@ checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
 Code health items for specs 0005–0007 and deprecated-declaration propagation
-(spec 0009) are done. The open Code health items from the 2026-07 review are
-the current hardening backlog — start with symbol-collision validation
-(spec 0008, proposed) and package-name validation, which are the two that
-can produce invalid Odin today. Later items remain polish and deferred work
-(wrappers, full pointer-lowering curation, Windows multi-lib, …).
+(spec 0009) are done. **Milestone 15 is now the only immediate feature
+priority:** close the structural failures exposed by curl/miniaudio, make all
+validation examples green, and automate that gate. Start with reduced fixtures
+for bare-void opaques, final-name/binding conflicts (spec 0008), and external
+type provenance; then implement those fixes in that order. Broader hardening,
+wrappers, full pointer-lowering
+curation, and Windows multi-lib emission resume only after the Milestone 15
+exit gate is met.

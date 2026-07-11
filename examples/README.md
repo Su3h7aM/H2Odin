@@ -57,10 +57,15 @@ remaining gaps in a README next to each example.
 | [`miniaudio`](miniaudio/) | `vendor:miniaudio` | ~95k-line single-header stress, callbacks, void tags | **fail** (see README) |
 
 Validation is about **coverage and honest failure modes**, not only green
-checks. Failures are recorded in each example README and summarized under
-**Validation findings** in [`ROADMAP.md`](../ROADMAP.md). Do not silently
-“fix” the generator inside a validation commit — prefer documenting the
-gap so it can be investigated on its own.
+checks. Failures are recorded in each example README and summarized in the
+[vendor-example audit](../docs/vendor-example-audit-2026-07-11.md). Closing
+those failures is now [Milestone 15](../ROADMAP.md#milestone-15--close-the-real-world-validation-gaps-current-priority), ahead of broader feature work.
+
+For this corpus, “functional” means: generation does not panic; every emitted
+type resolves; final names are valid in their actual Odin scopes; transitive
+foreign declarations follow an explicit policy; and the package passes
+`odin check`. Byte-for-byte parity, hand-written helpers, wrappers, and full
+pointer curation are not part of that gate.
 
 When a regenerate diverges from the official package in a new way, prefer
 fixing the generator (in a dedicated change) or documenting the gap in that

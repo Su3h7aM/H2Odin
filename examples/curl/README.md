@@ -43,9 +43,11 @@ an acceptable permanent policy.
    `Name :: distinct rawptr` / incomplete struct today.
 2. **Removing those typedefs leaves dangling type names** in function-pointer
    typedefs and signatures.
-3. **`sockaddr` redeclaration / illegal cycle** — system-header types appear
-   to leak into the generated package (two `sockaddr :: struct` decls), which
-   should not happen if only `config.inputs` homes are bound.
+3. **`sockaddr` redeclaration / illegal cycle** — this combines two defects:
+   configured `struct curl_sockaddr` is stripped to top-level `sockaddr`, while
+   its field referencing system `struct sockaddr` causes that external record
+   to be captured and emitted as a second `sockaddr`. Final-name validation
+   must catch the collision, and external-type provenance needs its own rule.
 
 ## Gaps vs `vendor:curl`
 

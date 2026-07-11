@@ -46,10 +46,17 @@ Scopes checked, each an independent namespace:
 - **Per record** — field names of each struct/union/bit_field.
 - **Per procedure** — parameter names.
 - **Per enum** — member names.
+- **Odin lexical binding conflicts** — a field or parameter whose final name
+  shadows a type name used in its own declaration (`format: format`,
+  `thread: thread`). These are not duplicate symbols, but Odin resolves them
+  as illegal declaration cycles, so output-validity validation must catch them
+  in the same final pass. This case was exposed by the miniaudio/cgltf
+  validation corpus.
 
 Each collision emits one `symbol_collision` diagnostic naming **all
 colliding original C spellings**, the resulting Odin name, and the scope
-(`package`, `struct Foo`, `proc bar`, `enum Baz`).
+(`package`, `struct Foo`, `proc bar`, `enum Baz`). A lexical binding conflict
+names the member/parameter and the referenced type it shadows.
 
 Default severity is **error** (matching the north-star examples), not the
 usual `warn` default: colliding output is not merely suspect, it is broken.
@@ -74,7 +81,8 @@ Per the existing flow, output is still written and the run exits non-zero;
   listing both C names; exit non-zero; e2e fixture covers it.
 - Same for: two `naming.overrides` entries mapping to one name; enum
   members colliding after `member_strip_prefix`; a `enums.bit_sets` name
-  colliding with an existing type; parameter names within one proc.
+  colliding with an existing type; parameter names within one proc; and a
+  field/parameter shadowing the final name of a type used by its declaration.
 - A clean config emits no `symbol_collision` diagnostics (all example
   projects stay green).
 - `config.diagnostics.symbol_collision = "warn"` downgrades the severity.

@@ -59,17 +59,21 @@ make format   # odinfmt via odinfmt.json
 make regen-libclang  # rebuild + regenerate vendored/libclang (self-host package)
 ```
 
-After emission changes, regenerate and check the checked-in examples
-(project directory loads `H2Odin.lua`; headers/output come from the Lua config):
+After extraction, transformation, or emission changes, regenerate and check the
+checked-in corpus (each project directory loads `H2Odin.lua`; headers/output
+come from the Lua config):
 
 ```sh
-./build/h2odin examples/sqlite3
-./build/h2odin examples/fff
-./build/h2odin examples/bit_fields
-odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
-odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
-odin check examples/bit_fields -no-entry-point -collection:vendored=$(pwd)/vendored
+for example in fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio; do
+    ./build/h2odin "examples/$example"
+    odin check "examples/$example" -no-entry-point -collection:vendored=$(pwd)/vendored
+done
 ```
+
+Until Roadmap Milestone 15 closes, curl and miniaudio are known `odin check`
+failures documented in their READMEs; they are still required probes, not
+optional examples. Changes in their failure mode must be investigated. The
+milestone exit gate makes all eight checks mandatory-green.
 
 Unit tests must stay runnable without inventing new foreign deps in the pure stages. E2e tests drive `build/h2odin` against `tests/fixtures/`.
 

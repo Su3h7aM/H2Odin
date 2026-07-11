@@ -18,13 +18,16 @@ Status: Milestones 0–5, 7–14 complete; Milestone 6 (idiomatic wrappers) is
 deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
-Code health items for specs 0005–0007 (opaque handles, imports_file
-removal, types.opaque for incomplete tag records) and deprecated-declaration
-propagation (spec 0009) are done. The 2026-07 review left a hardening
-backlog in ROADMAP's **Code health** section (headlined by symbol-collision
-validation, spec 0008). The rest is polish / deferred work in ROADMAP's
-**Later** section. See [`ROADMAP.md`](ROADMAP.md) and
-[`docs/specs/`](docs/specs/).
+
+The current priority is **Milestone 15: real-world validation closure**. New
+benchmarks copied from Odin's `vendor:` collection proved raylib, Box3D, and
+cgltf can already generate checkable bindings, while curl and miniaudio exposed
+bare-`void` opaque-handle panics, post-rename Odin binding conflicts, and an
+unsettled rule for transitively referenced system types. Broader features and
+polish are paused until all eight examples generate without panic and pass
+`odin check`. Evidence and ordering live in
+[`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md)
+and [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
@@ -229,8 +232,11 @@ rather than bend it silently.
   tests sit beside sources (`*_test.odin`, package `h2odin`); e2e tests
   (`tests/e2e_test.odin`, package `h2odin_e2e`) drive the built binary against
   fixtures in `tests/fixtures/`.
-- **Examples** in `examples/` (`bit_fields`, `fff`, `sqlite3`) are checked-in generated output;
-  regenerate and `odin check` them when emission changes.
+- **Examples** in `examples/` are checked-in generated output. Development
+  fixtures are `bit_fields`, `fff`, and `sqlite3`; vendor-validation benchmarks
+  are raylib, Box3D, cgltf, curl, and miniaudio. Regenerate and `odin check`
+  the full corpus when extraction, transformation, or emission changes. Curl
+  and miniaudio remain expected failures only until Milestone 15 closes.
 - **Style.** Plain, data-oriented Odin. Readable over clever, small procedures,
   state passed explicitly (Odin procs do not capture). Match surrounding
   conventions. Keep the early surface small — before adding an option, ask whether
@@ -242,7 +248,10 @@ rather than bend it silently.
 
 - [`docs/overview.md`](docs/overview.md) — the spirit of the project.
 - [`docs/architecture.md`](docs/architecture.md) — the stages and their boundaries.
-- [`docs/specs/`](docs/specs/) — numbered design specs: bit-field emission (0001), self-hosted libclang bindings (0002), multi-file emission (0003), bit_set backing width (0004), opaque handle typedefs (0005), imports_file removal (0006), opaque tag records (0007).
+- [`docs/specs/`](docs/specs/) — numbered design specs, including bit-field
+  emission (0001), self-hosted libclang (0002), multi-file emission (0003),
+  opaque handles (0005/0007), post-rename collision validation (0008), and
+  deprecated declarations (0009).
 - [`docs/source-layout.md`](docs/source-layout.md) — what each `src/` file is for; planned file splits.
 - [`docs/type-modes.md`](docs/type-modes.md) — ABI vs idiomatic in depth.
 - [`docs/configuration.md`](docs/configuration.md) — the Lua policy surface today.

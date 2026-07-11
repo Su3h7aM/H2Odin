@@ -4,7 +4,7 @@ A C-header-to-Odin bindings generator, written in Odin.
 
 H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings — configured through a small but powerful Lua policy layer.
 
-> Status: usable pipeline (Milestones 0–5 + 7–14). Idiomatic *wrappers* (Milestone 6) are deferred.
+> Status: usable pipeline (Milestones 0–5 + 7–14). Milestone 15 is closing correctness gaps exposed by vendor-library validation; idiomatic *wrappers* (Milestone 6) remain deferred.
 
 ---
 
@@ -122,7 +122,7 @@ More detail: [`docs/configuration.md`](docs/configuration.md). Full north-star: 
 
 ## Documentation
 
-Design and architecture notes live in [`docs/`](docs/). Start with [`CONTEXT.md`](CONTEXT.md) for orientation and [`ROADMAP.md`](ROADMAP.md) for status.
+Design and architecture notes live in [`docs/`](docs/). Start with [`CONTEXT.md`](CONTEXT.md) for orientation and [`ROADMAP.md`](ROADMAP.md) for status. The current validation evidence and acceptance matrix are in [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md).
 
 ## License
 
