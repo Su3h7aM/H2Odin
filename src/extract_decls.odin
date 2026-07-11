@@ -532,11 +532,14 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	}
 
 	deprecated, deprecated_message := cursor_deprecation(cursor)
+	// Calling convention is a property of the function *type*, not the cursor.
+	func_type := clang.get_cursor_type(cursor)
 	func := Func_Decl {
 		name               = name,
 		return_type        = return_type,
 		params             = params,
 		is_variadic        = clang.cursor_is_variadic(cursor) != 0,
+		calling_conv       = calling_conv_from_clang(clang.get_function_type_calling_conv(func_type)),
 		deprecated         = deprecated,
 		deprecated_message = deprecated_message,
 		doc                = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),

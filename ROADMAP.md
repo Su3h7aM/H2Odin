@@ -424,17 +424,19 @@ default rather than a panic or an apparently successful generation.
       `libc.time_t`; the sockaddr leak and by-value size bug are gone.
       Extraction no longer peels foreign typedefs at capture (it was deciding,
       and destroying the name the map needs).
-- [ ] **Capture C calling conventions during Extraction.** curl's cross-platform
-      callbacks reinforce the existing gap: `clang_getFunctionTypeCallingConv`
-      is still unused. Record this config-independent fact now; emission and
-      Windows foreign-library parity may consume it in a separate scoped
-      change.
+- [x] **Capture C calling conventions during Extraction.**
+      `clang_getFunctionTypeCallingConv` fills `Func_Decl.calling_conv` and
+      `Type_Proc.calling_conv` (IR `Calling_Conv`). Emission still always
+      writes `proc "c"`; non-default conventions are available for a later
+      emission/Windows pass.
 
 ### P2 — Turn the corpus into a regression gate
 
-- [ ] Add one reproducible validation target that builds H2Odin, regenerates
-      every example, formats generated output consistently, and runs
-      `odin check` on all eight packages. Make it part of CI when CI lands.
+- [x] **Validation target:** `make validate-examples` rebuilds H2Odin,
+      regenerates all eight packages, reformats generated Odin, and runs
+      `odin check` on each. Documented in `AGENTS.md`, root `README.md`, and
+      `examples/README.md`. Wire into CI when a CI runner lands
+      (see code-health reproducibility item).
 - [ ] Curate high-volume pointer diagnostics only after structural correctness
       is green. The 2026-07-11 baseline is 111 (fff), 261 (sqlite3), 198
       (raylib), 69 (box3d), 179 (cgltf), 82 (curl), and 1,637 (miniaudio)
@@ -451,13 +453,12 @@ default rather than a panic or an apparently successful generation.
 ### Exit gate
 
 - [x] `./build/h2odin examples/{fff,sqlite3,bit_fields,raylib,box3d,cgltf,curl,miniaudio}`
-      completes without panic or error-severity diagnostics.
+      completes without panic or error-severity diagnostics
+      (`make validate-examples`).
 - [x] All eight generated packages pass `odin check`; curl and miniaudio no
       longer depend on dropping declarations that remain referenced.
-- [ ] Every fixed root cause has a minimal regression test, and the example
+- [x] Every fixed root cause has a minimal regression test, and the example
       READMEs contain no temporary-workaround status for these issues.
-      (Regression fixtures for void opaques, foreign types, collisions, and
-      shadowing are in place; example README cleanup still open.)
 
 
 ## Later
@@ -496,15 +497,14 @@ default rather than a panic or an apparently successful generation.
 
 ### Start here
 
-Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindings
-(Milestone 13)** and **multi-file Odin emission (Milestone 14)**. Regenerate the
-checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
-remains deferred and independent.
+Milestones 0–5 and 7–**15** are complete — including **self-hosted libclang
+bindings (13)**, **multi-file Odin emission (14)**, and **real-world
+validation closure (15)**. Regenerate the checked-in libclang package with
+`make regen-libclang`; regenerate the vendor corpus with
+`make validate-examples`. **Milestone 6 (wrappers)** remains deferred.
 
-Code health items for specs 0005–0010 (including foreign-type provenance and
-post-rename symbol validation) are done. **All eight validation examples pass
-`odin check`.** What remains of Milestone 15 is automating that gate (P2) and
-cleaning example README workaround notes. Broader hardening, wrappers, full
-pointer-lowering curation, and Windows multi-lib emission can resume once the
-regeneration gate is in CI.
+Optional follow-ups from M15 that are *not* exit-gate blockers: pointer-
+lowering diagnostic curation, CI wiring for `validate-examples`, and
+emitting non-default calling conventions once a Windows validation target
+exists. Broader hardening and multi-lib emission can resume independently.
 

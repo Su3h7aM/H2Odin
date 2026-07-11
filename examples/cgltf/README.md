@@ -20,18 +20,19 @@ make build
 odin check examples/cgltf -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
-## Status (present capabilities)
+## Status
 
 | Step | Result |
 |------|--------|
-| Generate | OK (~0.04s) |
-| `odin check` | **OK** with current config |
+| Generate | OK |
+| `odin check` | **OK** |
 | Proc count (approx.) | ~36 foreign procs |
 
 Type names keep the `cgltf_` prefix. Stripping them is deliberately disabled:
-`cgltf_size` → `size` collides with fields named `size`, and `cgltf_image` →
-`image` collides with fields named `image`, producing illegal Odin declaration
-cycles. That collision mode is recorded on the ROADMAP as needing investigation.
+`cgltf_size` → `size` would collide with fields named `size`, and
+`cgltf_image` → `image` with fields named `image`. Spec 0008's
+`symbol_collision` diagnostic would catch that if strip were enabled; the
+config opts out so the package stays green without field renames.
 
 ## Gaps vs `vendor:cgltf`
 

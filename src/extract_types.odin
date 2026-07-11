@@ -60,9 +60,10 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 			params[i].type = capture_param_type(state, clang.get_arg_type(type, c.uint(i))) or_return
 		}
 		proc_type := Type_Proc {
-			return_type = return_type,
-			params      = params,
-			is_variadic = clang.is_function_type_variadic(type) != 0,
+			return_type  = return_type,
+			params       = params,
+			is_variadic  = clang.is_function_type_variadic(type) != 0,
+			calling_conv = calling_conv_from_clang(clang.get_function_type_calling_conv(type)),
 		}
 		return ir_add_type(ir, Type_Info{is_const = is_const, variant = proc_type}), true
 
@@ -118,6 +119,34 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 		handle = ir_add_type(ir, Type_Info{is_const = true, variant = Type_Builtin{kind = kind, size = size}})
 	}
 	return handle, true
+}
+
+// Map libclang's CXCallingConv onto the IR enum. Extraction owns this
+// boundary so later stages never need a clang type. Unmapped conventions
+// land in Other rather than being silently treated as C.
+calling_conv_from_clang :: proc(cc: clang.Calling_Conv) -> Calling_Conv {
+	#partial switch cc {
+	case .Default:
+		return .Default
+	case .C:
+		return .C
+	case .X86_Std_Call:
+		return .Stdcall
+	case .X86_Fast_Call:
+		return .Fastcall
+	case .X86_This_Call:
+		return .Thiscall
+	case .X86_Vector_Call:
+		return .Vectorcall
+	case .Win64:
+		// CXCallingConv_X86_64Win64 is an alias of Win64 in the C header.
+		return .Win64
+	case .X86_64_Sys_V:
+		return .Sys_V
+	case .Invalid, .Unexposed:
+		return .Unknown
+	}
+	return .Other
 }
 
 // The size of a Clang type in bytes on the extraction target. Extraction is

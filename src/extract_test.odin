@@ -379,3 +379,38 @@ test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing
 	}
 	testing.expect(t, found)
 }
+
+@(test)
+test_extract_captures_calling_conventions :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+	old := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old
+
+	ir: IR
+	ir_init(&ir)
+	ok := extract({"tests/fixtures/calling_conv.h"}, &ir)
+	testing.expect(t, ok)
+	if !ok {
+		return
+	}
+
+	found_plain := false
+	found_stdcall := false
+	for func in ir.funcs {
+		switch func.name {
+		case "plain_c":
+			found_plain = true
+			// Default or C are both honest "C ABI" answers from libclang.
+			testing.expect(t, func.calling_conv == .Default || func.calling_conv == .C)
+		case "stdcall_fn":
+			found_stdcall = true
+			// Attribute accepted → Stdcall; otherwise still a recorded fact.
+			testing.expect(t, func.calling_conv != .Unknown)
+		}
+	}
+	testing.expect(t, found_plain)
+	testing.expect(t, found_stdcall)
+}

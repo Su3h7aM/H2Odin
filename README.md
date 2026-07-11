@@ -4,7 +4,7 @@ A C-header-to-Odin bindings generator, written in Odin.
 
 H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings — configured through a small but powerful Lua policy layer.
 
-> Status: usable pipeline (Milestones 0–5 + 7–14). Milestone 15 is closing correctness gaps exposed by vendor-library validation; idiomatic *wrappers* (Milestone 6) remain deferred.
+> Status: usable pipeline (Milestones 0–5 + 7–15). The vendor validation corpus (eight examples) regenerates and `odin check`s green via `make validate-examples`. Idiomatic *wrappers* (Milestone 6) remain deferred.
 
 ---
 
@@ -30,10 +30,11 @@ H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings
 ## Building
 
 ```sh
-make check   # type-check the package
-make build   # produce build/h2odin
-make test    # unit + e2e tests (builds the binary first)
-make format  # odinfmt via odinfmt.json
+make check               # type-check the package
+make build               # produce build/h2odin
+make test                # unit + e2e tests (builds the binary first)
+make format              # odinfmt via odinfmt.json
+make validate-examples   # regen + odin check all eight validation packages
 ```
 
 H2Odin is **self-hosted**: the libclang bindings its Extraction stage imports
@@ -63,12 +64,12 @@ Example (writes `examples/sqlite3/sqlite3.odin` via `config.output_folder = "."`
 ./build/h2odin examples/sqlite3
 ```
 
-Check generated examples:
+Check the full validation corpus (or a single package):
 
 ```sh
+make validate-examples
+# or one package:
 odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
-odin check examples/fff     -no-entry-point -collection:vendored=$(pwd)/vendored
-odin check examples/bit_fields -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
 ---

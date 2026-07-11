@@ -31,7 +31,11 @@ ifneq ($(ODIN_PATH),)
 endif
 RUN_ODIN ?= $(ODIN)
 
-.PHONY: all check build run test test-unit test-e2e format clean regen-libclang
+# Validation corpus (Milestone 15). Regenerated and odin-checked by
+# validate-examples; keep this list in sync with examples/README.md.
+EXAMPLES := fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio
+
+.PHONY: all check build run test test-unit test-e2e format clean regen-libclang validate-examples
 
 all: check build
 
@@ -63,6 +67,21 @@ test-e2e: build
 regen-libclang: build
 	./$(BIN) vendored/libclang
 	$(RUN_ODIN) check vendored/libclang -no-entry-point $(COLLECTION_FLAGS)
+
+# Milestone 15 exit gate: rebuild the generator, regenerate every checked-in
+# example, reformat generated Odin, and odin-check all eight packages.
+# Failures must be investigated — curl and miniaudio are required green.
+validate-examples: build
+	@for ex in $(EXAMPLES); do \
+		echo "==> generate examples/$$ex"; \
+		./$(BIN) examples/$$ex || exit 1; \
+	done
+	$(ODINFMT) examples -config:odinfmt.json -w
+	@for ex in $(EXAMPLES); do \
+		echo "==> odin check examples/$$ex"; \
+		$(RUN_ODIN) check examples/$$ex -no-entry-point $(COLLECTION_FLAGS) || exit 1; \
+	done
+	@echo "validate-examples: all $(words $(EXAMPLES)) packages OK"
 
 format:
 	$(ODINFMT) $(SRC_DIR) -config:odinfmt.json -w

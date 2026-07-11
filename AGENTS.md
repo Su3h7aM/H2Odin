@@ -52,28 +52,24 @@ These are guidelines, not law. If docs and code disagree, or a task fights an in
 Run from the repo root. Prefer the Makefile targets:
 
 ```sh
-make check    # odin check src (vet + strict-style)
-make build    # build/h2odin
-make test     # unit tests (src/*_test.odin) + e2e (tests/)
-make format   # odinfmt via odinfmt.json
-make regen-libclang  # rebuild + regenerate vendored/libclang (self-host package)
+make check              # odin check src (vet + strict-style)
+make build              # build/h2odin
+make test               # unit tests (src/*_test.odin) + e2e (tests/)
+make format             # odinfmt via odinfmt.json
+make regen-libclang     # rebuild + rewrite vendored/libclang (self-host package)
+make validate-examples  # regen all eight examples + odin check (M15 gate)
 ```
 
-After extraction, transformation, or emission changes, regenerate and check the
-checked-in corpus (each project directory loads `H2Odin.lua`; headers/output
-come from the Lua config):
+After extraction, transformation, or emission changes that affect emission
+shape, run the corpus gate:
 
 ```sh
-for example in fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio; do
-    ./build/h2odin "examples/$example"
-    odin check "examples/$example" -no-entry-point -collection:vendored=$(pwd)/vendored
-done
+make validate-examples
 ```
 
-Until Roadmap Milestone 15 closes, curl and miniaudio are known `odin check`
-failures documented in their READMEs; they are still required probes, not
-optional examples. Changes in their failure mode must be investigated. The
-milestone exit gate makes all eight checks mandatory-green.
+All eight packages (fff, sqlite3, bit_fields, raylib, box3d, cgltf, curl,
+miniaudio) must generate without error-severity diagnostics and pass
+`odin check`. A regression on any of them is a blocker.
 
 Unit tests must stay runnable without inventing new foreign deps in the pure stages. E2e tests drive `build/h2odin` against `tests/fixtures/`.
 

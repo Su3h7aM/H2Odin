@@ -11,7 +11,9 @@ hand-written `vendor:miniaudio`.
 - Dense device/engine/sound config structs
 - Many callback function-pointer fields
 - Pure void opaque tags (`typedef void ma_data_source;`, `ma_node`, …)
-- `ma_` prefix strip colliding with field names (`format: format`, `thread: thread`)
+  → `data_source` / `node` / `vfs` as `distinct rawptr`
+- Field/type shadowing after `ma_` strip: `naming.override` renames fields
+  `format` / `thread` / `log` → `format_` / `thread_` / `log_`
 
 ## Regenerate
 
@@ -21,32 +23,21 @@ make build
 odin check examples/miniaudio -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
-## Status (present capabilities)
+Or the full corpus gate: `make validate-examples`.
+
+## Status
 
 | Step | Result |
 |------|--------|
-| Generate without workaround | **PANIC** — same void-typedef path as curl |
-| Generate with workaround | OK (~0.3s, ~6500-line output, ~950 procs) after dropping pure void tags |
-| `odin check` | **FAIL** — prefix-strip field/type cycles + dangling removed opaques |
-| Scale | Stress test: large IR, many pointer-lowering diagnostics |
-
-### Config workaround (not a fix)
-
-`symbols.remove.names` drops pure `typedef void ma_*` tags. Remaining
-references still name those types → undeclared names under `odin check`.
-Prefix strip of `ma_` turns types like `ma_format` / `ma_thread` into
-`format` / `thread`, which then collide with fields of the same name.
-
-## Findings requiring investigation (ROADMAP)
-
-1. **Pure void opaque typedefs** (shared with curl).
-2. **Strip-induced type/field name collisions** producing illegal declaration
-   cycles (`format: format`, `thread: thread`).
-3. **Incomplete workaround surface** — removing a typedef without rewriting
-   references yields undeclared type names.
+| Generate | OK (~0.3s, large single-file package) |
+| `odin check` | **OK** |
+| Opaque handles | pure `typedef void` → `distinct rawptr` |
+| Shadowing | resolved via `naming.override` (spec 0008) |
+| Scale | Stress test: many `pointer_lowering_guess` diagnostics remain |
 
 ## Gaps vs `vendor:miniaudio`
 
 - Official multi-file layout (types / procs / backends / wasm)
 - Heavy hand curation of platform threads and backend structs
-- Default calling convention / link_prefix blocks only (no panic path)
+- Pointer multipointers and out-params largely stay `^T` (quality work, not
+  a validity blocker)

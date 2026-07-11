@@ -14,27 +14,19 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: Milestones 0–5, 7–14 complete; Milestone 6 (idiomatic wrappers) is
-deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
+Status: Milestones 0–5 and 7–**15** complete; Milestone 6 (idiomatic wrappers)
+is deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
 
-The current priority is **Milestone 15: real-world validation closure**. New
-benchmarks copied from Odin's `vendor:` collection proved raylib, Box3D, and
-cgltf can already generate checkable bindings, while curl and miniaudio exposed
-bare-`void` opaque-handle panics, post-rename Odin binding conflicts, and an
-unsettled rule for transitively referenced system types. That last one is now
-settled and shipped:
-[spec 0010](docs/specs/0010-posix-libc-type-mapping.md) defines *foreign* as
-"declared in a system header" (libclang's `isInSystemHeader`, not "absent from
-`config.inputs`" — a library's own umbrella-included headers stay ours), keeps
-foreign declarations out of the output, and maps the POSIX/libc names to their
-defining package with one spelling in both type modes (`off_t`→`posix.off_t`,
-`time_t`→`libc.time_t`, `sockaddr`→`posix.sockaddr`). Six of the eight
-examples now pass `odin check`; curl's `^^httppost` and miniaudio's
-post-rename declaration cycles remain. Broader features and polish are paused
-until all eight examples generate without panic and pass `odin check`.
-Evidence and ordering live in
+**Milestone 15 (real-world validation) is closed.** All eight corpus packages
+regenerate and pass `odin check` via `make validate-examples`. Highlights that
+landed for the gate: pure `typedef void` → `distinct rawptr`; foreign types
+via [spec 0010](docs/specs/0010-posix-libc-type-mapping.md)
+(`posix.sockaddr`, `libc.time_t`, system-header provenance); post-rename
+collision/shadow validation ([spec 0008](docs/specs/0008-symbol-collision-validation.md));
+and calling-convention capture on funcs/proc types (emission still `"c"`).
+Evidence and residual quality work (pointer diagnostics, CI wiring) live in
 [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md)
 and [`ROADMAP.md`](ROADMAP.md).
 

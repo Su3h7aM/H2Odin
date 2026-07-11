@@ -173,12 +173,33 @@ Type_Array :: struct {
 	is_incomplete: bool, // T[] — flexible array member or extern array of unknown size
 }
 
+// C calling convention as measured by libclang (Extraction fact). Emission
+// may later map non-default conventions to Odin `"stdcall"` / `"fastcall"` /
+// …; until then every foreign proc still emits `proc "c"`. Zero value is
+// Default (CXCallingConv_Default).
+Calling_Conv :: enum u8 {
+	Default,
+	C,
+	Stdcall,
+	Fastcall,
+	Thiscall,
+	Vectorcall,
+	Win64,
+	Sys_V,
+	// Anything libclang reports that we do not yet map to an Odin convention
+	// string (Swift, AAPCS, Preserve*, …). Still a fact: not silently C.
+	Other,
+	// libclang returned Invalid / Unexposed.
+	Unknown,
+}
+
 // A C function type (always used through a pointer in practice). Parameter
 // names at the type level are usually empty.
 Type_Proc :: struct {
-	return_type: Type_Handle,
-	params:      []Param,
-	is_variadic: bool,
+	return_type:  Type_Handle,
+	params:       []Param,
+	is_variadic:  bool,
+	calling_conv: Calling_Conv,
 }
 
 Type_Record_Ref :: struct {
@@ -249,6 +270,8 @@ Func_Decl :: struct {
 	return_type_spelling: string,
 	params:               []Param,
 	is_variadic:          bool,
+	// libclang calling convention on the function type (Extraction fact).
+	calling_conv:         Calling_Conv,
 	// Spec 0009: C deprecation fact (attribute / availability). Message is
 	// arena-copied; empty when the attribute carries none.
 	deprecated:           bool,
