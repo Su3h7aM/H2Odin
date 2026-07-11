@@ -115,6 +115,51 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_extract_unsigned_enum_member_values :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	ok := extract({"tests/fixtures/unsigned_enum.h"}, &ir)
+	testing.expect(t, ok)
+	if !ok {
+		return
+	}
+
+	found_unsigned := false
+	found_signed := false
+	for enm in ir.enums {
+		if enm.name == "Unsigned_Flags" {
+			found_unsigned = true
+			testing.expect(t, enum_backing_is_unsigned(&ir, enm.backing))
+			testing.expect_value(t, len(enm.members), 3)
+			if len(enm.members) == 3 {
+				// Must not be -1: that is the signed mis-capture of 0xFFFFFFFF.
+				testing.expect_value(t, u64(enm.members[2].value), u64(0xFFFFFFFF))
+				testing.expect_value(t, u64(enm.members[1].value), u64(0x80000000))
+			}
+		}
+		if enm.name == "Signed_Flags" {
+			found_signed = true
+			testing.expect(t, !enum_backing_is_unsigned(&ir, enm.backing))
+			testing.expect_value(t, len(enm.members), 2)
+			if len(enm.members) == 2 {
+				testing.expect_value(t, enm.members[1].value, i64(-1))
+			}
+		}
+	}
+	testing.expect(t, found_unsigned)
+	testing.expect(t, found_signed)
+}
+
+@(test)
 test_extract_records_deprecation_from_attributes :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

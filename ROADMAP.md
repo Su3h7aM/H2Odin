@@ -351,12 +351,12 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
 `ExternC.odin` are correct output** — those headers declare no functions
 (binding coverage is exact: 427/427 across all 13 headers).
 
-- [ ] **Bug — enum member values are captured signed-only.**
-      `extract_decls.odin` stores `i64(get_enum_constant_decl_value(...))`;
-      a member like `0xFFFFFFFFFFFFFFFF` in an unsigned-backed enum arrives
-      as `-1` with no record of unsignedness.
-      `clang_getEnumConstantDeclUnsignedValue` is already in the bindings —
-      capture it (or a signedness fact from the backing type) at extraction.
+- [x] **Bug — enum member values are captured signed-only.**
+      `extract_decls.odin` stored `i64(get_enum_constant_decl_value(...))`;
+      a member like `0xFFFFFFFF` in an unsigned-backed enum arrived as `-1`.
+      Fixed: when the enum backing is unsigned, capture via
+      `get_enum_constant_decl_unsigned_value` and store the bit pattern as
+      `i64` (emission already reinterprets with `u64` for unsigned backings).
 - [ ] **Capture calling convention at extraction.**
       `clang_getFunctionTypeCallingConv` is unused; `__stdcall`/`__fastcall`
       in Windows headers are silently dropped. Record the fact now (cheap,

@@ -205,15 +205,20 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 }
 
 Enum_Fill :: struct {
-	ctx:     runtime.Context,
-	state:   ^Extract_State,
-	members: [dynamic]Enum_Member,
+	ctx:             runtime.Context,
+	state:           ^Extract_State,
+	members:         [dynamic]Enum_Member,
+	// When true, capture via get_enum_constant_decl_unsigned_value so values
+	// like 0xFFFFFFFF stay bit-correct for unsigned-backed enums (spec note
+	// in ROADMAP: signed-only capture stored -1 for those).
+	unsigned_values: bool,
 }
 
 fill_enum :: proc(state: ^Extract_State, handle: Decl_Handle, cursor: clang.Cursor) {
 	fill := Enum_Fill {
-		ctx   = context,
-		state = state,
+		ctx             = context,
+		state           = state,
+		unsigned_values = enum_backing_is_unsigned(state.ir, state.ir.enums[int(handle)].backing),
 	}
 	clang.visit_children(cursor, visit_enum_child, clang.Client_Data(rawptr(&fill)))
 	state.ir.enums[int(handle)].members = fill.members[:]
@@ -225,14 +230,39 @@ visit_enum_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data
 
 	#partial switch clang.get_cursor_kind(cursor) {
 	case .Enum_Constant_Decl:
+		value: i64
+		if fill.unsigned_values {
+			// Store the unsigned magnitude as i64 bit pattern; emission
+			// reinterprets via u64 when the backing is unsigned.
+			value = i64(clang.get_enum_constant_decl_unsigned_value(cursor))
+		} else {
+			value = i64(clang.get_enum_constant_decl_value(cursor))
+		}
 		member := Enum_Member {
 			name  = clone_clang_string(clang.get_cursor_spelling(cursor)),
-			value = i64(clang.get_enum_constant_decl_value(cursor)),
+			value = value,
 			doc   = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 		}
 		append(&fill.members, member)
 	}
 	return .Continue
+}
+
+// Follow typedefs to the underlying builtin and ask whether it is unsigned.
+// Non-builtin / unknown → signed capture (the historical default).
+enum_backing_is_unsigned :: proc(ir: ^IR, backing: Type_Handle) -> bool {
+	handle := backing
+	for {
+		info := ir_type(ir, handle)
+		#partial switch v in info.variant {
+		case Type_Builtin:
+			return builtin_is_unsigned(v.kind)
+		case Type_Typedef_Ref:
+			handle = ir.typedefs[v.decl].aliased
+		case:
+			return false
+		}
+	}
 }
 
 // Get or create the IR declaration for a struct/union cursor, and fill in
