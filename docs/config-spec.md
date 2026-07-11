@@ -328,9 +328,13 @@ config.symbols.remove.patterns = { "*_COUNT", "*_Count" }
 config.symbols.remove.where = function(sym)
     return sym.kind == "const" and h2o.str.has_prefix(sym.name, "SQLITE_PRIVATE_")
 end
+
+config.symbols.remove.deprecated = true   -- drop C-deprecated declarations
 ```
 
 **Why three tiers here.** Real headers carry internal declarations, compatibility aliases, private macros, and platform-specific symbols that shouldn't be emitted. Listing them by name (tier 1) is fine for a handful; patterns (tier 2) handle families like `*_Count`; the `where` predicate (tier 3) handles "everything that is a const and starts with `SQLITE_PRIVATE_`" without enumerating them. The predicate returns a boolean and never mutates the IR — removal is Odin's job.
+
+**Deprecated declarations** ([spec 0009](specs/0009-deprecated-declarations.md)) are the fourth, declarative tier. By default a C-deprecated API becomes a deprecated Odin declaration — `@(deprecated = "msg")` on procs and types, a `Deprecated:` doc line on constants and variables — because the header's own position is "works, but stop using it", and dropping would silently break existing callers. `remove.deprecated = true` opts into dropping them entirely; partial policies use `sym.deprecated` in a `where` predicate.
 
 ---
 
@@ -507,7 +511,7 @@ The first three exist now and are printed unconditionally; what this section add
 Callbacks receive small public views, never internal generator objects:
 
 ```text
-sym.name, sym.kind
+sym.name, sym.kind, sym.deprecated
 m.name, m.value, m.value_kind, m:is_integer()
 member.enum_name, member.name, member.value
 field.struct_name, field.name, field.type

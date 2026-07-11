@@ -343,6 +343,25 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       linked `libclang`. Make the executable/resource-dir configurable and
       print `clang_getClangVersion()` + the chosen resource dir under
       `-verbose`.
+The 2026-07 libclang usage review (extraction audited against the vendored
+bindings, claims probe-verified) also settled two non-issues worth pinning so
+they are not "fixed" later: **`clang_Cursor_Evaluate` returns nil for macro
+definitions** on this libclang, so `src/macro_value.odin`'s literal parser is
+necessary, not a reimplementation; and the **empty `Platform.odin` /
+`ExternC.odin` are correct output** — those headers declare no functions
+(binding coverage is exact: 427/427 across all 13 headers).
+
+- [ ] **Bug — enum member values are captured signed-only.**
+      `extract_decls.odin` stores `i64(get_enum_constant_decl_value(...))`;
+      a member like `0xFFFFFFFFFFFFFFFF` in an unsigned-backed enum arrives
+      as `-1` with no record of unsignedness.
+      `clang_getEnumConstantDeclUnsignedValue` is already in the bindings —
+      capture it (or a signedness fact from the backing type) at extraction.
+- [ ] **Capture calling convention at extraction.**
+      `clang_getFunctionTypeCallingConv` is unused; `__stdcall`/`__fastcall`
+      in Windows headers are silently dropped. Record the fact now (cheap,
+      config-independent); emission consumes it when the Windows-parity work
+      (see Later) happens.
 - [ ] **Flaky e2e observed (2026-07-11):**
       `test_opaque_tags_idiomatic_default_handle` once failed all four
       `expect_contains` (empty/truncated stdout?) under the 16-thread runner
@@ -358,6 +377,17 @@ claim was *disproven* on Linux and survives only as the Windows note below).
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
+- [ ] **Deprecated C declarations — propagate by default, drop on opt-in.**
+      Decided in
+      [`docs/specs/0009-deprecated-declarations.md`](docs/specs/0009-deprecated-declarations.md):
+      Extraction records `deprecated` + message via
+      `clang_getCursorAvailability` / `clang_getCursorPlatformAvailability`
+      (probe-verified); Emission writes `@(deprecated = "msg")` on procs and
+      types and a `Deprecated:` doc line on consts/vars (no Odin attribute
+      there); `symbols.remove.deprecated = true` drops them;
+      `sym.deprecated` joins the callback view. Dogfood acceptance:
+      `make regen-libclang` annotates exactly the five `clang_getRemappings*`
+      procs that `Index.h` marks `CINDEX_DEPRECATED` today.
 - [x] **Incomplete tag records — mode default + `types.opaque` overrides**
       (sqlite3-style `typedef struct T T;` used as `T *`). Decided in
       [`docs/specs/0007-opaque-tag-records.md`](docs/specs/0007-opaque-tag-records.md):
@@ -388,6 +418,7 @@ remains deferred and independent.
 Code health items for specs 0005–0007 are done. The open Code health items
 from the 2026-07 review are the current hardening backlog — start with
 symbol-collision validation (spec 0008, proposed) and package-name
-validation, which are the two that can produce invalid Odin today. Later
-items remain polish and deferred work (wrappers, full pointer-lowering
-curation, Windows multi-lib, …).
+validation, which are the two that can produce invalid Odin today. The next
+queued feature is deprecated-declaration support (spec 0009, accepted).
+Later items remain polish and deferred work (wrappers, full
+pointer-lowering curation, Windows multi-lib, …).

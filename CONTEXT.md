@@ -19,8 +19,11 @@ deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `make regen-libclang` — spec 0002).
 Code health items for specs 0005–0007 (opaque handles, imports_file
-removal, types.opaque for incomplete tag records) are done. Remaining debt
-is polish / deferred work in ROADMAP's **Later** section. See
+removal, types.opaque for incomplete tag records) are done. The 2026-07
+review left a hardening backlog in ROADMAP's **Code health** section
+(headlined by symbol-collision validation, spec 0008) and one queued
+feature: deprecated-declaration propagation (spec 0009). The rest is
+polish / deferred work in ROADMAP's **Later** section. See
 [`ROADMAP.md`](ROADMAP.md) and [`docs/specs/`](docs/specs/).
 
 ---
