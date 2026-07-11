@@ -73,11 +73,14 @@ policy_remove_where :: proc(policy: ^Policy, ctx: Symbol_Context) -> bool {
 }
 
 push_symbol_table :: proc(L: ^lua.State, ctx: Symbol_Context) {
-	lua.createtable(L, 0, 4)
+	lua.createtable(L, 0, 5)
 	push_string_field(L, "name", ctx.name)
 	push_string_field(L, "default", ctx.default_name)
 	lua.pushstring(L, symbol_kind_names[ctx.kind])
 	lua.setfield(L, -2, "kind")
+	// Spec 0009: C deprecation fact for partial remove policies.
+	lua.pushboolean(L, b32(ctx.deprecated))
+	lua.setfield(L, -2, "deprecated")
 	if ctx.parent != "" {
 		push_string_field(L, "parent", ctx.parent)
 	}

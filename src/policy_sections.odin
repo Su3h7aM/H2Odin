@@ -329,7 +329,7 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "symbols.remove", []cstring{"where", "names", "patterns"}) {
+	if !policy_reject_unknown_subkeys(L, "symbols.remove", []cstring{"where", "names", "patterns", "deprecated"}) {
 		return false
 	}
 
@@ -344,6 +344,20 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 	policy.remove_patterns = patterns
+
+	// symbols.remove.deprecated = true → drop every C-deprecated declaration.
+	dep_type := lua.Type(lua.getfield(L, -1, "deprecated"))
+	#partial switch dep_type {
+	case .NIL:
+		lua.pop(L, 1)
+	case .BOOLEAN:
+		policy.remove_deprecated = bool(lua.toboolean(L, -1))
+		lua.pop(L, 1)
+	case:
+		fmt.eprintln("h2odin: config: symbols.remove.deprecated must be a boolean")
+		lua.pop(L, 1)
+		return false
+	}
 
 	where_type := lua.Type(lua.getfield(L, -1, "where"))
 	#partial switch where_type {

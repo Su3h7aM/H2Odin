@@ -10,6 +10,7 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comm
 		return
 	}
 	write_doc(b, record.doc, 0, emit_comments)
+	write_deprecated_attr(b, record.deprecated, record.deprecated_message, 0)
 	fmt.sbprintf(b, "%s :: ", record.name)
 	// Spec 0007: handle style (idiomatic default or types.opaque override).
 	// Declaration is distinct rawptr; references already collapsed one
@@ -108,6 +109,30 @@ write_doc :: proc(b: ^strings.Builder, doc: string, indent: int, emit_comments: 
 	}
 }
 
+// Spec 0009 fallback when the C attribute has no message.
+DEPRECATED_FALLBACK_MESSAGE :: "deprecated in the C header"
+
+// @(deprecated = "msg") for procedures and types. indent matches the decl.
+write_deprecated_attr :: proc(b: ^strings.Builder, deprecated: bool, message: string, indent: int) {
+	if !deprecated {
+		return
+	}
+	msg := message if message != "" else DEPRECATED_FALLBACK_MESSAGE
+	write_indent(b, indent)
+	fmt.sbprintfln(b, "@(deprecated = %q)", msg)
+}
+
+// Deprecated: line for constants and variables — semantic, not prose, so it
+// is emitted even when config.comments = false. Prepended before ordinary docs.
+write_deprecated_doc_line :: proc(b: ^strings.Builder, deprecated: bool, message: string, indent: int) {
+	if !deprecated {
+		return
+	}
+	msg := message if message != "" else DEPRECATED_FALLBACK_MESSAGE
+	write_indent(b, indent)
+	fmt.sbprintfln(b, "Deprecated: %s", msg)
+}
+
 emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: bool, uses_core_c: ^bool) {
 	if decl.members == nil {
 		// Never defined in this header (or its backing type was
@@ -120,8 +145,11 @@ emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: 
 			return
 		}
 		// A C anonymous enum is just a bag of integer constants; that is
-		// exactly what it becomes.
+		// exactly what it becomes. Spec 0009: a deprecated anonymous enum
+		// still has no Odin attribute on constants — use Deprecated: lines.
 		for member in decl.members {
+			write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 0)
+			write_doc(b, member.doc, 0, emit_comments)
 			fmt.sbprintf(b, "%s :: ", member.name)
 			write_enum_value(b, ir, decl.backing, member.value)
 			strings.write_string(b, "\n")
@@ -130,6 +158,7 @@ emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: 
 		return
 	}
 	write_doc(b, decl.doc, 0, emit_comments)
+	write_deprecated_attr(b, decl.deprecated, decl.deprecated_message, 0)
 	fmt.sbprintf(b, "%s :: ", decl.name)
 	write_enum_body(b, ir, decl, 0, emit_comments, uses_core_c)
 	strings.write_string(b, "\n\n")
@@ -202,12 +231,15 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comm
 		}
 	}
 	write_doc(b, decl.doc, 0, emit_comments)
+	write_deprecated_attr(b, decl.deprecated, decl.deprecated_message, 0)
 	fmt.sbprintf(b, "%s :: ", decl.name)
 	write_type(b, ir, decl.aliased, 0, emit_comments, uses_core_c)
 	strings.write_string(b, "\n\n")
 }
 
 emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, emit_comments: bool, uses_core_c: ^bool) {
+	// Spec 0009: no @(deprecated) on variables — semantic Deprecated: line.
+	write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 1)
 	write_doc(b, decl.doc, 1, emit_comments)
 	if decl.link_name != "" {
 		fmt.sbprintfln(b, "\t@(link_name = %q)", decl.link_name)
@@ -227,6 +259,8 @@ emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl, emit_comments: bool) {
 		return
 	}
 
+	// Spec 0009: no @(deprecated) on constants — semantic Deprecated: line.
+	write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 0)
 	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
 }
@@ -263,6 +297,7 @@ macro_literal_can_emit :: proc(s: string) -> bool {
 
 emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: bool, uses_core_c: ^bool) {
 	write_doc(b, func.doc, 1, emit_comments)
+	write_deprecated_attr(b, func.deprecated, func.deprecated_message, 1)
 	if func.link_name != "" {
 		fmt.sbprintfln(b, "\t@(link_name = %q)", func.link_name)
 	}

@@ -426,6 +426,7 @@ foreign lib {
 	 * ## Safety
 	 * See `fff_create_instance_with`.
 	 */
+	@(deprecated = "Use fff_create_instance_with (by pointer) or fff_create_instance_with_value (by value) with FffCreateOptions instead. The struct evolves without ABI breaks.")
 	create_instance :: proc(base_path: cstring, frecency_db_path: cstring, history_db_path: cstring, _use_unsafe_no_lock: bool, enable_mmap_cache: bool, enable_content_indexing: bool, watch: bool, ai_mode: bool) -> ^Result ---
 	/**
 	 * Create a new file finder instance (legacy 13-arg positional signature).
@@ -438,6 +439,7 @@ foreign lib {
 	 * ## Safety
 	 * See `fff_create_instance_with`.
 	 */
+	@(deprecated = "Use fff_create_instance_with (by pointer) or fff_create_instance_with_value (by value) with FffCreateOptions instead. The struct evolves without ABI breaks.")
 	create_instance2 :: proc(base_path: cstring, frecency_db_path: cstring, history_db_path: cstring, _use_unsafe_no_lock: bool, enable_mmap_cache: bool, enable_content_indexing: bool, watch: bool, ai_mode: bool, log_file_path: cstring, log_level: cstring, cache_budget_max_files: u64, cache_budget_max_bytes: u64, cache_budget_max_file_size: u64) -> ^Result ---
 	/**
 	 * Create a new file finder instance from an [`FffCreateOptions`] struct.

@@ -89,54 +89,80 @@ apply_type_rewrites :: proc(ir: ^IR, type_spelling: map[string]string, drop_decl
 	ir.order = kept
 }
 
-// symbols.remove: names → patterns → where. Rebuild the ordering list with
-// survivors. Dropping is an ordering-list operation only — pool entries stay
-// so handles remain valid. Members and fields are never offered here.
+// symbols.remove: names → patterns → deprecated → where. Rebuild the ordering
+// list with survivors. Dropping is an ordering-list operation only — pool
+// entries stay so handles remain valid. Members and fields are never offered
+// here.
 filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
 	has_names := len(policy.remove_names) > 0
 	has_patterns := len(policy.remove_patterns) > 0
-	if !has_names && !has_patterns && !policy.has_remove_where {
+	if !has_names && !has_patterns && !policy.remove_deprecated && !policy.has_remove_where {
 		return
 	}
 	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
 	for ref in ir.order {
 		name: string
 		kind: Symbol_Kind
+		deprecated: bool
 		switch ref.kind {
 		case .Invalid:
 			continue
 		case .Func:
 			name = ir.funcs[ref.index].name
 			kind = .Func
+			deprecated = ir.funcs[ref.index].deprecated
 		case .Record:
 			name = ir.records[ref.index].name
 			kind = .Type
+			deprecated = ir.records[ref.index].deprecated
 		case .Enum:
 			name = ir.enums[ref.index].name
 			kind = .Type
+			deprecated = ir.enums[ref.index].deprecated
 		case .Typedef:
 			name = ir.typedefs[ref.index].name
 			kind = .Type
+			deprecated = ir.typedefs[ref.index].deprecated
 		case .Var:
 			name = ir.vars[ref.index].name
 			kind = .Var
+			deprecated = ir.vars[ref.index].deprecated
 		case .Macro:
 			name = ir.macros[ref.index].name
 			kind = .Const
+			deprecated = ir.macros[ref.index].deprecated
 		case .Bit_Set:
 			name = ir.bit_sets[ref.index].name
 			kind = .Type
+			// bit_set aliases inherit nothing; they are generator-authored.
+			deprecated = false
 		}
-		// Anonymous declarations are spelled inline where they are used;
-		// they stand or fall with their user, not on their own.
-		if name == "" || !should_remove_symbol(policy, name, kind) {
+		// Anonymous records are spelled inline where they are used and stand
+		// or fall with their user. Anonymous enums, however, emit as free
+		// constants (NAME :: value); a C-deprecated one is a top-level
+		// constant for remove.deprecated (spec 0009).
+		if name == "" {
+			if ref.kind == .Enum && deprecated && policy.remove_deprecated {
+				continue
+			}
+			// where can also drop them when the predicate reads sym.deprecated
+			// (name is empty; kind is type; deprecated is true).
+			if ref.kind == .Enum && deprecated && policy.has_remove_where {
+				if should_remove_symbol(policy, name, kind, deprecated) {
+					continue
+				}
+			}
+			append(&kept, ref)
+			continue
+		}
+		if !should_remove_symbol(policy, name, kind, deprecated) {
 			append(&kept, ref)
 		}
 	}
 	ir.order = kept
 }
 
-should_remove_symbol :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -> bool {
+should_remove_symbol :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, deprecated: bool) -> bool {
 	for n in policy.remove_names {
 		if n == name {
 			return true
@@ -148,8 +174,12 @@ should_remove_symbol :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -
 			return true
 		}
 	}
+	// Spec 0009: fourth declarative tier — drop every C-deprecated symbol.
+	if policy.remove_deprecated && deprecated {
+		return true
+	}
 	if policy.has_remove_where {
-		return policy_remove_where(policy, Symbol_Context{name = name, default_name = name, kind = kind})
+		return policy_remove_where(policy, Symbol_Context{name = name, default_name = name, kind = kind, deprecated = deprecated})
 	}
 	return false
 }

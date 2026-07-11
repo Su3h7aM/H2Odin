@@ -57,6 +57,7 @@ foreign lib {
 	get_diagnostic_option :: proc(diag: Diagnostic, disable: ^String) -> String ---
 	@(link_name = "clang_getDiagnosticCategory")
 	get_diagnostic_category :: proc(_: Diagnostic) -> u32 ---
+	@(deprecated = "deprecated in the C header")
 	@(link_name = "clang_getDiagnosticCategoryName")
 	get_diagnostic_category_name :: proc(category: u32) -> String ---
 	@(link_name = "clang_getDiagnosticCategoryText")

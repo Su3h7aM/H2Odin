@@ -244,6 +244,10 @@ Func_Decl :: struct {
 	return_type_spelling: string,
 	params:               []Param,
 	is_variadic:          bool,
+	// Spec 0009: C deprecation fact (attribute / availability). Message is
+	// arena-copied; empty when the attribute carries none.
+	deprecated:           bool,
+	deprecated_message:   string,
 	doc:                  string,
 	// Configured input header that owns this declaration for output placement.
 	home:                 Input_Header_Handle,
@@ -290,6 +294,9 @@ Record_Decl :: struct {
 	// collapsed at references.
 	emit_as_handle:             bool,
 	is_typedef_named:           bool, // anonymous tag that a typedef gives a name to
+	// Spec 0009: C deprecation fact.
+	deprecated:                 bool,
+	deprecated_message:         string,
 	doc:                        string,
 	// Definition site wins over an earlier placeholder's home (see fill_record).
 	home:                       Input_Header_Handle,
@@ -302,33 +309,43 @@ Enum_Member :: struct {
 }
 
 Enum_Decl :: struct {
-	name:             string, // "" when anonymous
-	backing:          Type_Handle,
-	members:          []Enum_Member,
-	is_typedef_named: bool,
-	doc:              string,
+	name:               string, // "" when anonymous
+	backing:            Type_Handle,
+	members:            []Enum_Member,
+	is_typedef_named:   bool,
+	// Spec 0009: C deprecation fact.
+	deprecated:         bool,
+	deprecated_message: string,
+	doc:                string,
 	// Definition site wins over an earlier placeholder's home (see fill_enum).
-	home:             Input_Header_Handle,
+	home:               Input_Header_Handle,
 }
 
 Typedef_Decl :: struct {
-	name:            string,
-	aliased:         Type_Handle,
+	name:               string,
+	aliased:            Type_Handle,
 
 	// The underlying type could not be captured. The typedef is skipped and
 	// so is anything that uses it — emitting a dangling name would just move
 	// the failure into the generated code.
-	is_unresolvable: bool,
-	doc:             string,
-	home:            Input_Header_Handle,
+	is_unresolvable:    bool,
+	// Spec 0009: C deprecation fact.
+	deprecated:         bool,
+	deprecated_message: string,
+	doc:                string,
+	home:               Input_Header_Handle,
 }
 
 Var_Decl :: struct {
-	name:      string,
-	link_name: string, // as in Func_Decl
-	type:      Type_Handle,
-	doc:       string,
-	home:      Input_Header_Handle,
+	name:               string,
+	link_name:          string, // as in Func_Decl
+	type:               Type_Handle,
+	// Spec 0009: C deprecation fact. Emitted as a Deprecated: doc line (no
+	// Odin attribute on variables).
+	deprecated:         bool,
+	deprecated_message: string,
+	doc:                string,
+	home:               Input_Header_Handle,
 }
 
 Macro_Token_Kind :: enum {
@@ -347,11 +364,15 @@ Macro_Token :: struct {
 // An object-like #define constant, or a function-like macro recorded so the
 // pipeline knows it exists (never emitted).
 Macro_Decl :: struct {
-	name:             string,
-	tokens:           []Macro_Token, // raw replacement-list tokens after the name
-	is_function_like: bool,
-	doc:              string,
-	home:             Input_Header_Handle,
+	name:               string,
+	tokens:             []Macro_Token, // raw replacement-list tokens after the name
+	is_function_like:   bool,
+	// Spec 0009: C deprecation fact when libclang reports it (rare for
+	// macros). Emitted as a Deprecated: doc line like variables.
+	deprecated:         bool,
+	deprecated_message: string,
+	doc:                string,
+	home:               Input_Header_Handle,
 }
 
 // A named `Name :: bit_set[Enum; uN]` produced by enums.bit_sets. Stored as

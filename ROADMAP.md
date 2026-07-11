@@ -377,7 +377,7 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
 ## Later
 
 - [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
-- [ ] **Deprecated C declarations — propagate by default, drop on opt-in.**
+- [x] **Deprecated C declarations — propagate by default, drop on opt-in.**
       Decided in
       [`docs/specs/0009-deprecated-declarations.md`](docs/specs/0009-deprecated-declarations.md):
       Extraction records `deprecated` + message via
@@ -415,10 +415,9 @@ Milestones 0–5, 7–14 are complete — including **self-hosted libclang bindi
 checked-in package with `make regen-libclang`. **Milestone 6 (wrappers)**
 remains deferred and independent.
 
-Code health items for specs 0005–0007 are done. The open Code health items
-from the 2026-07 review are the current hardening backlog — start with
-symbol-collision validation (spec 0008, proposed) and package-name
-validation, which are the two that can produce invalid Odin today. The next
-queued feature is deprecated-declaration support (spec 0009, accepted).
-Later items remain polish and deferred work (wrappers, full
-pointer-lowering curation, Windows multi-lib, …).
+Code health items for specs 0005–0007 and deprecated-declaration propagation
+(spec 0009) are done. The open Code health items from the 2026-07 review are
+the current hardening backlog — start with symbol-collision validation
+(spec 0008, proposed) and package-name validation, which are the two that
+can produce invalid Odin today. Later items remain polish and deferred work
+(wrappers, full pointer-lowering curation, Windows multi-lib, …).

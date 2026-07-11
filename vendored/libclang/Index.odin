@@ -1863,14 +1863,19 @@ foreign lib {
 	get_unary_operator_kind_spelling :: proc(kind: Unary_Operator_Kind) -> String ---
 	@(link_name = "clang_getCursorUnaryOperatorKind")
 	get_cursor_unary_operator_kind :: proc(cursor: Cursor) -> Unary_Operator_Kind ---
+	@(deprecated = "deprecated in the C header")
 	@(link_name = "clang_getRemappings")
 	get_remappings :: proc(_: cstring) -> Remapping ---
+	@(deprecated = "deprecated in the C header")
 	@(link_name = "clang_getRemappingsFromFileList")
 	get_remappings_from_file_list :: proc(_: ^cstring, _: u32) -> Remapping ---
+	@(deprecated = "deprecated in the C header")
 	@(link_name = "clang_remap_getNumFiles")
 	remap_get_num_files :: proc(_: Remapping) -> u32 ---
+	@(deprecated = "deprecated in the C header")
 	@(link_name = "clang_remap_getFilenames")
 	remap_get_filenames :: proc(_: Remapping, _: u32, _: ^String, _: ^String) ---
+	@(deprecated = "deprecated in the C header")
 	@(link_name = "clang_remap_dispose")
 	remap_dispose :: proc(_: Remapping) ---
 }

@@ -505,6 +505,85 @@ test_comments_false_suppresses_docs :: proc(t: ^testing.T) {
 	expect_contains(t, stdout, "API_VERSION :: 1")
 }
 
+// Spec 0009: C-deprecated decls propagate as @(deprecated) / Deprecated: lines.
+@(test)
+test_deprecated_propagates_by_default :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/deprecated.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	// Proc and type: Odin attribute with the C message verbatim.
+	expect_contains(t, stdout, `@(deprecated = "use new_fn instead")`)
+	expect_contains(t, stdout, "old_fn :: proc()")
+	expect_contains(t, stdout, `@(deprecated = "use New_Type instead")`)
+	expect_contains(t, stdout, "Old_Type :: struct")
+	// Variable and constant: semantic Deprecated: doc line.
+	expect_contains(t, stdout, "Deprecated: use new_var instead")
+	expect_contains(t, stdout, "old_var:")
+	expect_contains(t, stdout, "Deprecated: use NEW_CONST instead")
+	expect_contains(t, stdout, "OLD_CONST :: 42")
+	// Attribute without a message → fixed fallback.
+	expect_contains(t, stdout, `@(deprecated = "deprecated in the C header")`)
+	expect_contains(t, stdout, "bare_deprecated_fn :: proc()")
+	// Live API is untouched.
+	expect_contains(t, stdout, "live_fn :: proc()")
+}
+
+@(test)
+test_deprecated_doc_line_survives_comments_false :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/deprecated_no_comments.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Deprecated: use new_var instead")
+	expect_contains(t, stdout, "Deprecated: use NEW_CONST instead")
+	expect_contains(t, stdout, `@(deprecated = "use new_fn instead")`)
+}
+
+@(test)
+test_deprecated_remove_drops_all :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/deprecated_remove.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_not_contains(t, stdout, "old_fn")
+	expect_not_contains(t, stdout, "Old_Type")
+	expect_not_contains(t, stdout, "old_var")
+	expect_not_contains(t, stdout, "OLD_CONST")
+	expect_not_contains(t, stdout, "bare_deprecated_fn")
+	expect_contains(t, stdout, "live_fn :: proc()")
+}
+
+@(test)
+test_deprecated_where_predicate_sees_flag :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/deprecated_where.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	// where returns sym.deprecated → same drop set as remove.deprecated.
+	expect_not_contains(t, stdout, "old_fn")
+	expect_not_contains(t, stdout, "Old_Type")
+	expect_not_contains(t, stdout, "old_var")
+	expect_not_contains(t, stdout, "OLD_CONST")
+	expect_contains(t, stdout, "live_fn :: proc()")
+}
+
 @(test)
 test_m10_output_folder_writes_file :: proc(t: ^testing.T) {
 	out_dir := "/tmp/h2odin-m10-out"

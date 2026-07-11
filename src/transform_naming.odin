@@ -8,50 +8,50 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 		case .Invalid:
 		case .Func:
 			decl := &ir.funcs[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Func, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Func, "", decl.deprecated); decided {
 				decl.link_name = link_name_for(policy, decl.name, new_name)
 				decl.name = new_name
 			}
 			rename_params(ir, policy, decl.name, decl.params)
 		case .Var:
 			decl := &ir.vars[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Var, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Var, "", decl.deprecated); decided {
 				decl.link_name = link_name_for(policy, decl.name, new_name)
 				decl.name = new_name
 			}
 		case .Record:
 			decl := &ir.records[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", decl.deprecated); decided {
 				decl.name = new_name
 			}
 			for &field in decl.fields {
-				if new_name, decided := rename_of(ir, policy, field.name, .Field, decl.name); decided {
+				if new_name, decided := rename_of(ir, policy, field.name, .Field, decl.name, false); decided {
 					field.name = new_name
 				}
 			}
 		case .Enum:
 			decl := &ir.enums[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", decl.deprecated); decided {
 				decl.name = new_name
 			}
 			for &member in decl.members {
-				if new_name, decided := rename_of(ir, policy, member.name, .Enum_Member, decl.name); decided {
+				if new_name, decided := rename_of(ir, policy, member.name, .Enum_Member, decl.name, false); decided {
 					member.name = new_name
 				}
 			}
 		case .Typedef:
 			decl := &ir.typedefs[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", decl.deprecated); decided {
 				decl.name = new_name
 			}
 		case .Macro:
 			decl := &ir.macros[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Const, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Const, "", decl.deprecated); decided {
 				decl.name = new_name
 			}
 		case .Bit_Set:
 			decl := &ir.bit_sets[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, ""); decided {
+			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", false); decided {
 				decl.name = new_name
 			}
 		}
@@ -85,7 +85,7 @@ link_name_for :: proc(policy: ^Policy, c_name: string, odin_name: string) -> str
 // final name whichever path produced it: the absolute map, the override
 // callback, or the generator default. default_odin_name already escapes on
 // the default path; re-running here is idempotent and covers the other two.
-rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, parent: string) -> (string, bool) {
+rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, parent: string, deprecated := false) -> (string, bool) {
 	if name == "" {
 		return "", false
 	}
@@ -101,7 +101,7 @@ rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, par
 
 	default_name := default_odin_name(ir, policy, name, kind)
 
-	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = default_name, kind = kind, parent = parent})
+	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = default_name, kind = kind, parent = parent, deprecated = deprecated})
 	if !decided {
 		new_name = default_name
 	}

@@ -167,6 +167,8 @@ Policy :: struct {
 	// symbols.remove declarative tiers.
 	remove_names:        []string,
 	remove_patterns:     []string,
+	// Spec 0009: drop C-deprecated declarations (fourth declarative tier).
+	remove_deprecated:   bool,
 
 	// macros.groups
 	macro_groups:        []Macro_Group_Enum,
@@ -224,6 +226,8 @@ Symbol_Context :: struct {
 	default_name: string, // generator's default choice
 	kind:         Symbol_Kind,
 	parent:       string, // owning declaration for members/fields; "" otherwise
+	// Spec 0009: C deprecation fact for symbols.remove.where / naming views.
+	deprecated:   bool,
 }
 
 // Load and execute the Lua configuration once, at startup. Declarative

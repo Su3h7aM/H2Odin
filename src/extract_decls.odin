@@ -36,12 +36,15 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		}
 	}
 
+	deprecated, deprecated_message := cursor_deprecation(cursor)
 	ir_add_macro(
 		state.ir,
 		Macro_Decl {
 			name = clone_clang_string(clang.get_cursor_spelling(cursor)),
 			tokens = replacement,
 			is_function_like = clang.cursor_is_macro_function_like(cursor) != 0,
+			deprecated = deprecated,
+			deprecated_message = deprecated_message,
 			doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
 			home = cursor_home(state, cursor),
 		},
@@ -89,9 +92,17 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		ir_diag(state.ir, .Incomplete_Extern_Array, "extern array %q has unknown size; emitted as [0]T", name)
 	}
 
+	deprecated, deprecated_message := cursor_deprecation(cursor)
 	ir_add_var(
 		state.ir,
-		Var_Decl{name = name, type = type, doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)), home = cursor_home(state, cursor)},
+		Var_Decl {
+			name = name,
+			type = type,
+			deprecated = deprecated,
+			deprecated_message = deprecated_message,
+			doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
+			home = cursor_home(state, cursor),
+		},
 	)
 	remember_captured(state, cursor, .Var, u32(len(state.ir.vars) - 1))
 }
@@ -106,10 +117,13 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 		return Decl_Handle(ref.index)
 	}
 
+	deprecated, deprecated_message := cursor_deprecation(cursor)
 	decl := Typedef_Decl {
-		name = clone_clang_string(clang.get_cursor_spelling(cursor)),
-		doc  = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
-		home = cursor_home(state, cursor),
+		name               = clone_clang_string(clang.get_cursor_spelling(cursor)),
+		deprecated         = deprecated,
+		deprecated_message = deprecated_message,
+		doc                = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
+		home               = cursor_home(state, cursor),
 	}
 	handle := ir_add_typedef(state.ir, decl)
 	if usr != "" {
@@ -152,6 +166,10 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 		if state.ir.enums[int(handle)].doc == "" {
 			state.ir.enums[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 		}
+		// Definition may carry the attribute when the forward decl did not.
+		if !state.ir.enums[int(handle)].deprecated {
+			state.ir.enums[int(handle)].deprecated, state.ir.enums[int(handle)].deprecated_message = cursor_deprecation(cursor)
+		}
 		if clang.is_cursor_definition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
 			// Definition becomes home when it lands in a configured input.
 			if home := cursor_home(state, cursor); home != 0 {
@@ -166,6 +184,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 	if clang.cursor_is_anonymous(cursor) == 0 {
 		decl.name = clone_clang_string(clang.get_cursor_spelling(cursor))
 	}
+	decl.deprecated, decl.deprecated_message = cursor_deprecation(cursor)
 	decl.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 	decl.home = cursor_home(state, cursor)
 	// The backing integer type is known for any enum cursor — clang answers
@@ -227,6 +246,10 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 		if state.ir.records[int(handle)].doc == "" {
 			state.ir.records[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 		}
+		// Definition may carry the attribute when the forward decl did not.
+		if !state.ir.records[int(handle)].deprecated {
+			state.ir.records[int(handle)].deprecated, state.ir.records[int(handle)].deprecated_message = cursor_deprecation(cursor)
+		}
 		if clang.is_cursor_definition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
 			// Definition becomes home when it lands in a configured input.
 			if home := cursor_home(state, cursor); home != 0 {
@@ -246,6 +269,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	if clang.cursor_is_anonymous(cursor) == 0 {
 		record.name = clone_clang_string(clang.get_cursor_spelling(cursor))
 	}
+	record.deprecated, record.deprecated_message = cursor_deprecation(cursor)
 	record.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 	handle := ir_add_record(state.ir, record)
 	if usr != "" {
@@ -430,16 +454,39 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		}
 	}
 
+	deprecated, deprecated_message := cursor_deprecation(cursor)
 	func := Func_Decl {
-		name        = name,
-		return_type = return_type,
-		params      = params,
-		is_variadic = clang.cursor_is_variadic(cursor) != 0,
-		doc         = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
-		home        = cursor_home(state, cursor),
+		name               = name,
+		return_type        = return_type,
+		params             = params,
+		is_variadic        = clang.cursor_is_variadic(cursor) != 0,
+		deprecated         = deprecated,
+		deprecated_message = deprecated_message,
+		doc                = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
+		home               = cursor_home(state, cursor),
 	}
 	ir_add_func(state.ir, func)
 	remember_captured(state, cursor, .Func, u32(len(state.ir.funcs) - 1))
+}
+
+// Spec 0009: deprecation is a header fact. Availability reports Deprecated;
+// platform availability recovers the attribute message (empty when none).
+cursor_deprecation :: proc(cursor: clang.Cursor) -> (deprecated: bool, message: string) {
+	if clang.get_cursor_availability(cursor) != .Deprecated {
+		return false, ""
+	}
+	always_deprecated: c.int
+	deprecated_message: clang.String
+	always_unavailable: c.int
+	unavailable_message: clang.String
+	_ = clang.get_cursor_platform_availability(cursor, &always_deprecated, &deprecated_message, &always_unavailable, &unavailable_message, nil, 0)
+	// always_* flags are not needed once availability is Deprecated; still
+	// release both CXStrings the call may fill.
+	_ = always_deprecated
+	_ = always_unavailable
+	message = clone_clang_string(deprecated_message)
+	clang.dispose_string(unavailable_message)
+	return true, message
 }
 
 // True when this cursor's USR is already in decl_map (captured from another

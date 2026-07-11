@@ -115,6 +115,78 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_extract_records_deprecation_from_attributes :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	ok := extract({"tests/fixtures/deprecated.h"}, &ir)
+	testing.expect(t, ok)
+	if !ok {
+		return
+	}
+
+	found_fn := false
+	found_bare := false
+	found_live := false
+	for func in ir.funcs {
+		if func.name == "old_fn" {
+			found_fn = true
+			testing.expect(t, func.deprecated)
+			testing.expect_value(t, func.deprecated_message, "use new_fn instead")
+		}
+		if func.name == "bare_deprecated_fn" {
+			found_bare = true
+			testing.expect(t, func.deprecated)
+			testing.expect_value(t, func.deprecated_message, "")
+		}
+		if func.name == "live_fn" {
+			found_live = true
+			testing.expect(t, !func.deprecated)
+		}
+	}
+	testing.expect(t, found_fn)
+	testing.expect(t, found_bare)
+	testing.expect(t, found_live)
+
+	found_type := false
+	for record in ir.records {
+		if record.name == "Old_Type" {
+			found_type = true
+			testing.expect(t, record.deprecated)
+			testing.expect_value(t, record.deprecated_message, "use New_Type instead")
+		}
+	}
+	testing.expect(t, found_type)
+
+	found_var := false
+	for var in ir.vars {
+		if var.name == "old_var" {
+			found_var = true
+			testing.expect(t, var.deprecated)
+			testing.expect_value(t, var.deprecated_message, "use new_var instead")
+		}
+	}
+	testing.expect(t, found_var)
+
+	found_const_enum := false
+	for enm in ir.enums {
+		if enm.name == "" && enm.deprecated {
+			found_const_enum = true
+			testing.expect_value(t, enm.deprecated_message, "use NEW_CONST instead")
+		}
+	}
+	testing.expect(t, found_const_enum)
+}
+
+@(test)
 test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

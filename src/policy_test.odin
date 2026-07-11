@@ -606,6 +606,35 @@ return config
 }
 
 @(test)
+test_policy_remove_deprecated_and_sym_view :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"remove-deprecated",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.symbols.remove.deprecated = true
+config.symbols.remove.where = function(sym)
+  return sym.deprecated and sym.kind == "const"
+end
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect(t, policy.remove_deprecated)
+	testing.expect(t, policy.has_remove_where)
+	// where reads sym.deprecated from the view.
+	testing.expect(t, policy_remove_where(&policy, Symbol_Context{name = "OLD", default_name = "OLD", kind = .Const, deprecated = true}))
+	testing.expect(t, !policy_remove_where(&policy, Symbol_Context{name = "old_fn", default_name = "old_fn", kind = .Func, deprecated = true}))
+	testing.expect(t, !policy_remove_where(&policy, Symbol_Context{name = "OLD", default_name = "OLD", kind = .Const, deprecated = false}))
+}
+
+@(test)
 test_policy_require_sibling_module :: proc(t: ^testing.T) {
 	dir := "/tmp/h2odin-policy-test-sibling-dir"
 	_ = os.make_directory(dir)
