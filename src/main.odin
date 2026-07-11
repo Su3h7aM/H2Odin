@@ -52,8 +52,12 @@ main :: proc() {
 		os.exit(1)
 	}
 
+	include_paths, includes_ok := resolve_path_list(policy.include_paths, policy.config_dir)
+	if !includes_ok {
+		os.exit(1)
+	}
 	preprocess := Extract_Preprocess {
-		include_paths = resolve_path_list(policy.include_paths, policy.config_dir),
+		include_paths = include_paths,
 		defines       = policy.defines,
 	}
 
@@ -239,32 +243,43 @@ resolve_input_headers :: proc(policy: ^Policy) -> (headers: []string, ok: bool) 
 	}
 	out := make([]string, len(policy.inputs))
 	for path, i in policy.inputs {
-		out[i] = resolve_path(path, policy.config_dir)
+		resolved, path_ok := resolve_path(path, policy.config_dir)
+		if !path_ok {
+			return nil, false
+		}
+		out[i] = resolved
 	}
 	return out, true
 }
 
-resolve_path_list :: proc(paths: []string, base_dir: string) -> []string {
+resolve_path_list :: proc(paths: []string, base_dir: string) -> (out: []string, ok: bool) {
 	if len(paths) == 0 {
-		return nil
+		return nil, true
 	}
-	out := make([]string, len(paths))
+	out = make([]string, len(paths))
 	for path, i in paths {
-		out[i] = resolve_path(path, base_dir)
+		resolved, path_ok := resolve_path(path, base_dir)
+		if !path_ok {
+			return nil, false
+		}
+		out[i] = resolved
 	}
-	return out
+	return out, true
 }
 
 // Absolute paths stay as-is; relative paths join base_dir when non-empty.
-resolve_path :: proc(path: string, base_dir: string) -> string {
+// Join failure is fatal — a silent cwd-relative fallback can pick the wrong
+// header or output dir (see ROADMAP Code health).
+resolve_path :: proc(path: string, base_dir: string) -> (resolved: string, ok: bool) {
 	if path == "" || filepath.is_abs(path) || base_dir == "" {
-		return path
+		return path, true
 	}
 	joined, err := filepath.join({base_dir, path})
 	if err != nil {
-		return path
+		fmt.eprintfln("h2odin: cannot join path %q with base %q: %v", path, base_dir, err)
+		return "", false
 	}
-	return joined
+	return joined, true
 }
 
 write_emit_result :: proc(result: Emit_Result, policy: ^Policy, destination: Output_Destination) -> bool {
@@ -296,7 +311,10 @@ write_emit_to_stdout :: proc(result: Emit_Result, policy: ^Policy) -> bool {
 
 write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> bool {
 	// Relative output_folder resolves against the config directory (same as inputs).
-	output_folder := resolve_path(policy.output_folder, policy.config_dir)
+	output_folder, folder_ok := resolve_path(policy.output_folder, policy.config_dir)
+	if !folder_ok {
+		return false
+	}
 
 	if output_folder == "" {
 		fmt.eprintln("h2odin: no config.output_folder set; set it in the Lua config or use -destination:stdout")
@@ -342,8 +360,7 @@ load_footer :: proc(policy: ^Policy, stem: string) -> string {
 		}
 		return string(data)
 	}
-	output_folder := resolve_path(policy.output_folder, policy.config_dir)
-	if output_folder != "" {
+	if output_folder, folder_ok := resolve_path(policy.output_folder, policy.config_dir); folder_ok && output_folder != "" {
 		if p, err := filepath.join({output_folder, name}); err == nil {
 			if s := try_read(p); s != "" {
 				return s

@@ -316,10 +316,10 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       so `{ "a.h", typo = "b.h" }` passes silently. Validate every key as a
       dense 1..n integer index, and consolidate the two near-duplicate
       parsers while there.
-- [ ] **`resolve_path` silently falls back on join failure**
+- [x] **`resolve_path` silently falls back on join failure**
       (`src/main.odin`): a config-relative path degrades to cwd-relative,
-      which can select the wrong header or output dir. Propagate the error
-      with both path components in the message.
+      which can select the wrong header or output dir. Fixed: join failure
+      is fatal and reports both path components; callers propagate `ok`.
 - [ ] **Multi-file output is not transactional.**
       `write_emit_to_config_folder` writes in sequence, so a mid-run failure
       leaves a mixed generation, and files from since-removed headers are
