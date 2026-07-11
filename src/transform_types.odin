@@ -57,6 +57,21 @@ apply_opaque_handles :: proc(ir: ^IR, policy: ^Policy) {
 				Type_Info{variant = Type_Idiomatic_Leaf{original = td.aliased, spelling = SPELLING_DISTINCT_RAWPTR, reason = .Opaque_Handle}},
 			)
 			changed = true
+			continue
+		}
+
+		// Pure `typedef void Name` (curl's CURL, miniaudio's ma_data_source):
+		// a common C opaque-handle idiom where the typedef names an incomplete
+		// type. Emit as `Name :: distinct rawptr` — references via
+		// Type_Typedef_Ref already use the name, and `Name *` becomes `^Name`
+		// naturally. No pointer level is collapsed (unlike incomplete-tag
+		// handles) because the void typedef has no separate record to peel.
+		if type_is_void_builtin(ir, td.aliased) {
+			td.aliased = ir_add_type(
+				ir,
+				Type_Info{variant = Type_Idiomatic_Leaf{original = td.aliased, spelling = SPELLING_DISTINCT_RAWPTR, reason = .Opaque_Handle}},
+			)
+			changed = true
 		}
 	}
 
@@ -102,6 +117,14 @@ type_is_rawptr :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 		return variant.spelling == SPELLING_RAWPTR
 	}
 	return false
+}
+
+// True when the type is a bare C void builtin — not a void pointer (that is
+// a lowered rawptr). Used to detect the `typedef void Name` opaque-handle
+// idiom that must emit as `distinct rawptr`, never as the unspellable void.
+type_is_void_builtin :: proc(ir: ^IR, handle: Type_Handle) -> bool {
+	builtin, is_builtin := ir_type(ir, handle).variant.(Type_Builtin)
+	return is_builtin && builtin.kind == .Void
 }
 
 // Spec 0007: incomplete tag records may emit as handle style

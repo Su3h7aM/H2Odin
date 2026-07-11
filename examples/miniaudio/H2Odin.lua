@@ -23,15 +23,4 @@ config.naming = {
 	},
 }
 
--- WORKAROUND: pure `typedef void ma_*;` panics emission (same as curl).
--- Drop those opaque tags so generation can finish; uses become rawptr-ish.
--- Tracked on ROADMAP — not a proper opaque-handle solution.
-config.symbols.remove.names = {
-	"ma_resampling_backend",
-	"ma_data_source",
-	"ma_async_notification",
-	"ma_vfs",
-	"ma_node",
-}
-
 return config

@@ -1132,6 +1132,43 @@ test_verbose_diagnostics_include_guidance :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_void_opaque_typedef_emits_distinct_rawptr :: proc(t: ^testing.T) {
+	// Pure `typedef void Name` (curl's CURL, miniaudio's ma_data_source) is
+	// a common C opaque-handle idiom. The typedef names an incomplete type;
+	// the API only passes `Name *`. Generation must not panic, and the
+	// typedef should emit `Name :: distinct rawptr` with all references
+	// (direct, callback typedef, record field) resolving to ^Name.
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/void_opaque.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "CURL :: distinct rawptr")
+	expect_contains(t, stdout, "CURLM :: distinct rawptr")
+	// Direct use: return type and parameter.
+	expect_contains(t, stdout, "curl_easy_init :: proc() -> ^CURL")
+	expect_contains(t, stdout, "curl_easy_cleanup :: proc(handle: ^CURL)")
+	// Callback typedef references the opaque name.
+	expect_contains(t, stdout, "^CURL")
+	// Record field references the opaque name.
+	expect_contains(t, stdout, "easy: ^CURL")
+
+	// odin check: the generated package must be valid Odin.
+	out_dir := "/tmp/h2odin-void-opaque"
+	_ = os.remove_all(out_dir)
+	testing.expect_value(t, os.make_directory_all(out_dir), nil)
+	testing.expect_value(t, os.write_entire_file("/tmp/h2odin-void-opaque/generated.odin", stdout), nil)
+	check_cmd := [?]string{"odin", "check", out_dir, "-no-entry-point"}
+	check_stdout, check_stderr, check_ok := run_h2odin(t, check_cmd[:])
+	defer delete(check_stdout)
+	defer delete(check_stderr)
+	testing.expect(t, check_ok)
+}
+
+@(test)
 test_project_dir_missing_h2odin_lua_fails :: proc(t: ^testing.T) {
 	proj := "/tmp/h2odin-empty-project"
 	_ = os.remove_all(proj)

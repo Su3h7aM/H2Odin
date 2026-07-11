@@ -24,13 +24,4 @@ config.naming = {
 	},
 }
 
--- WORKAROUND (do not treat as a fix): pure `typedef void CURL;` / CURLM /
--- CURLSH panic emission ("void type has no ABI spelling"). Dropping the
--- typedef decls lets uses peel toward void* → rawptr. Tracked on ROADMAP.
-config.symbols.remove.names = {
-	"CURL",
-	"CURLSH",
-	"CURLM",
-}
-
 return config
