@@ -270,24 +270,31 @@ enum_backing_is_unsigned :: proc(ir: ^IR, backing: Type_Handle) -> bool {
 // forward declaration (or a first mention inside another type) are completed
 // later when the definition shows up.
 record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
+	// libclang gives every anonymous union/struct nested in the same parent
+	// the same USR (e.g. c:@S@Node@Ua for both unions in a TreeNode). Sharing
+	// by USR would collapse distinct layouts into one IR decl — Box3D's
+	// TreeNode is the dogfood case. Anonymous records are never shared.
+	is_anonymous := clang.cursor_is_anonymous(cursor) != 0
 	usr := clone_clang_string(clang.get_cursor_usr(cursor))
-	if ref, found := state.decl_map[usr]; usr != "" && found {
-		handle := Decl_Handle(ref.index)
-		if state.ir.records[int(handle)].doc == "" {
-			state.ir.records[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
-		}
-		// Definition may carry the attribute when the forward decl did not.
-		if !state.ir.records[int(handle)].deprecated {
-			state.ir.records[int(handle)].deprecated, state.ir.records[int(handle)].deprecated_message = cursor_deprecation(cursor)
-		}
-		if clang.is_cursor_definition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
-			// Definition becomes home when it lands in a configured input.
-			if home := cursor_home(state, cursor); home != 0 {
-				state.ir.records[int(handle)].home = home
+	if !is_anonymous {
+		if ref, found := state.decl_map[usr]; usr != "" && found {
+			handle := Decl_Handle(ref.index)
+			if state.ir.records[int(handle)].doc == "" {
+				state.ir.records[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 			}
-			fill_record(state, handle, cursor)
+			// Definition may carry the attribute when the forward decl did not.
+			if !state.ir.records[int(handle)].deprecated {
+				state.ir.records[int(handle)].deprecated, state.ir.records[int(handle)].deprecated_message = cursor_deprecation(cursor)
+			}
+			if clang.is_cursor_definition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
+				// Definition becomes home when it lands in a configured input.
+				if home := cursor_home(state, cursor); home != 0 {
+					state.ir.records[int(handle)].home = home
+				}
+				fill_record(state, handle, cursor)
+			}
+			return handle
 		}
-		return handle
 	}
 
 	record := Record_Decl {
@@ -296,13 +303,15 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	}
 	// Anonymous records keep "" as their name: recent libclang spells them
 	// as "struct (unnamed at file:line)", which is a description, not a name.
-	if clang.cursor_is_anonymous(cursor) == 0 {
+	if !is_anonymous {
 		record.name = clone_clang_string(clang.get_cursor_spelling(cursor))
 	}
 	record.deprecated, record.deprecated_message = cursor_deprecation(cursor)
 	record.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
 	handle := ir_add_record(state.ir, record)
-	if usr != "" {
+	// Only named records enter decl_map. Anonymous ones must not: shared USRs
+	// would alias distinct nested types (see is_anonymous note above).
+	if !is_anonymous && usr != "" {
 		state.decl_map[usr] = Decl_Ref {
 			kind  = .Record,
 			index = u32(handle),

@@ -115,6 +115,67 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_extract_distinct_anonymous_unions_in_one_record :: proc(t: ^testing.T) {
+	// libclang assigns the same USR to every anonymous union in a parent
+	// (c:@S@Parent@Ua). Extraction must still create two layouts.
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	// Write a tiny header into the arena path… use the tests fixture.
+	ir: IR
+	ir_init(&ir)
+	// Inline path: tests/fixtures is preferred; create if missing via /tmp no —
+	// use extract on a dedicated fixture file added next to this test.
+	ok := extract({"tests/fixtures/anon_unions.h"}, &ir)
+	testing.expect(t, ok)
+	if !ok {
+		return
+	}
+
+	found := false
+	for record in ir.records {
+		if record.name != "Node" {
+			continue
+		}
+		found = true
+		// x + 2 anonymous unions + height
+		testing.expect_value(t, len(record.fields), 4)
+		if len(record.fields) < 4 {
+			break
+		}
+		// Fields 1 and 2 are the anonymous unions — distinct type handles.
+		testing.expect(t, record.fields[1].type != record.fields[2].type)
+		u1 := ir_type(&ir, record.fields[1].type)
+		u2 := ir_type(&ir, record.fields[2].type)
+		r1, ok1 := u1.variant.(Type_Record_Ref)
+		r2, ok2 := u2.variant.(Type_Record_Ref)
+		testing.expect(t, ok1 && ok2)
+		if ok1 && ok2 {
+			testing.expect(t, r1.decl != r2.decl)
+			testing.expect_value(t, ir.records[r1.decl].is_union, true)
+			testing.expect_value(t, ir.records[r2.decl].is_union, true)
+			// First union: children + userData; second: parent + next.
+			testing.expect_value(t, len(ir.records[r1.decl].fields), 2)
+			testing.expect_value(t, len(ir.records[r2.decl].fields), 2)
+			if len(ir.records[r1.decl].fields) == 2 {
+				testing.expect_value(t, ir.records[r1.decl].fields[0].name, "children")
+			}
+			if len(ir.records[r2.decl].fields) == 2 {
+				testing.expect_value(t, ir.records[r2.decl].fields[0].name, "parent")
+			}
+		}
+		break
+	}
+	testing.expect(t, found)
+}
+
+@(test)
 test_extract_unsigned_enum_member_values :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)
