@@ -314,13 +314,13 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       Fixed by nil-ing `math.random` / `math.randomseed` after `open_math`
       while leaving pure helpers (`abs`, `floor`, …) available.
 - [ ] **Portability — `require` sandbox path check is lexical on Windows.**
-      On Linux, `filepath.abs` resolves symlinks through an fd (verified: a
-      symlink escaping the config dir is rejected) — pin that load-bearing
-      behavior with a test so a `core:os` change can't silently regress it.
-      On Windows, `GetFullPathNameW` is purely lexical, so a symlink/junction
-      could escape. `path_is_under` now accepts descendants of roots that end
-      with a separator (including `/`); remaining gap is case-insensitive
-      volume comparison on Windows.
+      **Low priority** (Linux-first project). On Linux, `filepath.abs` resolves
+      symlinks through an fd (verified: a symlink escaping the config dir is
+      rejected) — pin that load-bearing behavior with a test so a `core:os`
+      change can't silently regress it. On Windows, `GetFullPathNameW` is
+      purely lexical, so a symlink/junction could escape; case-insensitive
+      volume comparison is also open. `path_is_under` already accepts
+      descendants of roots that end with a separator (including `/`).
 - [x] **Dead diagnostic — `naming_ambiguity` cannot fire.**
       Equal-length key collisions were unreachable (`known_tokens` map keys
       are unique). Fixed by detecting competing segmentations: when longest
@@ -369,10 +369,11 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
       Fixed: when the enum backing is unsigned, capture via
       `get_enum_constant_decl_unsigned_value` and store the bit pattern as
       `i64` (emission already reinterprets with `u64` for unsigned backings).
-- [x] **Calling-convention capture.**
+- [x] **Calling-convention capture and emission.**
       Extraction records libclang's calling-convention fact in the IR.
-      Emission and target-sensitive validation remain open and are tracked in
-      Milestone 16.
+      Emission maps supported conventions for direct procs and procedure types;
+      unsupported/unknown non-default values diagnose
+      `unsupported_calling_conv` (Milestone 16 P0).
 - [x] **Flaky e2e observed (2026-07-11):**
       `test_opaque_tags_idiomatic_default_handle` once failed all four
       `expect_contains` under the multi-thread runner (empty/truncated stdout;
@@ -576,12 +577,13 @@ Land as a short stack (not one commit):
       surface (array params like `CXUnsavedFile *` as `^Unsaved_File`,
       out-params, …). Spec 0002 scoped self-host to Extraction's needs; this
       is the follow-up polish.
-- [ ] Borrowed output-slice wrappers after policy has an explicit lifetime
-      vocabulary (spec 0011).
-- [ ] Struct pointer/count folding after a whole-record layout proof exists
-      (spec 0011).
-- [ ] Generic string wrappers only after allocation, ownership, and return
-      lifetime contracts are specified.
+- [x] **Borrowed output slices / field ptr+count folds / generic string
+      wrappers — out of generator scope.** Spec 0011 deferred these behind
+      lifetime, layout-proof, and ownership contracts. A unified contract
+      design proved too complex for the gain; leave them to hand-written Odin
+      (`output.footer_per_header` / same-package files). Generator keeps
+      `cstring` at the FFI surface and M6 wrappers only (out-param results +
+      input slices).
 - [ ] Multi-target runs (generate per target, merge).
 - [ ] A license.
 

@@ -175,13 +175,16 @@ statements, imports, and output text.
 
 ## Bugs and inconsistencies identified
 
-1. `Calling_Conv` is extracted for procedures and callback types, but
-   `write_type` and `emit_func` always write `"c"`. The IR comment acknowledges
-   that emission is pending.
-2. The existing single-library configuration cannot represent the official
-   packages' target-specific static/shared/system dependencies.
-3. Spec 0010 deliberately defers Windows foreign-type emission, leaving close
-   curl/platform parity Unix-only.
+Status notes below reflect the code as of 2026-07-12 (M16 + M6 closed); the
+numbered list is the original review inventory.
+
+1. ~~`Calling_Conv` always emitted `"c"`.~~ **Fixed (M16 P0):** emission maps
+   supported conventions; unsupported non-default values diagnose.
+2. ~~Single-library config could not express target-specific linkage.~~
+   **Fixed (M16 P1):** `foreign.targets` + `when` emission.
+3. Spec 0010 deliberately defers full Windows foreign-type coverage beyond the
+   defining-package mappings already landed; remaining curl/platform parity is
+   Unix-first.
 4. `docs/type-modes.md` previously said a full slice could be selected as
    pointer lowering. A slice is two words and requires a wrapper; the document
    now distinguishes `[^]T` from `[]T`.
@@ -191,18 +194,20 @@ statements, imports, and output text.
 6. The vendor audit described curl/miniaudio as current failures after those
    failures had been fixed. It is now explicitly marked as a historical
    discovery record.
-7. The roadmap called Milestone 15 the current priority after its exit gate was
-   complete. Milestone 16 is now the next priority.
+7. ~~Roadmap still prioritized M15 after its gate.~~ **Superseded:** M15, M16,
+   and M6 (wrappers) are complete; residual work is under Later / code health.
 8. The old Milestone 6 included generic `cstring -> string` conversion without
-   an allocation/lifetime contract. It is removed from the initial wrapper set.
-9. `naming_ambiguity` was unreachable under equal-length key counting; it now
-   fires on competing known-token segmentations (see code health / naming).
-10. Multi-file output remains non-transactional and stale generated files are
-    not tracked.
-11. The clang resource directory comes from `clang` on `PATH`, which may not
-    match the linked libclang.
+   an allocation/lifetime contract. It remains out of the closed wrapper set
+   (see `docs/research/idiomatic-conversion-tradeoffs-2026-07-12.md`).
+9. ~~`naming_ambiguity` unreachable under equal-length key counting.~~
+   **Fixed:** competing known-token segmentations.
+10. ~~Multi-file output non-transactional / no stale tracking.~~ **Fixed (M16):**
+    stage dir, atomic rename, `.h2odin-generated` manifest.
+11. ~~Clang resource dir only from `PATH`.~~ **Fixed (M16 P0):** override via
+    config/CLI; verbose prints linked libclang version and selected dir.
+    Default may still query the driver on PATH when unset.
 12. Policy callbacks still contain deep `os.exit` paths that skip top-level
-    cleanup and reduce negative-path testability.
+    cleanup and reduce negative-path testability (open, code health).
 
 ## Prioritized implementation plan
 
