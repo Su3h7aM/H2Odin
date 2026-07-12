@@ -8,16 +8,36 @@ write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic:
 		if i > 0 {
 			strings.write_string(b, ", ")
 		}
-		if param.name != "" {
+		if param.by_ptr {
+			// #by_ptr name: T — peels one single-pointer level (idiomatic only).
+			strings.write_string(b, "#by_ptr ")
+			if param.name != "" {
+				fmt.sbprintf(b, "%s: ", param.name)
+			} else {
+				strings.write_string(b, "_: ")
+			}
+			if lowered, ok := ir_type(ir, param.type).variant.(Type_Lowered_Pointer); ok {
+				write_type(b, ir, lowered.pointee, 1, emit_comments, imports)
+			} else {
+				// Should not reach emission; fall back to full type.
+				write_type(b, ir, param.type, 1, emit_comments, imports)
+			}
+		} else if param.name != "" {
 			fmt.sbprintf(b, "%s: ", param.name)
+			if param.type_spelling != "" {
+				note_import_for_spelling(imports, param.type_spelling)
+				strings.write_string(b, param.type_spelling)
+			} else {
+				write_type(b, ir, param.type, 1, emit_comments, imports)
+			}
 		} else {
 			strings.write_string(b, "_: ")
-		}
-		if param.type_spelling != "" {
-			note_import_for_spelling(imports, param.type_spelling)
-			strings.write_string(b, param.type_spelling)
-		} else {
-			write_type(b, ir, param.type, 1, emit_comments, imports)
+			if param.type_spelling != "" {
+				note_import_for_spelling(imports, param.type_spelling)
+				strings.write_string(b, param.type_spelling)
+			} else {
+				write_type(b, ir, param.type, 1, emit_comments, imports)
+			}
 		}
 		if param.default != "" {
 			fmt.sbprintf(b, " = %s", param.default)

@@ -262,6 +262,9 @@ Param :: struct {
 	type_spelling: string,
 	// Non-empty: emit as a default argument expression (procs.param).
 	default:       string,
+	// Idiomatic-only: emit `#by_ptr name: T` for a single data pointer param
+	// (pointee spelling). Explicit policy only — never inferred from const.
+	by_ptr:        bool,
 	facts:         Param_Facts,
 }
 

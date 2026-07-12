@@ -220,7 +220,7 @@ policy_proc_param_action :: proc(policy: ^Policy, proc_name, param_name, type_sp
 		os.exit(1)
 	}
 	defer lua.pop(L, 2)
-	return policy_read_member_action_result(L, "procs.param", param_name, allow_tag = false, allow_default = true, allow_pointer = true)
+	return policy_read_member_action_result(L, "procs.param", param_name, allow_tag = false, allow_default = true, allow_pointer = true, allow_by_ptr = true)
 }
 
 // procs.result(result) → nil | { type? }
@@ -253,6 +253,7 @@ policy_read_member_action_result :: proc(
 	allow_tag: bool,
 	allow_default: bool,
 	allow_pointer := false,
+	allow_by_ptr := false,
 ) -> (
 	action: Member_Action,
 	decided: bool,
@@ -274,6 +275,9 @@ policy_read_member_action_result :: proc(
 	}
 	if allow_pointer {
 		append(&allowed, "pointer")
+	}
+	if allow_by_ptr {
+		append(&allowed, "by_ptr")
 	}
 	// Only allow known keys on the action table.
 	lua.pushnil(L)
@@ -332,7 +336,17 @@ policy_read_member_action_result :: proc(
 		}
 		lua.pop(L, 1)
 	}
-	if action.type == "" && action.tag == "" && action.default == "" && action.pointer == "" {
+	if allow_by_ptr {
+		if lua.getfield(L, -1, "by_ptr"); !lua.isnil(L, -1) {
+			if lua.type(L, -1) != .BOOLEAN {
+				user_errorf("h2odin: config %s for %q: by_ptr must be a boolean", callback_path, subject)
+				os.exit(1)
+			}
+			action.by_ptr = bool(lua.toboolean(L, -1))
+		}
+		lua.pop(L, 1)
+	}
+	if action.type == "" && action.tag == "" && action.default == "" && action.pointer == "" && !action.by_ptr {
 		return {}, false
 	}
 	return action, true

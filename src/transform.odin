@@ -46,7 +46,7 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 
 	// Signature/layout spellings before naming so map keys still use C names.
 	apply_struct_adjustments(ir, policy)
-	apply_proc_adjustments(ir, policy)
+	apply_proc_adjustments(ir, policy, mode)
 
 	filter_declarations(ir, policy)
 	apply_renames(ir, policy)

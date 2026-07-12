@@ -524,7 +524,7 @@ Land as a short stack (not one commit):
       use it for array parameters proven by declaration shape or explicit policy.
 - [x] Add policy-controlled `require_results`; use block-level emission only
       when every procedure in that block shares the setting.
-- [ ] Add idiomatic-only, explicit `#by_ptr` with non-null/call-borrowed policy;
+- [x] Add idiomatic-only, explicit `#by_ptr` with non-null/call-borrowed policy;
       never infer it from `const T *` alone.
 - [ ] Curate the five vendor examples against recurring patterns and record
       declaration-level parity metrics separately from helper/module counts.

@@ -52,7 +52,8 @@ apply_member_action_to_field :: proc(field: ^Field, action: Member_Action) {
 }
 
 // procs.params → procs.param; procs.results → procs.result; require_results.
-apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy) {
+// mode gates idiomatic-only features (by_ptr).
+apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy, mode: Type_Mode = .ABI) {
 	has_params := policy.proc_params != nil && len(policy.proc_params) > 0
 	has_results := policy.proc_results != nil && len(policy.proc_results) > 0
 	has_req := len(policy.require_results) > 0
@@ -73,13 +74,13 @@ apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy) {
 				key := fmt.tprintf("%s.%s", fn.name, key_name)
 				if has_params {
 					if action, ok := policy.proc_params[key]; ok {
-						apply_member_action_to_param(&param, action, ir)
+						apply_member_action_to_param(&param, action, ir, mode, fn.name)
 					}
 				}
 				if policy.has_proc_param {
 					view_type := type_name_for_view(ir, param.type)
 					if action, decided := policy_proc_param_action(policy, fn.name, param.name, view_type); decided {
-						apply_member_action_to_param(&param, action, ir)
+						apply_member_action_to_param(&param, action, ir, mode, fn.name)
 					}
 				}
 			}
@@ -106,7 +107,7 @@ apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy) {
 	}
 }
 
-apply_member_action_to_param :: proc(param: ^Param, action: Member_Action, ir: ^IR) {
+apply_member_action_to_param :: proc(param: ^Param, action: Member_Action, ir: ^IR, mode: Type_Mode = .ABI, proc_name: string = "") {
 	if action.type != "" {
 		param.type_spelling = action.type
 	}
@@ -126,6 +127,30 @@ apply_member_action_to_param :: proc(param: ^Param, action: Member_Action, ir: ^
 			)
 		}
 	}
+	if action.by_ptr {
+		apply_param_by_ptr(ir, param, mode, proc_name)
+	}
+}
+
+// Idiomatic-only #by_ptr: peels one single-pointer level at emission.
+// Never inferred from C const; explicit policy only (spec 0011).
+apply_param_by_ptr :: proc(ir: ^IR, param: ^Param, mode: Type_Mode, proc_name: string) {
+	pname := param.name if param.name != "" else "_"
+	scope := fmt.tprintf("%s.%s", proc_name, pname) if proc_name != "" else pname
+	if mode != .Idiomatic {
+		ir_diag(ir, .Pointer_Lowering_Guess, "procs.params by_ptr ignored for %s: #by_ptr is idiomatic-only (type_mode = \"idiomatic\")", scope)
+		return
+	}
+	if param.type_spelling != "" {
+		ir_diag(ir, .Pointer_Lowering_Guess, "procs.params by_ptr ignored for %s: cannot combine with an explicit type spelling", scope)
+		return
+	}
+	lowered, is_ptr := ir_type(ir, param.type).variant.(Type_Lowered_Pointer)
+	if !is_ptr || lowered.kind != .Single {
+		ir_diag(ir, .Pointer_Lowering_Guess, "procs.params by_ptr ignored for %s: type is not a single data pointer (^T)", scope)
+		return
+	}
+	param.by_ptr = true
 }
 
 // Best-effort type name for callback views — named refs only; complex types

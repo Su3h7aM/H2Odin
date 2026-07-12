@@ -501,10 +501,10 @@ remain invariant:
 - A user who wants an ergonomic layer beyond that closed set writes it as ordinary hand-written Odin on top of the raw bindings. That is what `output.footer_per_header` exists to make pleasant.
 - `procs.wrappers` is rejected unless `type_mode = "idiomatic"`; ABI mode never emits a procedure body.
 
-`pointer = "multi"` and `require_results` are implemented (array-parameter
-decay also selects `[^]T` automatically; block-level `@(require_results)`
-when every proc in the foreign block is listed). `by_ptr` and
-`procs.wrappers` land with later P2 / Milestone 6 work.
+`pointer = "multi"`, `require_results`, and idiomatic `by_ptr = true` are
+implemented (array-parameter decay also selects `[^]T`; block-level
+`@(require_results)` when every proc in the foreign block is listed).
+`procs.wrappers` is Milestone 6.
 
 ---
 

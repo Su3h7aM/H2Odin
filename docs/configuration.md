@@ -77,8 +77,8 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `structs.fields` | `"Struct.field"` → `{ type?, tag? }` | field type spelling and/or tag |
 | `structs.field` | `function(field) → nil\|{type?,tag?}` | same, as a callback |
 | `structs.align` | string → positive int | `#align(N)` on a named struct |
-| `procs.params` | `"Proc.param"` → `{ type?, default?, pointer? }` | raw foreign param type spelling and/or default; `pointer = "multi"` selects ABI-identical `[^]T`. Does not create a wrapper |
-| `procs.param` | `function(param) → nil\|{type?,default?,pointer?}` | same, as a callback |
+| `procs.params` | `"Proc.param"` → `{ type?, default?, pointer?, by_ptr? }` | raw foreign param type spelling and/or default; `pointer = "multi"` → `[^]T`; `by_ptr = true` → `#by_ptr` (idiomatic only). Does not create a wrapper |
+| `procs.param` | `function(param) → nil\|{type?,default?,pointer?,by_ptr?}` | same, as a callback |
 | `procs.results` | `"Proc"` → `{ type? }` | return type spelling |
 | `procs.result` | `function(result) → nil\|{type?}` | same, as a callback |
 | `procs.require_results` | list of C proc names | `@(require_results)` on those foreign procs; block-level attribute when every proc in the foreign block is listed |

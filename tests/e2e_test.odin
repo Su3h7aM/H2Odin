@@ -1250,6 +1250,22 @@ test_calling_conv_supported_emits_stdcall_and_callback_types :: proc(t: ^testing
 }
 
 @(test)
+test_by_ptr_idiomatic_param :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/by_ptr.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	expect_contains(t, stdout, "create :: proc(#by_ptr options: Options)")
+	// Unconfigured bare pointer stays ^T.
+	expect_contains(t, stdout, "bare :: proc(p: ^")
+	expect_not_contains(t, stdout, "#by_ptr p:")
+	check_generated_output(t, stdout, "/tmp/h2odin-by-ptr")
+}
+
+@(test)
 test_require_results_block_attr :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/require_results.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])

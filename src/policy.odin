@@ -104,6 +104,8 @@ Member_Action :: struct {
 	default: string, // procs only
 	// procs only: "" | "multi" — foreign multipointer [^]T (ABI-identical).
 	pointer: string,
+	// procs only, idiomatic mode: emit #by_ptr (call-borrowed non-null).
+	by_ptr:  bool,
 }
 
 // config.output.layout — closed enum; unknown strings fail config loading.

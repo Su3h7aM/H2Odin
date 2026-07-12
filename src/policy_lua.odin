@@ -103,6 +103,7 @@ policy_member_action_map :: proc(
 	allow_tag: bool,
 	allow_default: bool,
 	allow_pointer := false,
+	allow_by_ptr := false,
 ) -> (
 	result: map[string]Member_Action,
 	ok: bool,
@@ -144,6 +145,9 @@ policy_member_action_map :: proc(
 		if allow_pointer {
 			append(&allowed, "pointer")
 		}
+		if allow_by_ptr {
+			append(&allowed, "by_ptr")
+		}
 		if !policy_reject_unknown_subkeys(L, fmt.tprintf("%s.%s[]", parent_name, key), allowed[:]) {
 			lua.pop(L, 2)
 			return nil, false
@@ -184,8 +188,16 @@ policy_member_action_map :: proc(
 			}
 			action.pointer = ptr_s
 		}
-		if action.type == "" && action.tag == "" && action.default == "" && action.pointer == "" {
-			user_errorf("h2odin: config: %s.%s[%q] must set at least one of type/tag/default/pointer", parent_name, key, map_key)
+		if allow_by_ptr {
+			by, by_ok := policy_optional_bool_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "by_ptr")
+			if !by_ok {
+				lua.pop(L, 2)
+				return nil, false
+			}
+			action.by_ptr = by
+		}
+		if action.type == "" && action.tag == "" && action.default == "" && action.pointer == "" && !action.by_ptr {
+			user_errorf("h2odin: config: %s.%s[%q] must set at least one of type/tag/default/pointer/by_ptr", parent_name, key, map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
@@ -193,6 +205,23 @@ policy_member_action_map :: proc(
 		lua.pop(L, 1)
 	}
 	return result, true
+}
+
+// Optional boolean field on the table at stack top. Absent/nil → false.
+policy_optional_bool_field :: proc(L: ^lua.State, table_name: string, field_key: cstring) -> (value: bool, ok: bool) {
+	field_type := lua.getfield(L, -1, field_key)
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return false, true
+	}
+	if field_type != c.int(lua.Type.BOOLEAN) {
+		user_errorf("h2odin: config: %s.%s must be a boolean", table_name, field_key)
+		lua.pop(L, 1)
+		return false, false
+	}
+	value = bool(lua.toboolean(L, -1))
+	lua.pop(L, 1)
+	return value, true
 }
 
 // string → int map nested under parent (at stack top).
