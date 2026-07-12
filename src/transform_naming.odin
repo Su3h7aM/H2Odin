@@ -54,6 +54,8 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", false); decided {
 				decl.name = new_name
 			}
+		case .Wrapper:
+		// Wrappers are materialized after renames with final public names.
 		}
 	}
 

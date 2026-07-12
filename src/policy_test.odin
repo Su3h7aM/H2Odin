@@ -101,6 +101,67 @@ return config
 }
 
 @(test)
+test_policy_load_proc_wrappers :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"proc-wrappers",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.type_mode = "idiomatic"
+config.inputs = { "a.h" }
+config.procs.wrappers = {
+  parse = h2o.proc.wrapper { out_params = { "out_data" } },
+  consume = h2o.proc.wrapper {
+    slices = { { pointer = "items", count = "count", name = "items" } },
+  },
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, len(policy.proc_wrappers), 2)
+	parse_rule := policy.proc_wrappers["parse"]
+	testing.expect_value(t, len(parse_rule.out_params), 1)
+	testing.expect_value(t, parse_rule.out_params[0], "out_data")
+	testing.expect(t, parse_rule.keep_c_return)
+	consume_rule := policy.proc_wrappers["consume"]
+	testing.expect_value(t, len(consume_rule.slices), 1)
+	testing.expect_value(t, consume_rule.slices[0].pointer, "items")
+	testing.expect_value(t, consume_rule.slices[0].count, "count")
+	testing.expect_value(t, consume_rule.slices[0].name, "items")
+}
+
+@(test)
+test_policy_load_rejects_wrappers_in_abi_mode :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"wrappers-abi",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.type_mode = "abi"
+config.inputs = { "a.h" }
+config.procs.wrappers = {
+  parse = h2o.proc.wrapper { out_params = { "out_data" } },
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
 test_policy_load_foreign_targets :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(
 		t,

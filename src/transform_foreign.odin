@@ -433,7 +433,7 @@ scan_ordered_type_uses :: proc(
 		case .Var:
 			v := ir.vars[ref.index]
 			scan_type_use(ir, v.type, true, home, by_value, referenced, referrer_home)
-		case .Macro, .Bit_Set:
+		case .Macro, .Bit_Set, .Wrapper:
 		}
 	}
 }

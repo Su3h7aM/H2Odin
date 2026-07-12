@@ -667,13 +667,16 @@ cgltf_data :: struct {
 @(link_prefix = "cgltf_")
 foreign lib {
 	@(require_results)
-	parse :: proc(#by_ptr options: cgltf_options, data: rawptr, size: cgltf_size, out_data: ^^cgltf_data) -> cgltf_result ---
+	@(link_name = "cgltf_parse")
+	_parse :: proc(#by_ptr options: cgltf_options, data: rawptr, size: cgltf_size, out_data: ^^cgltf_data) -> cgltf_result ---
 	@(require_results)
-	parse_file :: proc(#by_ptr options: cgltf_options, path: cstring, out_data: ^^cgltf_data) -> cgltf_result ---
+	@(link_name = "cgltf_parse_file")
+	_parse_file :: proc(#by_ptr options: cgltf_options, path: cstring, out_data: ^^cgltf_data) -> cgltf_result ---
 	@(require_results)
 	load_buffers :: proc(#by_ptr options: cgltf_options, data: ^cgltf_data, gltf_path: cstring) -> cgltf_result ---
 	@(require_results)
-	load_buffer_base64 :: proc(#by_ptr options: cgltf_options, size: cgltf_size, base64: cstring, out_data: ^rawptr) -> cgltf_result ---
+	@(link_name = "cgltf_load_buffer_base64")
+	_load_buffer_base64 :: proc(#by_ptr options: cgltf_options, size: cgltf_size, base64: cstring, out_data: ^rawptr) -> cgltf_result ---
 	decode_string :: proc(string: ^u8) -> cgltf_size ---
 	decode_uri :: proc(uri: ^u8) -> cgltf_size ---
 	@(require_results)
@@ -708,4 +711,21 @@ foreign lib {
 	animation_index :: proc(data: ^cgltf_data, object: ^cgltf_animation) -> cgltf_size ---
 	animation_sampler_index :: proc(animation: ^cgltf_animation, object: ^cgltf_animation_sampler) -> cgltf_size ---
 	animation_channel_index :: proc(animation: ^cgltf_animation, object: ^cgltf_animation_channel) -> cgltf_size ---
+}
+@(require_results)
+parse :: proc(#by_ptr options: cgltf_options, data: rawptr, size: cgltf_size) -> (out_data: ^cgltf_data, res: cgltf_result) {
+	res = _parse(options, data, size, &out_data)
+	return
+}
+
+@(require_results)
+parse_file :: proc(#by_ptr options: cgltf_options, path: cstring) -> (out_data: ^cgltf_data, res: cgltf_result) {
+	res = _parse_file(options, path, &out_data)
+	return
+}
+
+@(require_results)
+load_buffer_base64 :: proc(#by_ptr options: cgltf_options, size: cgltf_size, base64: cstring) -> (out_data: rawptr, res: cgltf_result) {
+	res = _load_buffer_base64(options, size, base64, &out_data)
+	return
 }

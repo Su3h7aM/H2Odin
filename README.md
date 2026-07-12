@@ -4,7 +4,7 @@ A C-header-to-Odin bindings generator, written in Odin.
 
 H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings — configured through a small but powerful Lua policy layer.
 
-> Status: usable pipeline (Milestones 0–5 + 7–16). The vendor validation corpus (nine examples, including ggml) regenerates and `odin check`s green via `./scripts/validate-examples`. Milestone 6 adds the bounded idiomatic wrapper set from spec 0011.
+> Status: usable pipeline (Milestones 0–5 + 6–16). The vendor validation corpus (nine examples, including ggml) regenerates and `odin check`s green via `./scripts/validate-examples`. Idiomatic wrappers (`procs.wrappers`) cover out-parameter results and pointer+count input slices per spec 0011.
 
 ---
 

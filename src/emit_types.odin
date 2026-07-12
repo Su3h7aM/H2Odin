@@ -291,7 +291,7 @@ report_unsupported_calling_conventions :: proc(ir: ^IR) {
 	seen_types := make(map[Type_Handle]bool, context.temp_allocator)
 	for ref in ir.order {
 		switch ref.kind {
-		case .Invalid, .Macro, .Bit_Set:
+		case .Invalid, .Macro, .Bit_Set, .Wrapper:
 		case .Func:
 			func := ir.funcs[ref.index]
 			report_unsupported_calling_conv_in_type(ir, func.return_type, &seen_types)

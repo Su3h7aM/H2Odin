@@ -240,6 +240,7 @@ Decl_Kind :: enum {
 	Var,
 	Macro,
 	Bit_Set, // named bit_set[Enum] alias produced by enum policy
+	Wrapper, // idiomatic generator-authored proc over a faithful foreign func
 }
 
 // An entry in the ordering list: which pool, and where in that pool.
@@ -432,6 +433,33 @@ Bit_Set_Decl :: struct {
 	home:         Input_Header_Handle,
 }
 
+// Out-parameter promoted to a named multi-result (peels one pointer level).
+Wrapper_Out_Param :: struct {
+	param_index: int,
+	result_name: string, // public result name (usually the param's Odin name)
+}
+
+// Pointer + count → one []T public parameter.
+Wrapper_Slice :: struct {
+	pointer_index: int,
+	count_index:   int,
+	public_name:   string,
+}
+
+// Idiomatic-only public procedure that calls a retained faithful foreign func
+// (spec 0011). Transformation plans; Emission serializes a minimal body.
+Wrapper_Decl :: struct {
+	name:            string, // public Odin name
+	target:          Decl_Handle, // ir.funcs index
+	home:            Input_Header_Handle,
+	require_results: bool,
+	out_params:      []Wrapper_Out_Param,
+	slices:          []Wrapper_Slice,
+	// Keep the C return value as a named result (default true).
+	keep_c_return:   bool,
+	doc:             string,
+}
+
 IR :: struct {
 	types:         [dynamic]Type_Info,
 	funcs:         [dynamic]Func_Decl,
@@ -441,6 +469,7 @@ IR :: struct {
 	vars:          [dynamic]Var_Decl,
 	macros:        [dynamic]Macro_Decl,
 	bit_sets:      [dynamic]Bit_Set_Decl,
+	wrappers:      [dynamic]Wrapper_Decl,
 	order:         [dynamic]Decl_Ref,
 
 	// Configured input headers in config.inputs order. Slot 0 is empty so a
@@ -517,6 +546,8 @@ ir_decl_home :: proc(ir: ^IR, ref: Decl_Ref) -> Input_Header_Handle {
 		return ir.macros[ref.index].home
 	case .Bit_Set:
 		return ir.bit_sets[ref.index].home
+	case .Wrapper:
+		return ir.wrappers[ref.index].home
 	}
 	return 0
 }
@@ -538,6 +569,8 @@ ir_set_decl_home :: proc(ir: ^IR, ref: Decl_Ref, home: Input_Header_Handle) {
 		ir.macros[ref.index].home = home
 	case .Bit_Set:
 		ir.bit_sets[ref.index].home = home
+	case .Wrapper:
+		ir.wrappers[ref.index].home = home
 	}
 }
 
@@ -645,4 +678,15 @@ ir_add_macro :: proc(ir: ^IR, decl: Macro_Decl) {
 ir_add_bit_set :: proc(ir: ^IR, decl: Bit_Set_Decl) {
 	append(&ir.bit_sets, decl)
 	append(&ir.order, Decl_Ref{kind = .Bit_Set, index = u32(len(ir.bit_sets) - 1)})
+}
+
+// Append a wrapper and return its pool index. Does not insert into order —
+// callers insert next to the target foreign decl for stable placement.
+ir_add_wrapper :: proc(ir: ^IR, decl: Wrapper_Decl) -> Decl_Handle {
+	append(&ir.wrappers, decl)
+	return Decl_Handle(len(ir.wrappers) - 1)
+}
+
+ir_add_wrapper_to_order :: proc(ir: ^IR, handle: Decl_Handle) {
+	append(&ir.order, Decl_Ref{kind = .Wrapper, index = u32(handle)})
 }

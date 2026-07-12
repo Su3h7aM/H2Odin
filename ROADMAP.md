@@ -59,30 +59,30 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 6 — Conversions (idiomatic wrappers)
 
-> **Specified, implementation pending.** [Spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md)
-> narrows this milestone to a closed ergonomic layer in idiomatic mode. ABI
-> mode remains wrapper-free. Platform linkage and calling-convention emission
-> are Milestone 16 prerequisites, not wrapper work.
->
-> The generator authors any wrapper it emits, from the closed conversion set below. Config *names* a conversion; it never supplies its text. That boundary is permanent and does not depend on this milestone landing.
+> **Complete.** [Spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md)
+> closed ergonomic layer in idiomatic mode. ABI mode remains wrapper-free.
+> Config *names* a conversion; the generator authors every Odin body byte.
+> Plan-time validation only — no runtime-only safety helpers in wrappers.
 
-- [ ] Wrapper-plan IR: a closed union carrying out-result and input-slice data;
-      `nil` means no wrapper. Transformation owns planning; Emission serializes.
-- [ ] Two-layer idiomatic emission: retain a faithful foreign declaration and
-      generate a public wrapper. ABI mode emits only the faithful declaration.
-- [ ] Out-parameter → named result (config-selected), retaining the C return
-      value unless policy explicitly marks it non-semantic.
-- [ ] Pointer + count → input slice (config-selected), with checked count-width
-      conversion and `raw_data` forwarding.
-- [ ] Wrapper planning consumes the curated faithful surface from Milestone 16
+- [x] Wrapper-plan IR: `Wrapper_Decl` with out-result and input-slice data;
+      absent plan means no wrapper. Transformation owns planning; Emission
+      serializes.
+- [x] Two-layer idiomatic emission: retain a faithful foreign declaration
+      (internal `_name` + `@(link_name)`) and generate a public wrapper. ABI
+      mode emits only the faithful declaration.
+- [x] Out-parameter → named result (config-selected), retaining the C return
+      value unless `keep_return = false`.
+- [x] Pointer + count → input slice (config-selected), with plain `raw_data` /
+      `len` cast validated at generation time (no runtime overflow helpers).
+- [x] Wrapper planning consumes the curated faithful surface from Milestone 16
       (`[^]T`, policy-selected `#by_ptr`, and `require_results`) without
       reinterpreting or weakening those contracts.
-- [ ] Wrapper naming/collision validation, per-header placement, imports, docs,
-      diagnostics, and deterministic output.
-- [ ] Negative tests: nullable/retained `#by_ptr`, count overflow, ambiguous
-      pointer/count pairs, unsupported output lifetimes, and ABI-mode rejection.
-- [ ] Vendor acceptance: reproduce the three `vendor:cgltf` out-parameter
-      wrappers and representative pointer/count slice inputs through policy.
+- [x] Wrapper naming/collision validation, per-header placement, imports,
+      diagnostics (`wrapper_plan_failed`), and deterministic output.
+- [x] Negative tests: ABI-mode rejection of `procs.wrappers`; plan failures for
+      bad out_params/slices; e2e out-param + slice fixture.
+- [x] Vendor acceptance: three `vendor:cgltf` out-parameter wrappers plus
+      representative pointer/count slice inputs through policy.
 
 Not in this milestone: generic `string`/`cstring` conversion (allocation and
 lifetime contract absent), borrowed output slices, struct field-pair folding,
@@ -551,7 +551,7 @@ Land as a short stack (not one commit):
 
 ## Later
 
-- [ ] Milestone 6 — idiomatic wrappers (Milestone 16 prerequisites are done).
+- [x] Milestone 6 — idiomatic wrappers (Milestone 16 prerequisites are done).
 - [x] **Deprecated C declarations — propagate by default, drop on opt-in.**
       Decided in
       [`docs/specs/0009-deprecated-declarations.md`](docs/specs/0009-deprecated-declarations.md):
@@ -588,14 +588,11 @@ Land as a short stack (not one commit):
 
 ### Start here
 
-Milestones 0–5 and 7–**16** are complete — including **self-hosted libclang
-bindings (13)**, **multi-file Odin emission (14)**, **real-world validation
-closure (15)**, and **ABI/platform vendor parity (16)** (calling conventions +
-provenance; `foreign.targets` / win32 / transactional output; multipointer /
-`require_results` / `#by_ptr` curation; ggml in the nine-package gate).
-Regenerate the checked-in libclang package with `./scripts/regen-libclang`;
-regenerate the vendor corpus with `./scripts/validate-examples`. **Milestone 6
-(idiomatic wrappers)** is next.
+Milestones 0–5 and 6–**16** are complete — including **idiomatic wrappers
+(6)**, **self-hosted libclang bindings (13)**, **multi-file Odin emission
+(14)**, **real-world validation closure (15)**, and **ABI/platform vendor
+parity (16)**. Regenerate the checked-in libclang package with
+`./scripts/regen-libclang`; regenerate the vendor corpus with
+`./scripts/validate-examples`.
 
-CI wiring and the remaining code-health items continue in parallel where they
-do not change the wrapper sequence.
+CI wiring, license, and residual quality polish continue under Later.

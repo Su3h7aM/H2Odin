@@ -49,7 +49,12 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	apply_proc_adjustments(ir, policy, mode)
 
 	filter_declarations(ir, policy)
+
+	// Wrapper plans key on C names; resolve before renames, materialize after
+	// so public wrapper names and param result names are final Odin spellings.
+	provisional := resolve_wrapper_plans(ir, policy, mode)
 	apply_renames(ir, policy)
+	materialize_wrapper_plans(ir, policy, provisional)
 
 	// Spec 0008: detect package/member collisions and field/param type
 	// shadowing after every rename is final. Reports only — never renames.

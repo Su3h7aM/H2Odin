@@ -69,6 +69,9 @@ h2o["enum"] = {}
 h2o["enum"].anonymous = ctor("h2o.enum.anonymous")
 h2o["enum"].bit_set = ctor("h2o.enum.bit_set")
 
+h2o.proc = {}
+h2o.proc.wrapper = ctor("h2o.proc.wrapper")
+
 -- Filled by the host with Odin-registered helpers.
 h2o.str = {}
 

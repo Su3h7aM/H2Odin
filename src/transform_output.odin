@@ -134,6 +134,8 @@ decl_ref_name :: proc(ir: ^IR, ref: Decl_Ref) -> string {
 		return ir.macros[ref.index].name
 	case .Bit_Set:
 		return ir.bit_sets[ref.index].name
+	case .Wrapper:
+		return ir.wrappers[ref.index].name
 	}
 	return ""
 }

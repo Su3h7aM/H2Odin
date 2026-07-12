@@ -405,7 +405,7 @@ force_multi_pointer :: proc(ir: ^IR, handle: Type_Handle, reason: Pointer_Loweri
 report_pointer_lowering_guesses :: proc(ir: ^IR, opaque_records: []bool = nil) {
 	for ref in ir.order {
 		switch ref.kind {
-		case .Invalid, .Macro, .Bit_Set:
+		case .Invalid, .Macro, .Bit_Set, .Wrapper:
 		case .Func:
 			decl := ir.funcs[ref.index]
 			report_type_guesses(ir, decl.return_type, fmt.tprintf("function %q return type", decl.name))

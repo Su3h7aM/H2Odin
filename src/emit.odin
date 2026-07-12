@@ -206,11 +206,21 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 				emit_macro(&types_body, ir.macros[ref.index], opts.emit_comments)
 			case .Bit_Set:
 				emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], opts.emit_comments, &imports)
+			case .Wrapper:
+			// Wrappers are ordinary Odin procs; emit after the foreign block.
+			}
+		}
+		// Second pass: wrappers after foreign (so they can call internal foreign names).
+		wrappers_body: strings.Builder
+		for ref in decls {
+			if ref.kind == .Wrapper {
+				emit_wrapper(&wrappers_body, ir, ir.wrappers[ref.index], opts.emit_comments, &imports)
 			}
 		}
 		out: strings.Builder
 		strings.write_string(&out, strings.to_string(types_body))
 		emit_write_foreign_block(&out, strings.to_string(foreign_body), opts.link_prefix, block_req)
+		strings.write_string(&out, strings.to_string(wrappers_body))
 		return strings.to_string(out), imports, needs_foreign
 	}
 
@@ -241,6 +251,9 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 		case .Bit_Set:
 			emit_close_foreign(&interleaved, &in_foreign)
 			emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], opts.emit_comments, &imports)
+		case .Wrapper:
+			emit_close_foreign(&interleaved, &in_foreign)
+			emit_wrapper(&interleaved, ir, ir.wrappers[ref.index], opts.emit_comments, &imports)
 		}
 	}
 	emit_close_foreign(&interleaved, &in_foreign)

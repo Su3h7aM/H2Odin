@@ -39,7 +39,9 @@ config opts out so the package stays green without field renames.
 ## Gaps vs `vendor:cgltf`
 
 - Official multi-file / wasm layout; we emit one unit
-- Out-parameter → multi-result **wrappers** are Milestone 6 (spec 0011), not
-  this faithful surface
+- Out-parameter wrappers (`parse`, `parse_file`, `load_buffer_base64`) are
+  generated via `procs.wrappers` (faithful foreign under `_name`); vendor also
+  nests private foreign blocks differently
 - Remaining multipointers often stay `^T` (see regenerate diagnostics)
+- Struct field pointer/count → `[]T` overlays are deferred (spec 0011)
 - Header-only static inlines are skipped (no external symbol) — by design

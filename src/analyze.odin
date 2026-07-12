@@ -93,6 +93,15 @@ type_is_integer_like :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 		     "uintmax_t":
 			return true
 		}
+	case Type_Idiomatic_Leaf:
+		// After idiomatic leaf sub, ints become i32/u32/… spellings.
+		s := variant.spelling
+		if strings.has_prefix(s, "i") || strings.has_prefix(s, "u") {
+			return true
+		}
+		if strings.contains(s, "int") || strings.contains(s, "size") {
+			return true
+		}
 	case Type_Typedef_Ref:
 		decl := ir.typedefs[variant.decl]
 		if !decl.is_unresolvable {

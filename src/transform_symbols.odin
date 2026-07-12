@@ -136,6 +136,11 @@ filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
 			kind = .Type
 			// bit_set aliases inherit nothing; they are generator-authored.
 			deprecated = false
+		case .Wrapper:
+			// Materialized after filter; should not appear during remove.
+			name = ir.wrappers[ref.index].name
+			kind = .Func
+			deprecated = false
 		}
 		// Anonymous records are spelled inline where they are used and stand
 		// or fall with their user. Anonymous enums, however, emit as free

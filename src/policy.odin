@@ -108,6 +108,23 @@ Member_Action :: struct {
 	by_ptr:  bool,
 }
 
+// One pointer+count pair selected for an input-slice conversion.
+Wrapper_Slice_Rule :: struct {
+	pointer: string, // C param name
+	count:   string, // C param name
+	name:    string, // public slice name; "" → use pointer name
+}
+
+// Declarative procs.wrappers entry (config names the conversion only).
+Wrapper_Rule :: struct {
+	out_params:        []string, // C param names → named results
+	slices:            []Wrapper_Slice_Rule,
+	// Default true: keep the C return as a named result when non-void.
+	keep_c_return:     bool,
+	// True when keep_return was set explicitly in config.
+	keep_c_return_set: bool,
+}
+
 // config.output.layout — closed enum; unknown strings fail config loading.
 Output_Layout :: enum {
 	Merged, // one Odin file (default; preserves pre-M14 behavior)
@@ -199,6 +216,8 @@ Policy :: struct {
 	proc_results:        map[string]Member_Action,
 	// procs.require_results: C proc names that get @(require_results).
 	require_results:     []string,
+	// procs.wrappers: C proc name → closed conversion plan (idiomatic only).
+	proc_wrappers:       map[string]Wrapper_Rule,
 
 	// Callbacks present in the config (checked once at load).
 	has_rename:          bool, // naming.override
@@ -392,6 +411,28 @@ policy_free_owned :: proc(policy: ^Policy) {
 	policy_free_int_map(&policy.struct_align)
 	policy_free_member_action_map(&policy.proc_params)
 	policy_free_member_action_map(&policy.proc_results)
+	policy_free_wrapper_rules(&policy.proc_wrappers)
+}
+
+policy_free_wrapper_rules :: proc(m: ^map[string]Wrapper_Rule) {
+	if m^ == nil {
+		return
+	}
+	for key, rule in m^ {
+		delete(key)
+		for s in rule.out_params {
+			delete(s)
+		}
+		delete(rule.out_params)
+		for sl in rule.slices {
+			delete(sl.pointer)
+			delete(sl.count)
+			delete(sl.name)
+		}
+		delete(rule.slices)
+	}
+	delete(m^)
+	m^ = nil
 }
 
 policy_free_string_slice :: proc(list: ^[]string) {
@@ -459,6 +500,8 @@ policy_set_diag_defaults :: proc(policy: ^Policy) {
 	policy.diag_severity[.Symbol_Collision] = .Error
 	// Unrepresentable calling conventions must not silently become `"c"` (spec 0011).
 	policy.diag_severity[.Unsupported_Calling_Conv] = .Error
+	// Explicit wrapper config that cannot apply is a generation failure.
+	policy.diag_severity[.Wrapper_Plan_Failed] = .Error
 }
 
 policy_config_dir :: proc(path: string) -> (dir: string, ok: bool) {
@@ -556,6 +599,7 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 	if !mode_ok {
 		return false
 	}
+	defer delete(mode)
 	switch mode {
 	case "":
 	case "abi":

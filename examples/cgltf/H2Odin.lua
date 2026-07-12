@@ -41,4 +41,18 @@ config.procs.require_results = {
 	"cgltf_validate",
 }
 
+-- vendor:cgltf-style out-parameter → multi-result wrappers (spec 0011).
+-- Faithful foreign decls remain under _name; public API is the wrapper.
+config.procs.wrappers = {
+	cgltf_parse = h2o.proc.wrapper {
+		out_params = { "out_data" },
+	},
+	cgltf_parse_file = h2o.proc.wrapper {
+		out_params = { "out_data" },
+	},
+	cgltf_load_buffer_base64 = h2o.proc.wrapper {
+		out_params = { "out_data" },
+	},
+}
+
 return config

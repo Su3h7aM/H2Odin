@@ -12,7 +12,7 @@ validate_symbol_names :: proc(ir: ^IR) {
 
 	for ref in ir.order {
 		switch ref.kind {
-		case .Invalid, .Func, .Var, .Typedef, .Macro, .Bit_Set:
+		case .Invalid, .Func, .Var, .Typedef, .Macro, .Bit_Set, .Wrapper:
 		// package scope above; params below
 		case .Record:
 			rec := ir.records[ref.index]
@@ -98,6 +98,8 @@ validate_package_scope :: proc(ir: ^IR) {
 			note(&first_kind, &count, ir.macros[ref.index].name, "const")
 		case .Bit_Set:
 			note(&first_kind, &count, ir.bit_sets[ref.index].name, "type")
+		case .Wrapper:
+			note(&first_kind, &count, ir.wrappers[ref.index].name, "proc")
 		}
 	}
 

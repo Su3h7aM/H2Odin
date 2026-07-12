@@ -2,6 +2,7 @@ package h2odin
 
 import "core:c"
 import "core:fmt"
+import "core:strings"
 
 import lua "vendor:lua/5.4"
 
@@ -980,7 +981,7 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "procs", []cstring{"params", "param", "results", "result", "require_results"}) {
+	if !policy_reject_unknown_subkeys(L, "procs", []cstring{"params", "param", "results", "result", "require_results", "wrappers"}) {
 		return false
 	}
 
@@ -1048,7 +1049,228 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 	policy.require_results = req
+
+	wrappers, wrappers_ok := policy_read_proc_wrappers(L, policy)
+	if !wrappers_ok {
+		return false
+	}
+	policy.proc_wrappers = wrappers
 	return true
+}
+
+// procs.wrappers: map C proc name → h2o.proc.wrapper { out_params?, slices?, keep_return? }.
+// Idiomatic-only; empty map when absent.
+policy_read_proc_wrappers :: proc(L: ^lua.State, policy: ^Policy) -> (result: map[string]Wrapper_Rule, ok: bool) {
+	field_type := lua.getfield(L, -1, "wrappers")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return nil, true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		user_error("h2odin: config: procs.wrappers must be a table keyed by C procedure name")
+		lua.pop(L, 1)
+		return nil, false
+	}
+	defer lua.pop(L, 1)
+
+	// Reject in ABI mode (or when type_mode is unset — defaults to ABI at run).
+	if !policy.type_mode_is_set || policy.type_mode != .Idiomatic {
+		user_error("h2odin: config: procs.wrappers requires type_mode = \"idiomatic\" (ABI mode never emits procedure bodies)")
+		return nil, false
+	}
+
+	result = make(map[string]Wrapper_Rule)
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		// key at -2, value at -1
+		if lua.type(L, -2) != .STRING {
+			user_error("h2odin: config: procs.wrappers keys must be C procedure name strings")
+			lua.pop(L, 2)
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+		proc_name := strings.clone(string(lua.tostring(L, -2)))
+		if lua.type(L, -1) != .TABLE {
+			user_errorf("h2odin: config: procs.wrappers[%q] must be a table (use h2o.proc.wrapper {{ … }})", proc_name)
+			delete(proc_name)
+			lua.pop(L, 2)
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+		if !policy_reject_unknown_subkeys(L, "procs.wrappers[]", []cstring{"out_params", "slices", "keep_return"}) {
+			delete(proc_name)
+			lua.pop(L, 2)
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+
+		rule: Wrapper_Rule
+		rule.keep_c_return = true // default
+
+		out_list, out_ok := policy_string_list_field(L, "procs.wrappers[]", "out_params")
+		if !out_ok {
+			delete(proc_name)
+			lua.pop(L, 2)
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+		rule.out_params = out_list
+
+		// keep_return optional bool
+		keep_ty := lua.getfield(L, -1, "keep_return")
+		#partial switch lua.Type(keep_ty) {
+		case .NIL:
+			lua.pop(L, 1)
+		case .BOOLEAN:
+			rule.keep_c_return = bool(lua.toboolean(L, -1))
+			rule.keep_c_return_set = true
+			lua.pop(L, 1)
+		case:
+			user_error("h2odin: config: procs.wrappers[].keep_return must be a boolean")
+			lua.pop(L, 1) // keep_return value
+			delete(proc_name)
+			for s in rule.out_params {
+				delete(s)
+			}
+			delete(rule.out_params)
+			lua.pop(L, 2) // wrapper value + map key
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+
+		slices, slices_ok := policy_read_wrapper_slices(L)
+		if !slices_ok {
+			delete(proc_name)
+			for s in rule.out_params {
+				delete(s)
+			}
+			delete(rule.out_params)
+			lua.pop(L, 2)
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+		rule.slices = slices
+
+		if len(rule.out_params) == 0 && len(rule.slices) == 0 {
+			user_errorf("h2odin: config: procs.wrappers[%q] needs at least one of out_params or slices", proc_name)
+			delete(proc_name)
+			for s in rule.out_params {
+				delete(s)
+			}
+			delete(rule.out_params)
+			for sl in rule.slices {
+				delete(sl.pointer)
+				delete(sl.count)
+				delete(sl.name)
+			}
+			delete(rule.slices)
+			lua.pop(L, 2)
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+
+		if proc_name in result {
+			user_errorf("h2odin: config: procs.wrappers[%q] specified more than once", proc_name)
+			delete(proc_name)
+			for s in rule.out_params {
+				delete(s)
+			}
+			delete(rule.out_params)
+			for sl in rule.slices {
+				delete(sl.pointer)
+				delete(sl.count)
+				delete(sl.name)
+			}
+			delete(rule.slices)
+			lua.pop(L, 2)
+			policy_free_wrapper_rules(&result)
+			return nil, false
+		}
+		result[proc_name] = rule
+		lua.pop(L, 1) // value; keep key for next
+	}
+	return result, true
+}
+
+// Read slices list from the wrapper table at stack top.
+policy_read_wrapper_slices :: proc(L: ^lua.State) -> (slices: []Wrapper_Slice_Rule, ok: bool) {
+	field_type := lua.getfield(L, -1, "slices")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return nil, true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		user_error("h2odin: config: procs.wrappers[].slices must be a list of tables")
+		lua.pop(L, 1)
+		return nil, false
+	}
+	defer lua.pop(L, 1)
+
+	n := int(lua.L_len(L, -1))
+	if !policy_require_pure_list(L, "procs.wrappers[]", "slices", n) {
+		return nil, false
+	}
+	if n == 0 {
+		return nil, true
+	}
+	out := make([dynamic]Wrapper_Slice_Rule, 0, n)
+	for i in 0 ..< n {
+		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
+		if elem_type != c.int(lua.Type.TABLE) {
+			user_errorf("h2odin: config: procs.wrappers[].slices[%d] must be a table", i + 1)
+			lua.pop(L, 1)
+			for sl in out {
+				delete(sl.pointer)
+				delete(sl.count)
+				delete(sl.name)
+			}
+			delete(out)
+			return nil, false
+		}
+		if !policy_reject_unknown_subkeys(L, "procs.wrappers[].slices[]", []cstring{"pointer", "count", "name"}) {
+			lua.pop(L, 1)
+			for sl in out {
+				delete(sl.pointer)
+				delete(sl.count)
+				delete(sl.name)
+			}
+			delete(out)
+			return nil, false
+		}
+		pointer, p_ok := policy_optional_string_field(L, "procs.wrappers[].slices[]", "pointer")
+		count, c_ok := policy_optional_string_field(L, "procs.wrappers[].slices[]", "count")
+		name, n_ok := policy_optional_string_field(L, "procs.wrappers[].slices[]", "name")
+		if !p_ok || !c_ok || !n_ok {
+			delete(pointer)
+			delete(count)
+			delete(name)
+			lua.pop(L, 1)
+			for sl in out {
+				delete(sl.pointer)
+				delete(sl.count)
+				delete(sl.name)
+			}
+			delete(out)
+			return nil, false
+		}
+		if pointer == "" || count == "" {
+			user_errorf("h2odin: config: procs.wrappers[].slices[%d] requires pointer and count strings", i + 1)
+			delete(pointer)
+			delete(count)
+			delete(name)
+			lua.pop(L, 1)
+			for sl in out {
+				delete(sl.pointer)
+				delete(sl.count)
+				delete(sl.name)
+			}
+			delete(out)
+			return nil, false
+		}
+		append(&out, Wrapper_Slice_Rule{pointer = pointer, count = count, name = name})
+		lua.pop(L, 1)
+	}
+	return out[:], true
 }
 
 policy_read_output :: proc(policy: ^Policy) -> bool {

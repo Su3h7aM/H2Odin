@@ -14,22 +14,20 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: Milestones 0–5 and 7–**16** complete. Milestone 6 (idiomatic wrappers)
-is next. **H2Odin is self-hosted**: Extraction runs on the libclang package
-H2Odin itself generates (`vendored/libclang`, Odin naming convention,
-regenerated generation-over-generation via `./scripts/regen-libclang` — spec 0002).
+Status: Milestones 0–5 and 6–**16** complete. **H2Odin is self-hosted**:
+Extraction runs on the libclang package H2Odin itself generates
+(`vendored/libclang`, Odin naming convention, regenerated
+generation-over-generation via `./scripts/regen-libclang` — spec 0002).
 
-**Milestone 15 (real-world validation) is closed.** **Milestone 16
-(ABI/platform vendor parity) is closed:** calling conventions and libclang
-provenance; `foreign.targets` + Windows `win32.*` types + transactional
-output; curated `[^]T` / `require_results` / `#by_ptr`; ggml dual-prefix
-config in the nine-package `./scripts/validate-examples` gate. Declaration-level
-parity metrics:
+**Milestone 15–16 and Milestone 6 are closed.** The nine-package corpus
+regenerates and `odin check`s via `./scripts/validate-examples`. Idiomatic
+wrappers (`procs.wrappers`) emit minimal out-param and input-slice bodies over
+retained faithful foreign decls (spec 0011); validations run at generation
+time. Declaration-level parity metrics:
 [`docs/vendor-parity-metrics-2026-07-12.md`](docs/vendor-parity-metrics-2026-07-12.md).
 Earlier evidence lives in
 [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md)
-and [`ROADMAP.md`](ROADMAP.md). The parity boundary and wrapper scope are fixed
-in [spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md).
+and [`ROADMAP.md`](ROADMAP.md).
 
 ---
 

@@ -37,6 +37,8 @@ Diag_Category :: enum u8 {
 	Symbol_Collision,
 	// C calling convention has no Odin spelling (Milestone 16 P0).
 	Unsupported_Calling_Conv,
+	// procs.wrappers plan rejected at generation time (spec 0011).
+	Wrapper_Plan_Failed,
 }
 
 Diagnostic :: struct {
@@ -84,6 +86,8 @@ diag_category_name :: proc(c: Diag_Category) -> string {
 		return "symbol_collision"
 	case .Unsupported_Calling_Conv:
 		return "unsupported_calling_conv"
+	case .Wrapper_Plan_Failed:
+		return "wrapper_plan_failed"
 	}
 	return "unknown"
 }
@@ -124,6 +128,8 @@ diag_category_from_name :: proc(name: string) -> (Diag_Category, bool) {
 		return .Symbol_Collision, true
 	case "unsupported_calling_conv":
 		return .Unsupported_Calling_Conv, true
+	case "wrapper_plan_failed":
+		return .Wrapper_Plan_Failed, true
 	}
 	return {}, false
 }
@@ -305,6 +311,9 @@ diag_verbose_guidance :: proc(c: Diag_Category) -> (cause: string, fix: string) 
 	case .Unsupported_Calling_Conv:
 		return "libclang reported a calling convention that Odin cannot spell on a foreign procedure or procedure type.",
 			"This is not config-overridable: the C ABI cannot be represented faithfully. Drop the declaration (symbols.remove) or bind it by hand outside the generator."
+	case .Wrapper_Plan_Failed:
+		return "procs.wrappers named a conversion that cannot be applied from the header/IR facts.",
+			"Fix out_params/slices names and types, or remove the wrapper entry. Validations run at generation time — not in the emitted body."
 	}
 	return "", ""
 }

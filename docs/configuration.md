@@ -82,6 +82,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `procs.results` | `"Proc"` → `{ type? }` | return type spelling |
 | `procs.result` | `function(result) → nil\|{type?}` | same, as a callback |
 | `procs.require_results` | list of C proc names | `@(require_results)` on those foreign procs; block-level attribute when every proc in the foreign block is listed |
+| `procs.wrappers` | C proc → `h2o.proc.wrapper { out_params?, slices?, keep_return? }` | idiomatic-only: generate a minimal public wrapper over a retained faithful foreign decl (`_name`); plan-time validation only |
 | `output.layout` | `"merged"` \| `"per_header"` | default `merged`: one Odin file; `per_header`: one file per `config.inputs` header (requires `output_folder`) |
 | `output.procedures_at_end` | bool | default `true`: types then foreign block; `false`: source order |
 | `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output (each unit in `per_header`) |
@@ -363,7 +364,8 @@ diagnostics reporting follow before and after emission respectively.
 
 ## What we deliberately keep out for now
 
-Generated wrapper procs and structured per-target foreign linkage (spec 0011).
-The first wrapper set is out-parameter results and pointer-plus-count input
+Structured per-target foreign linkage and idiomatic wrappers (spec 0011) are
+implemented. Wrappers use `procs.wrappers` with `out_params` / `slices`; bodies
+are minimal (`raw_data` + `len`, out-param multi-results). The first wrapper set is out-parameter results and pointer-plus-count input
 slices in idiomatic mode. Generic string conversion and library-specific helper
 bodies are not part of that first set.
