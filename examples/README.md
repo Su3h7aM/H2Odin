@@ -13,9 +13,9 @@ directory and loads `H2Odin.lua`.
 ./scripts/validate-examples
 ```
 
-That target rebuilds `build/h2odin`, regenerates every package below, runs
-`odinfmt` on `examples/`, and `odin check`s all eight packages. Equivalent
-manual loop:
+That target rebuilds `build/h2odin`, regenerates every **gate** package below
+(not known-red probes), runs `odinfmt` on `examples/`, and `odin check`s them.
+Equivalent manual loop:
 
 ```sh
 ./scripts/build
@@ -51,6 +51,7 @@ remaining intentional gaps in each example README.
 | [`cgltf`](cgltf/) | `vendor:cgltf` | Single-header, pointer-rich scene graph | pass |
 | [`curl`](curl/) | `vendor:curl` | Multi-header, `typedef void` opaques, POSIX types | pass |
 | [`miniaudio`](miniaudio/) | `vendor:miniaudio` | ~95k-line single-header stress, callbacks | pass |
+| [`ggml`](ggml/) | [ggml-org/ggml](https://github.com/ggml-org/ggml) | Multi-header tensor API, dual `ggml`/`gguf` prefixes | **fail** (see README; not in validate-examples gate) |
 
 “Functional” for this corpus means: generation does not panic; every emitted
 type resolves; final names are valid in their Odin scopes; transitive foreign
