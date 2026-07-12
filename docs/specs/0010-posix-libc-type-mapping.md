@@ -1,7 +1,8 @@
 # Spec 0010 — Foreign types: POSIX / libc mapping, one spelling, the defining package
 
 **Status:** accepted and implemented (`src/transform_foreign.odin`);
-Windows emission strategy and allowlist growth remain open items
+Windows win32.* compounds for corpus-required socket types are implemented;
+further allowlist growth remains open
 **Date:** 2026-07-11
 
 ## Context
@@ -140,19 +141,16 @@ Verified against Odin `dev-2026-07a`:
    exists.
 
 7. **Imports follow spellings.** `posix.*` anywhere in the output pulls
-   `import "core:sys/posix"`; `libc.*` pulls `import "core:c/libc"` — the
-   same used-only tracking as `core:c` today (`Emit_Imports` needs a `libc`
-   flag; only `posix` exists so far). Config-supplied spellings with these
-   prefixes flip the same flags.
+   `import "core:sys/posix"`; `libc.*` pulls `import "core:c/libc"`;
+   `win32.*` pulls `import win32 "core:sys/windows"`. Config-supplied
+   spellings with these prefixes flip the same flags.
 
-8. **Windows is deferred, Unix-first.** The `posix.*` rows of the built-in
-   map are valid only for Unix targets; `libc.*` rows are portable. Today
-   the escape hatch is config (`types.map` to a `win32.*` spelling, plus a
-   `win32` import once supported). The likely eventual design mirrors
-   `vendor:curl`: generator-synthesized per-OS alias files
-   (`platform_sockaddr :: posix.sockaddr` / `win32.sockaddr`) — permitted,
-   since the *generator* authors them, but out of scope until a Windows
-   validation target exists.
+8. **Windows uses the defining package, same as Unix.** Host == generation
+   target: Unix maps compounds/scalars to `posix.*` / `libc.*`; Windows maps
+   compounds that `core:sys/windows` exports to `win32.*` (sockaddr, fd_set,
+   timeval, …) and keeps portable `libc.*` rows. Pure-POSIX names without a
+   win32 counterpart stay unmapped and need `types.map` or the incomplete-stub
+   path. Config still wins over the built-in map.
 
 ## The built-in map (candidate membership)
 
@@ -162,8 +160,9 @@ exist as an exported name in Odin `dev-2026-07a`.
 **Scalars**
 
 ```text
-dev_t, blkcnt_t, blksize_t, fsblkcnt_t, off_t, gid_t, pid_t, clockid_t
-                                                            → posix.*
+dev_t, blkcnt_t, blksize_t, fsblkcnt_t, off_t, gid_t, pid_t, clockid_t,
+socklen_t                                                   → posix.*
+                                                            (Windows: socklen_t → win32.socklen_t)
 time_t, clock_t                                             → libc.*
 ```
 
@@ -173,6 +172,9 @@ time_t, clock_t                                             → libc.*
 sockaddr, sockaddr_storage, sockaddr_in, sockaddr_in6, sockaddr_un,
 in_addr, in6_addr, addrinfo, fd_set, timeval, iovec, msghdr, cmsghdr,
 pollfd, linger, ipv6_mreq                                   → posix.*
+  Windows rewrites when exported by core:sys/windows:
+    sockaddr, sockaddr_in, sockaddr_in6, in_addr, in6_addr,
+    fd_set, timeval                                         → win32.*
 timespec, tm                                                → libc.*
 ```
 

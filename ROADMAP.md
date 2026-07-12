@@ -507,16 +507,16 @@ any public call shape. Decisions and ordering are in
 
 Land as a short stack (not one commit):
 
-- [x] **P1.1** Specify and implement `foreign.targets`: closed target keys, ordered
+- [x] Specify and implement `foreign.targets`: closed target keys, ordered
       libraries, system dependencies, fallback, path validation, and deterministic
       `when` emission. Keep `foreign.import_lib` as the single-library shorthand
       (mutually exclusive with `targets`).
-- [ ] **P1.2** Add Windows foreign-type mappings/aliases matching the defining Odin
+- [x] Add Windows foreign-type mappings/aliases matching the defining Odin
       package (`win32.sockaddr`, `win32.fd_set`, and corpus-required names);
       retain spec 0010's Unix allowlist discipline and config precedence.
-- [ ] **P1.3** Make output publication transactional and track generated files so a
+- [ ] Make output publication transactional and track generated files so a
       failed multi-target/per-header run cannot leave mixed or stale output.
-- [ ] **P1.4** Validate generated linkage files on Linux and Windows targets, including
+- [ ] Validate generated linkage files on Linux and Windows targets, including
       static/shared and system fallback forms represented by raylib, Box3D,
       cgltf, curl, and miniaudio; close docs/examples.
 

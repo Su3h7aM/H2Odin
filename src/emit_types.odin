@@ -161,6 +161,9 @@ note_import_for_spelling :: proc(imports: ^Emit_Imports, spelling: string) {
 	if strings.has_prefix(spelling, "libc.") {
 		imports.libc = true
 	}
+	if strings.has_prefix(spelling, "win32.") {
+		imports.win32 = true
+	}
 }
 
 // Params may carry an explicit type_spelling from policy; track its imports.

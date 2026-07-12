@@ -14,12 +14,13 @@ import "core:strings"
 //   3. Diagnoses by-value use of an unmapped foreign type (layout unavailable).
 //
 // Config wins over the built-in map: a name in types.map / types.overrides is
-// left for apply_type_rewrites. Library-specific and Windows spellings stay in
-// config for now (spec 0010, decision 8).
+// left for apply_type_rewrites. On Windows, compounds that exist in
+// core:sys/windows are rewritten to win32.* (platform_foreign_spelling);
+// pure-POSIX names still need types.map.
 
 Foreign_Type_Entry :: struct {
 	c_name:    string,
-	spelling:  string,
+	spelling:  string, // Unix/default defining-package spelling (posix.* / libc.*)
 	// Scalars are width-guarded against the Odin type's size before mapping
 	// (spec 0010, decision 6); compounds rely on the allowlist plus Odin's
 	// own per-OS layout, since foreign layouts are deliberately not captured.
@@ -40,6 +41,7 @@ FOREIGN_TYPE_MAP :: [?]Foreign_Type_Entry {
 	{c_name = "gid_t", spelling = "posix.gid_t", is_scalar = true},
 	{c_name = "pid_t", spelling = "posix.pid_t", is_scalar = true},
 	{c_name = "clockid_t", spelling = "posix.clockid_t", is_scalar = true},
+	{c_name = "socklen_t", spelling = "posix.socklen_t", is_scalar = true},
 	// Scalars: ISO C library-defined (posix only re-exports these).
 	{c_name = "time_t", spelling = "libc.time_t", is_scalar = true},
 	{c_name = "clock_t", spelling = "libc.clock_t", is_scalar = true},
@@ -76,6 +78,32 @@ foreign_type_entry :: proc(name: string) -> (entry: Foreign_Type_Entry, ok: bool
 		}
 	}
 	return {}, false
+}
+
+// C system types that core:sys/windows exports under the same bare name.
+// Used only when the generation host is Windows (platform_foreign_spelling).
+// Verified against Odin dev-2026-07a; grow from corpus needs, not inventory.
+windows_compound_spelling :: proc(c_name: string) -> (spelling: string, ok: bool) {
+	switch c_name {
+	case "sockaddr":
+		return "win32.sockaddr", true
+	case "sockaddr_in":
+		return "win32.sockaddr_in", true
+	case "sockaddr_in6":
+		return "win32.sockaddr_in6", true
+	case "in_addr":
+		return "win32.in_addr", true
+	case "in6_addr":
+		return "win32.in6_addr", true
+	case "fd_set":
+		return "win32.fd_set", true
+	case "timeval":
+		return "win32.timeval", true
+	case "socklen_t":
+		// Map entry is posix.socklen_t (scalar); Windows uses win32.socklen_t.
+		return "win32.socklen_t", true
+	}
+	return "", false
 }
 
 apply_foreign_type_stubs :: proc(ir: ^IR, policy: ^Policy) {
@@ -243,29 +271,35 @@ platform_spelling :: proc(ir: ^IR, policy: ^Policy, name: string, aliased: Type_
 	if !known {
 		return "", false
 	}
-	if !platform_spelling_supported(entry.spelling) {
-		// e.g. posix.* on a Windows target: naming it would emit a type that
-		// does not exist. Fall through to the stub/diagnostic path.
+	// Host-specific spelling: Unix keeps the map's posix.*/libc.* names;
+	// Windows rewrites compounds that core:sys/windows exports to win32.*.
+	spelling = platform_foreign_spelling(entry)
+	if spelling == "" {
 		ir_diag(
 			ir,
 			.Unresolved_Type,
-			"foreign type %q would map to %s, which this target does not define; map it with types.map (e.g. a win32.* spelling)",
+			"foreign type %q has no defining-package spelling on this target (Unix map entry %s); map it with types.map",
 			name,
 			entry.spelling,
 		)
+		return "", false
+	}
+	if !platform_spelling_supported(spelling) {
+		// e.g. a spelling that cannot be imported on this host.
+		ir_diag(ir, .Unresolved_Type, "foreign type %q would map to %s, which this target does not define; map it with types.map", name, spelling)
 		return "", false
 	}
 	if !entry.is_scalar {
 		// Compounds are not width-guarded: foreign layouts are deliberately
 		// not captured, and Odin's package owns the per-OS layout. The
 		// verified allowlist is what keeps these honest.
-		return entry.spelling, true
+		return spelling, true
 	}
 
 	// Width guard: never substitute a type whose width does not match on this
 	// target (libc.time_t is unconditionally 64-bit; a 32-bit C time_t is a
 	// different type). Diagnose and leave the C spelling alone.
-	odin_size := platform_type_size(entry.spelling)
+	odin_size := platform_type_size(spelling)
 	measured := type_measured_size(ir, aliased)
 	if odin_size <= 0 {
 		ir_diag(
@@ -273,7 +307,7 @@ platform_spelling :: proc(ir: ^IR, policy: ^Policy, name: string, aliased: Type_
 			.Unresolved_Type,
 			"foreign type %q maps to %s, whose width is unknown on this target; keeping the C spelling. Map it with types.map",
 			name,
-			entry.spelling,
+			spelling,
 		)
 		return "", false
 	}
@@ -284,12 +318,12 @@ platform_spelling :: proc(ir: ^IR, policy: ^Policy, name: string, aliased: Type_
 			"foreign type %q measures %d bytes but %s is %d bytes on this target; keeping the C spelling. Map it with types.map",
 			name,
 			measured,
-			entry.spelling,
+			spelling,
 			odin_size,
 		)
 		return "", false
 	}
-	return entry.spelling, true
+	return spelling, true
 }
 
 // Size of a scalar type as libclang measured it on the generation target.

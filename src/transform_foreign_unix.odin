@@ -11,10 +11,15 @@ import "core:sys/posix"
 // and restating them here would be the duplication the spec rejects.
 //
 // The posix package is Unix-only, so this file is; see the windows build for
-// the portable libc subset. Host == generation target until cross-target
-// generation exists.
+// the portable libc subset plus win32 compounds. Host == generation target
+// until cross-target generation exists.
 platform_spelling_supported :: proc(spelling: string) -> bool {
 	return true // both core:sys/posix and core:c/libc exist on Unix targets
+}
+
+// Unix hosts use the map entry spelling as-is (posix.* / libc.*).
+platform_foreign_spelling :: proc(entry: Foreign_Type_Entry) -> string {
+	return entry.spelling
 }
 
 platform_type_size :: proc(spelling: string) -> int {
@@ -35,6 +40,8 @@ platform_type_size :: proc(spelling: string) -> int {
 		return size_of(posix.pid_t)
 	case "posix.clockid_t":
 		return size_of(posix.clockid_t)
+	case "posix.socklen_t":
+		return size_of(posix.socklen_t)
 	case "libc.time_t":
 		return size_of(libc.time_t)
 	case "libc.clock_t":

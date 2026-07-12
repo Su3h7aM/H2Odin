@@ -26,6 +26,7 @@ Emit_Imports :: struct {
 	core_c: bool, // import "core:c"
 	posix:  bool, // import "core:sys/posix" (for posix.* spellings, spec 0010)
 	libc:   bool, // import "core:c/libc"    (for libc.* spellings, spec 0010)
+	win32:  bool, // import win32 "core:sys/windows" (for win32.* spellings)
 }
 
 // One self-contained generated Odin file (package + prelude + decls).
@@ -71,7 +72,11 @@ emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, imports: Emi
 	if imports.posix {
 		strings.write_string(b, "import \"core:sys/posix\"\n")
 	}
-	if imports.core_c || imports.libc || imports.posix {
+	if imports.win32 {
+		// Alias matches vendor:curl / core:sys/windows usage: win32.sockaddr.
+		strings.write_string(b, "import win32 \"core:sys/windows\"\n")
+	}
+	if imports.core_c || imports.libc || imports.posix || imports.win32 {
 		strings.write_string(b, "\n")
 	}
 	// Type-only / empty units must not declare an unused foreign import:

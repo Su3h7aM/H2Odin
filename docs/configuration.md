@@ -87,6 +87,8 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `comments` | bool | default `true`: emit C doc comments; `false` suppresses them |
 | `diagnostics` | category → `"warn"` \| `"error"` | per-category severity; default posture is `warn` |
 
+Built-in foreign (system-header) types: Unix uses `posix.*` / `libc.*`; Windows rewrites socket compounds exported by `core:sys/windows` to `win32.*` (`sockaddr`, `fd_set`, `timeval`, …) and keeps portable `libc.*`. Config `types.map` / `types.overrides` still win over the built-in map.
+
 `h2o.naming.odin { ... }`, `h2o.macro_group.enum { ... }`, `h2o.enum.anonymous { ... }`, and `h2o.enum.bit_set { ... }` are constructor sugar: they type-check the table and return it. Field validation still runs on the Odin side at load.
 
 Unknown keys fail the run. Pre-M8 flat keys are rejected by name with a migration message:
