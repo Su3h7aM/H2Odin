@@ -51,12 +51,20 @@ apply_member_action_to_field :: proc(field: ^Field, action: Member_Action) {
 	}
 }
 
-// procs.params → procs.param; procs.results → procs.result.
+// procs.params → procs.param; procs.results → procs.result; require_results.
 apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy) {
 	has_params := policy.proc_params != nil && len(policy.proc_params) > 0
 	has_results := policy.proc_results != nil && len(policy.proc_results) > 0
-	if !has_params && !has_results && !policy.has_proc_param && !policy.has_proc_result {
+	has_req := len(policy.require_results) > 0
+	if !has_params && !has_results && !has_req && !policy.has_proc_param && !policy.has_proc_result {
 		return
+	}
+	req_set: map[string]bool
+	if has_req {
+		req_set = make(map[string]bool, context.temp_allocator)
+		for name in policy.require_results {
+			req_set[name] = true
+		}
 	}
 	for &fn in ir.funcs {
 		if has_params || policy.has_proc_param {
@@ -90,6 +98,10 @@ apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy) {
 					fn.return_type_spelling = action.type
 				}
 			}
+		}
+		// Match on C name before renames (this pass runs before naming).
+		if has_req && req_set[fn.name] {
+			fn.require_results = true
 		}
 	}
 }

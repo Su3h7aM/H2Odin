@@ -296,9 +296,14 @@ macro_literal_can_emit :: proc(s: string) -> bool {
 	return true
 }
 
-emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: bool, imports: ^Emit_Imports) {
+// block_require_results: when true the enclosing foreign block already has
+// @(require_results), so per-proc attributes are omitted.
+emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: bool, imports: ^Emit_Imports, block_require_results := false) {
 	write_doc(b, func.doc, 1, emit_comments)
 	write_deprecated_attr(b, func.deprecated, func.deprecated_message, 1)
+	if func.require_results && !block_require_results {
+		strings.write_string(b, "\t@(require_results)\n")
+	}
 	if func.link_name != "" {
 		fmt.sbprintfln(b, "\t@(link_name = %q)", func.link_name)
 	}

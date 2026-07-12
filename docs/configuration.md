@@ -81,6 +81,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `procs.param` | `function(param) → nil\|{type?,default?,pointer?}` | same, as a callback |
 | `procs.results` | `"Proc"` → `{ type? }` | return type spelling |
 | `procs.result` | `function(result) → nil\|{type?}` | same, as a callback |
+| `procs.require_results` | list of C proc names | `@(require_results)` on those foreign procs; block-level attribute when every proc in the foreign block is listed |
 | `output.layout` | `"merged"` \| `"per_header"` | default `merged`: one Odin file; `per_header`: one file per `config.inputs` header (requires `output_folder`) |
 | `output.procedures_at_end` | bool | default `true`: types then foreign block; `false`: source order |
 | `output.footer_per_header` | bool | append `{stem}_footer.odin` when found next to the config or output (each unit in `per_header`) |

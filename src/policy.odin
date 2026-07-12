@@ -195,6 +195,8 @@ Policy :: struct {
 	// procs.* — "Proc.param" / "Proc" (results) → action.
 	proc_params:         map[string]Member_Action,
 	proc_results:        map[string]Member_Action,
+	// procs.require_results: C proc names that get @(require_results).
+	require_results:     []string,
 
 	// Callbacks present in the config (checked once at load).
 	has_rename:          bool, // naming.override

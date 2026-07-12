@@ -522,7 +522,7 @@ Land as a short stack (not one commit):
 
 - [x] Add structured, ABI-identical pointer curation (`pointer = "multi"`) and
       use it for array parameters proven by declaration shape or explicit policy.
-- [ ] Add policy-controlled `require_results`; use block-level emission only
+- [x] Add policy-controlled `require_results`; use block-level emission only
       when every procedure in that block shares the setting.
 - [ ] Add idiomatic-only, explicit `#by_ptr` with non-null/call-borrowed policy;
       never infer it from `const T *` alone.

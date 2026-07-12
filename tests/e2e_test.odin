@@ -1250,6 +1250,23 @@ test_calling_conv_supported_emits_stdcall_and_callback_types :: proc(t: ^testing
 }
 
 @(test)
+test_require_results_block_attr :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/require_results.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	// Sole configured proc → block-level attribute, not per-proc.
+	expect_contains(t, stdout, "@(require_results)")
+	expect_contains(t, stdout, "foreign lib {")
+	expect_contains(t, stdout, "add :: proc")
+	expect_not_contains(t, stdout, "\t@(require_results)\n")
+	check_generated_output(t, stdout, "/tmp/h2odin-require-results")
+}
+
+@(test)
 test_array_param_and_configured_multi_pointer :: proc(t: ^testing.T) {
 	// Array-form params → [^]T (proven); bare T* with pointer="multi" → [^]T.
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/array_param.lua"}

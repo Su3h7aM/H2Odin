@@ -925,7 +925,7 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "procs", []cstring{"params", "param", "results", "result"}) {
+	if !policy_reject_unknown_subkeys(L, "procs", []cstring{"params", "param", "results", "result", "require_results"}) {
 		return false
 	}
 
@@ -987,6 +987,12 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 	policy.proc_results = results
+
+	req, req_ok := policy_string_list_field(L, "procs", "require_results")
+	if !req_ok {
+		return false
+	}
+	policy.require_results = req
 	return true
 }
 

@@ -43,9 +43,9 @@ test_emit_func_writes_non_c_calling_convention :: proc(t: ^testing.T) {
 
 	b: strings.Builder
 	imports: Emit_Imports
-	emit_func(&b, &ir, Func_Decl{name = "plain", return_type = void_ty, calling_conv = .C}, false, &imports)
-	emit_func(&b, &ir, Func_Decl{name = "std", return_type = void_ty, calling_conv = .Stdcall}, false, &imports)
-	emit_func(&b, &ir, Func_Decl{name = "fast", return_type = void_ty, calling_conv = .Fastcall}, false, &imports)
+	emit_func(&b, &ir, Func_Decl{name = "plain", return_type = void_ty, calling_conv = .C}, false, &imports, false)
+	emit_func(&b, &ir, Func_Decl{name = "std", return_type = void_ty, calling_conv = .Stdcall}, false, &imports, false)
+	emit_func(&b, &ir, Func_Decl{name = "fast", return_type = void_ty, calling_conv = .Fastcall}, false, &imports, false)
 	text := strings.to_string(b)
 
 	testing.expect(t, strings.contains(text, "plain :: proc("))

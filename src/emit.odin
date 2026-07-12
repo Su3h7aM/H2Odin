@@ -40,13 +40,29 @@ Emit_Result :: struct {
 	files: []Generated_File,
 }
 
-emit_open_foreign :: proc(b: ^strings.Builder, in_foreign: ^bool, link_prefix: string) {
+// Write @(link_prefix=…, require_results) when either is set.
+write_foreign_block_attrs :: proc(b: ^strings.Builder, link_prefix: string, require_results: bool) {
+	if link_prefix == "" && !require_results {
+		return
+	}
+	strings.write_string(b, "@(")
+	if link_prefix != "" {
+		fmt.sbprintf(b, "link_prefix = %q", link_prefix)
+		if require_results {
+			strings.write_string(b, ", ")
+		}
+	}
+	if require_results {
+		strings.write_string(b, "require_results")
+	}
+	strings.write_string(b, ")\n")
+}
+
+emit_open_foreign :: proc(b: ^strings.Builder, in_foreign: ^bool, link_prefix: string, require_results := false) {
 	if in_foreign^ {
 		return
 	}
-	if link_prefix != "" {
-		fmt.sbprintfln(b, "@(link_prefix = %q)", link_prefix)
-	}
+	write_foreign_block_attrs(b, link_prefix, require_results)
 	strings.write_string(b, "foreign lib {\n")
 	in_foreign^ = true
 }
@@ -87,16 +103,58 @@ emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, imports: Emi
 	}
 }
 
-emit_write_foreign_block :: proc(b: ^strings.Builder, foreign_body: string, link_prefix: string) {
+emit_write_foreign_block :: proc(b: ^strings.Builder, foreign_body: string, link_prefix: string, require_results := false) {
 	if len(foreign_body) == 0 {
 		return
 	}
-	if link_prefix != "" {
-		fmt.sbprintfln(b, "@(link_prefix = %q)", link_prefix)
-	}
+	write_foreign_block_attrs(b, link_prefix, require_results)
 	strings.write_string(b, "foreign lib {\n")
 	strings.write_string(b, foreign_body)
 	strings.write_string(b, "}\n")
+}
+
+// True when every Func in decls has require_results and there is at least one.
+// Used for block-level @(require_results) compression.
+foreign_decls_all_require_results :: proc(ir: ^IR, decls: []Decl_Ref) -> bool {
+	n_func := 0
+	for ref in decls {
+		if ref.kind != .Func {
+			continue
+		}
+		n_func += 1
+		if !ir.funcs[ref.index].require_results {
+			return false
+		}
+	}
+	return n_func > 0
+}
+
+// Per-index flag: the contiguous Func/Var foreign segment containing this
+// decl has block-level require_results (every Func in the segment sets it).
+compute_foreign_segment_require_results :: proc(ir: ^IR, decls: []Decl_Ref) -> []bool {
+	out := make([]bool, len(decls), context.temp_allocator)
+	i := 0
+	for i < len(decls) {
+		kind := decls[i].kind
+		if kind != .Func && kind != .Var {
+			i += 1
+			continue
+		}
+		j := i
+		for j < len(decls) {
+			k := decls[j].kind
+			if k != .Func && k != .Var {
+				break
+			}
+			j += 1
+		}
+		all_req := foreign_decls_all_require_results(ir, decls[i:j])
+		for k in i ..< j {
+			out[k] = all_req
+		}
+		i = j
+	}
+	return out
 }
 
 // Serialize each planned output unit. Decl placement is already decided.
@@ -128,12 +186,13 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 	needs_foreign = false
 
 	if opts.procedures_at_end {
+		block_req := foreign_decls_all_require_results(ir, decls)
 		for ref in decls {
 			switch ref.kind {
 			case .Invalid:
 			case .Func:
 				needs_foreign = true
-				emit_func(&foreign_body, ir, ir.funcs[ref.index], opts.emit_comments, &imports)
+				emit_func(&foreign_body, ir, ir.funcs[ref.index], opts.emit_comments, &imports, block_req)
 			case .Record:
 				emit_record(&types_body, ir, ir.records[ref.index], opts.emit_comments, &imports)
 			case .Enum:
@@ -151,20 +210,21 @@ emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body:
 		}
 		out: strings.Builder
 		strings.write_string(&out, strings.to_string(types_body))
-		emit_write_foreign_block(&out, strings.to_string(foreign_body), opts.link_prefix)
+		emit_write_foreign_block(&out, strings.to_string(foreign_body), opts.link_prefix, block_req)
 		return strings.to_string(out), imports, needs_foreign
 	}
 
-	for ref in decls {
+	segment_req := compute_foreign_segment_require_results(ir, decls)
+	for ref, di in decls {
 		switch ref.kind {
 		case .Invalid:
 		case .Func:
 			needs_foreign = true
-			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
-			emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &imports)
+			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix, segment_req[di])
+			emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &imports, segment_req[di])
 		case .Var:
 			needs_foreign = true
-			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix)
+			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix, segment_req[di])
 			emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &imports)
 		case .Record:
 			emit_close_foreign(&interleaved, &in_foreign)

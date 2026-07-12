@@ -282,6 +282,8 @@ Func_Decl :: struct {
 	// arena-copied; empty when the attribute carries none.
 	deprecated:           bool,
 	deprecated_message:   string,
+	// procs.require_results: callers must use/acknowledge results (Odin attr).
+	require_results:      bool,
 	doc:                  string,
 	// Configured input header that owns this declaration for output placement.
 	home:                 Input_Header_Handle,

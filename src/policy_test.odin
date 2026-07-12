@@ -38,6 +38,7 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 	}
 	delete_string_slice(policy.inputs)
 	delete_string_slice(policy.include_paths)
+	delete_string_slice(policy.require_results)
 	delete_string_map(&policy.defines)
 	delete_string_slice(policy.strip_prefix_proc)
 	delete_string_slice(policy.strip_prefix_type)
