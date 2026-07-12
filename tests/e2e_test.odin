@@ -1239,6 +1239,30 @@ test_calling_conv_supported_emits_stdcall_and_callback_types :: proc(t: ^testing
 }
 
 @(test)
+test_foreign_targets_emits_when_chain :: proc(t: ^testing.T) {
+	// Milestone 16 P1.1: structured foreign.targets → deterministic when/else.
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/foreign_targets.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "when ODIN_OS == .Windows {")
+	expect_contains(t, stdout, `"lib/foo.lib"`)
+	expect_contains(t, stdout, `"system:user32.lib"`)
+	expect_contains(t, stdout, "} else when ODIN_OS == .Linux && ODIN_ARCH == .amd64 {")
+	expect_contains(t, stdout, `"lib/libfoo.a"`)
+	expect_contains(t, stdout, `"system:pthread"`)
+	expect_contains(t, stdout, "} else {")
+	expect_contains(t, stdout, `foreign import lib "system:foo"`)
+	// Shorthand system: path must not appear when targets are set.
+	expect_not_contains(t, stdout, `foreign import lib "system:ftargs"`)
+	expect_contains(t, stdout, "add :: proc")
+}
+
+@(test)
 test_void_opaque_typedef_emits_distinct_rawptr :: proc(t: ^testing.T) {
 	// Pure `typedef void Name` (curl's CURL, miniaudio's ma_data_source) is
 	// a common C opaque-handle idiom. The typedef names an incomplete type;

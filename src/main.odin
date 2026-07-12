@@ -103,6 +103,7 @@ main :: proc() {
 	opts := Emit_Options {
 		package_name      = package_name,
 		foreign_lib       = foreign_lib,
+		foreign_targets   = policy.foreign_targets,
 		link_prefix       = policy.foreign_link_prefix,
 		procedures_at_end = policy.procedures_at_end,
 		emit_comments     = policy.emit_comments,
@@ -309,6 +310,7 @@ resolve_path_list :: proc(paths: []string, base_dir: string) -> (out: []string, 
 
 // Resolve package and foreign-lib names for emission. Explicit config values
 // fail closed when invalid; stem defaults are sanitized into legal forms.
+// When foreign.targets is set, foreign_lib is unused (left empty).
 resolve_emit_names :: proc(policy: ^Policy, stem: string) -> (package_name, foreign_lib: string, ok: bool) {
 	if policy.package_name != "" {
 		if !is_odin_identifier(policy.package_name) {
@@ -324,6 +326,11 @@ resolve_emit_names :: proc(policy: ^Policy, stem: string) -> (package_name, fore
 		if package_name == "" {
 			package_name = "bindings"
 		}
+	}
+
+	if len(policy.foreign_targets) > 0 {
+		// Structured targets supply every foreign import path; no shorthand.
+		return package_name, "", true
 	}
 
 	if policy.foreign_lib != "" {

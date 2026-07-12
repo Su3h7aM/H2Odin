@@ -120,7 +120,10 @@ Policy :: struct {
 
 	// Declarative settings copied out of the config; "" means absent.
 	package_name:        string,
-	foreign_lib:         string, // foreign.import_lib
+	foreign_lib:         string, // foreign.import_lib (shorthand; mutually exclusive with targets)
+	// foreign.targets — ordered after load via sort_foreign_targets. Empty when
+	// using the import_lib shorthand.
+	foreign_targets:     []Foreign_Target,
 	foreign_link_prefix: string, // foreign.link_prefix — C symbol prefix
 	type_mode:           Type_Mode,
 	type_mode_is_set:    bool,

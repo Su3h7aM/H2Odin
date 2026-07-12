@@ -55,7 +55,8 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `preprocess.defines` | string → string | `-DNAME=value` (empty value → `-DNAME`) |
 | `preprocess.resource_dir` | string | explicit clang builtin-header resource directory (`-resource-dir=`); relative to the config dir. Empty: query the clang driver (see `preprocess.clang`) |
 | `preprocess.clang` | string | clang driver used only for `-print-resource-dir` when `resource_dir` is empty (default: `"clang"` on PATH) |
-| `foreign.import_lib` | string | `foreign import` system library name (default: first header stem) |
+| `foreign.import_lib` | string | single-library shorthand → `foreign import lib "system:…"` (default: first header stem). Mutually exclusive with `foreign.targets` |
+| `foreign.targets` | target key → `{ libraries?, system? }` | structured per-OS/ARCH linkage (spec 0011). Closed keys: `windows[_amd64\|_i386\|_arm64]`, `linux[_amd64\|_arm64]`, `darwin[_amd64\|_arm64]`, `wasm32`, `wasm64p32`, `fallback`. `libraries` are local/path strings; `system` entries become `system:…`. Emitted as a deterministic `when` chain |
 | `foreign.link_prefix` | string | `@(link_prefix=…)` on the foreign block (C symbol prefix) |
 | `naming.strip_prefixes` | `{ proc?, type?, const?, enum_value? }` | string or list of strings |
 | `naming.strip_suffixes` | same shape | string or list of strings |

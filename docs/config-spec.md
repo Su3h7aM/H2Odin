@@ -525,12 +525,13 @@ config.output.footer_per_header = true
 
 **Why `link_prefix` is under `foreign`, not `naming`.** `link_prefix` is the *external C symbol* name — what the linker resolves — not the Odin-facing procedure name. Putting it under `foreign` keeps the "Odin name vs. C symbol" distinction clear; it is the counterpart to renaming, not a form of it.
 
-`foreign.targets` is the planned structured replacement for hand-authored OS
-link stanzas. The generator validates target keys and library values and owns
-the emitted `when` / `foreign import` source. `foreign.import_lib` remains the
-portable single-system-library shorthand. Captured function calling
-conventions are ABI facts and do not require policy; config does not silently
-coerce an unsupported convention to `"c"`.
+`foreign.targets` is the structured replacement for hand-authored OS link
+stanzas (Milestone 16 P1.1). The generator validates a closed set of target
+keys and library values and owns the emitted `when` / `foreign import` source.
+`foreign.import_lib` remains the portable single-system-library shorthand and
+is mutually exclusive with `targets`. Captured function calling conventions
+are ABI facts and do not require policy; config does not silently coerce an
+unsupported convention to `"c"`.
 
 `output.layout = "per_header"` emits one Odin file per `config.inputs` header into `output_folder` (required). Placement follows each declaration's home input header; synthesized macro-group enums and bit sets inherit documented placement rules. Each file carries its own prelude because Odin `import` / `foreign import` names are file-local. (`output.imports_file` was removed for that reason — [spec 0006](specs/0006-remove-imports-file.md).) Full rules: [spec 0003](specs/0003-multi-file-odin-emission.md).
 

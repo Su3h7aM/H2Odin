@@ -1,6 +1,8 @@
 package h2odin
 
 import "core:c"
+import "core:fmt"
+import "core:strings"
 
 import lua "vendor:lua/5.4"
 
@@ -136,7 +138,7 @@ policy_read_foreign :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "foreign", []cstring{"import_lib", "link_prefix"}) {
+	if !policy_reject_unknown_subkeys(L, "foreign", []cstring{"import_lib", "link_prefix", "targets"}) {
 		return false
 	}
 	lib, lib_ok := policy_optional_string_field(L, "foreign", "import_lib")
@@ -149,7 +151,124 @@ policy_read_foreign :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 	policy.foreign_link_prefix = prefix
+
+	targets, targets_ok := policy_read_foreign_targets(L)
+	if !targets_ok {
+		return false
+	}
+	policy.foreign_targets = targets
+
+	if policy.foreign_lib != "" && len(policy.foreign_targets) > 0 {
+		user_error(
+			"h2odin: config: foreign.import_lib and foreign.targets are mutually exclusive (use import_lib for a single system library, or targets for per-OS linkage)",
+		)
+		return false
+	}
 	return true
+}
+
+// Read foreign.targets from the foreign table at stack top. Returns nil when
+// the field is absent. Paths are validated; keys must be from the closed set.
+policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target, ok: bool) {
+	field_type := lua.getfield(L, -1, "targets")
+	if field_type == c.int(lua.Type.NIL) {
+		lua.pop(L, 1)
+		return nil, true
+	}
+	if field_type != c.int(lua.Type.TABLE) {
+		user_error("h2odin: config: foreign.targets must be a table keyed by target name")
+		lua.pop(L, 1)
+		return nil, false
+	}
+	defer lua.pop(L, 1)
+
+	raw: [dynamic]Foreign_Target
+	seen: [Foreign_Target_Key]bool
+
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		// key at -2, value at -1
+		if lua.type(L, -2) != .STRING {
+			user_error("h2odin: config: foreign.targets keys must be strings (closed set of target names)")
+			lua.pop(L, 2)
+			return nil, false
+		}
+		key_name := string(lua.tostring(L, -2))
+		key, key_ok := foreign_target_key_from_name(key_name)
+		if !key_ok {
+			user_errorf(
+				"h2odin: config: foreign.targets[%q] is not a known target key (want windows[_amd64|_i386|_arm64], linux[_amd64|_arm64], darwin[_amd64|_arm64], wasm32, wasm64p32, fallback)",
+				key_name,
+			)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		if seen[key] {
+			user_errorf("h2odin: config: foreign.targets[%q] specified more than once", key_name)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		seen[key] = true
+
+		if lua.type(L, -1) != .TABLE {
+			user_errorf("h2odin: config: foreign.targets[%q] must be a table with libraries / system lists", key_name)
+			lua.pop(L, 2)
+			return nil, false
+		}
+		if !policy_reject_unknown_subkeys(L, fmt.tprintf("foreign.targets.%s", key_name), []cstring{"libraries", "system"}) {
+			lua.pop(L, 2)
+			return nil, false
+		}
+
+		paths: [dynamic]string
+		libs, libs_ok := policy_string_list_field(L, fmt.tprintf("foreign.targets.%s", key_name), "libraries")
+		if !libs_ok {
+			lua.pop(L, 2)
+			return nil, false
+		}
+		for lib in libs {
+			if !is_safe_foreign_path(lib) {
+				user_errorf(
+					"h2odin: config: foreign.targets[%q].libraries entry %q is empty or contains a quote, backslash, or control character",
+					key_name,
+					lib,
+				)
+				lua.pop(L, 2)
+				return nil, false
+			}
+			append(&paths, strings.clone(lib))
+		}
+
+		sys_list, sys_ok := policy_string_list_field(L, fmt.tprintf("foreign.targets.%s", key_name), "system")
+		if !sys_ok {
+			lua.pop(L, 2)
+			return nil, false
+		}
+		for sys in sys_list {
+			if !is_safe_foreign_path(sys) {
+				user_errorf("h2odin: config: foreign.targets[%q].system entry %q is empty or contains a quote, backslash, or control character", key_name, sys)
+				lua.pop(L, 2)
+				return nil, false
+			}
+			append(&paths, normalize_system_lib_path(sys))
+		}
+
+		if len(paths) == 0 {
+			user_errorf("h2odin: config: foreign.targets[%q] needs at least one libraries or system entry", key_name)
+			lua.pop(L, 2)
+			return nil, false
+		}
+
+		append(&raw, Foreign_Target{key = key, paths = paths[:]})
+		lua.pop(L, 1) // value; keep key for next
+	}
+
+	if len(raw) == 0 {
+		user_error("h2odin: config: foreign.targets is empty (omit the field or list at least one target)")
+		return nil, false
+	}
+
+	return sort_foreign_targets(raw[:]), true
 }
 
 policy_read_naming :: proc(policy: ^Policy) -> bool {

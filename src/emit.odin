@@ -14,7 +14,8 @@ import "core:strings"
 
 Emit_Options :: struct {
 	package_name:      string,
-	foreign_lib:       string,
+	foreign_lib:       string, // import_lib shorthand when foreign_targets is empty
+	foreign_targets:   []Foreign_Target, // structured per-OS linkage (spec 0011)
 	link_prefix:       string, // foreign.link_prefix; "" = none
 	procedures_at_end: bool, // true: types then foreign; false: source order
 	emit_comments:     bool, // false: suppress doc-comment passthrough
@@ -77,10 +78,7 @@ emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, imports: Emi
 	// -vet treats that as an error and per_header layout emits one file per
 	// input (macros-only headers become package-only files).
 	if needs_foreign {
-		// %q escapes the full system: path so foreign.import_lib content
-		// cannot break out of the string literal.
-		fmt.sbprintfln(b, "foreign import lib %q", fmt.tprintf("system:%s", opts.foreign_lib))
-		strings.write_string(b, "\n")
+		emit_write_foreign_import(b, opts)
 	}
 }
 

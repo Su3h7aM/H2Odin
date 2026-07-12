@@ -74,3 +74,4 @@ Each pass gets a file, aligned with the config section it serves:
 | `emit_decls.odin` | Per-declaration emitters (record, enum, typedef, var, func, macro, bit_set) and doc/indent helpers. |
 | `emit_types.odin` | `write_type`, `write_params`, spelling dispatch. |
 | `emit_bit_field.odin` | Bit-field run grouping and the layout proof — the one decision-adjacent computation in Emission, kept visibly separate. |
+| `foreign_targets.odin` | Closed `foreign.targets` keys, path normalization, deterministic `when`/`foreign import` emission (spec 0011 / M16 P1). |

@@ -23,6 +23,13 @@ delete_policy_test_data :: proc(policy: ^Policy) {
 	if policy.foreign_lib != "" {
 		delete(policy.foreign_lib)
 	}
+	for target in policy.foreign_targets {
+		for p in target.paths {
+			delete(p)
+		}
+		delete(target.paths)
+	}
+	delete(policy.foreign_targets)
 	if policy.foreign_link_prefix != "" {
 		delete(policy.foreign_link_prefix)
 	}
@@ -210,6 +217,88 @@ return config
 	testing.expect(t, policy.footer_per_header)
 	testing.expect_value(t, policy.output_layout, Output_Layout.Merged)
 	testing.expect(t, !policy.emit_comments)
+}
+
+@(test)
+test_policy_load_foreign_targets :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"foreign-targets",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.foreign.targets = {
+  windows = { libraries = { "lib/foo.lib" }, system = { "user32.lib" } },
+  linux_amd64 = { libraries = { "lib/libfoo.a" }, system = { "m", "pthread" } },
+  fallback = { libraries = { "system:foo" } },
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, ok)
+	testing.expect_value(t, len(policy.foreign_targets), 3)
+	// Sorted: windows, linux_amd64, fallback
+	testing.expect_value(t, policy.foreign_targets[0].key, Foreign_Target_Key.Windows)
+	testing.expect_value(t, len(policy.foreign_targets[0].paths), 2)
+	testing.expect_value(t, policy.foreign_targets[0].paths[0], "lib/foo.lib")
+	testing.expect_value(t, policy.foreign_targets[0].paths[1], "system:user32.lib")
+	testing.expect_value(t, policy.foreign_targets[1].key, Foreign_Target_Key.Linux_Amd64)
+	testing.expect_value(t, policy.foreign_targets[1].paths[2], "system:pthread")
+	testing.expect_value(t, policy.foreign_targets[2].key, Foreign_Target_Key.Fallback)
+	testing.expect_value(t, policy.foreign_targets[2].paths[0], "system:foo")
+}
+
+@(test)
+test_policy_load_rejects_import_lib_with_targets :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"foreign-both",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.foreign.import_lib = "foo"
+config.foreign.targets = { fallback = { libraries = { "system:foo" } } }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_load_rejects_unknown_foreign_target_key :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"foreign-bad-key",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.foreign.targets = { beos = { libraries = { "system:foo" } } }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
 }
 
 @(test)
