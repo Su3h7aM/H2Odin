@@ -4,13 +4,13 @@ A C-header-to-Odin bindings generator, written in Odin.
 
 H2Odin reads C headers with libclang and produces clean, idiomatic Odin bindings — configured through a small but powerful Lua policy layer.
 
-> Status: usable pipeline (Milestones 0–5 + 7–15). The vendor validation corpus (eight examples) regenerates and `odin check`s green via `./scripts/validate-examples`. Idiomatic *wrappers* (Milestone 6) remain deferred.
+> Status: usable pipeline (Milestones 0–5 + 7–15). The vendor validation corpus (eight examples) regenerates and `odin check`s green via `./scripts/validate-examples`. Milestone 16 closes ABI/platform parity before Milestone 6 adds the bounded idiomatic wrapper set from spec 0011.
 
 ---
 
 ## Features
 
-- **Two type modes.** *ABI mode* preserves the C API faithfully using Odin's C-compatible types (`c.int`, `c.size_t`, …). *Idiomatic mode* generates native Odin types (`i32`, `f64`, …) where the substitution is proven ABI-safe on the target. Generated wrapper procedures (e.g. `cstring → string` params, `pointer+length → []T` slices) are planned, not yet implemented.
+- **Two type modes.** *ABI mode* preserves the C API faithfully using Odin's C-compatible types (`c.int`, `c.size_t`, …) and never emits wrappers. *Idiomatic mode* uses proven native spellings and will add selected out-parameter-result and pointer+length-slice wrappers over retained faithful foreign declarations. Generic string conversion is not in the initial wrapper set.
 - **Measured C bit-fields.** Representable bit-field runs become Odin `bit_field` regions only when their size, alignment, and offsets can be proven from libclang's target layout; everything else fails closed to an opaque record with a diagnostic.
 - **Correctness first.** A type is never swapped for a nicer-looking one if it would break behavior or the ABI. When the header is ambiguous, H2Odin picks a safe default, flags it, and lets you override it — it never silently guesses wrong.
 - **Deterministic.** Same headers plus the same config tree produce identical output, provided config callbacks are themselves deterministic. The Lua config is sandboxed (no `io`/`os`/`debug`, no raw loaders, no `math.random`/`math.randomseed`); `require` only resolves the `h2odin` prelude and sibling `.lua` under the config directory.
@@ -136,7 +136,7 @@ More detail: [`docs/configuration.md`](docs/configuration.md). Full north-star: 
 
 ## Documentation
 
-Design and architecture notes live in [`docs/`](docs/). Start with [`CONTEXT.md`](CONTEXT.md) for orientation and [`ROADMAP.md`](ROADMAP.md) for status. The current validation evidence and acceptance matrix are in [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md).
+Design and architecture notes live in [`docs/`](docs/). Start with [`CONTEXT.md`](CONTEXT.md) for orientation and [`ROADMAP.md`](ROADMAP.md) for status. The historical validation evidence is in [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md); the current parity boundary is [spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md).
 
 ## License
 

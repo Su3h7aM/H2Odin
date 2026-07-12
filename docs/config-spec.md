@@ -436,10 +436,18 @@ The `field` action callback returns `nil` or an action table (`{ type = ..., tag
 config.procs.params = {
     ["SetConfigFlags.flags"] = { type = "Config_Flags" },
     ["DrawTexturePro.tint"]  = { default = "WHITE" },
+    -- Foreign-surface curation: no procedure body, same C ABI.
+    ["Decode.data"]          = { pointer = "multi" },
+    ["Create.options"]       = { by_ptr = true },
 }
 
 config.procs.results = {
     GetKeyPressed = { type = "Keyboard_Key" },
+}
+
+config.procs.require_results = {
+    "parse",
+    "validate",
 }
 
 config.procs.param = function(param)
@@ -451,14 +459,47 @@ config.procs.param = function(param)
 end
 ```
 
-**What this section does, and what it does not.** Everything above adjusts a *type spelling* on a signature — a value. None of it is a wrapper. Out-parameter wrappers, pointer-to-slice conversion, `cstring → string` conversion, and nullable-pointer semantics all change arity or layout, so none of them is a pure type swap: each needs a generated procedure sitting in front of a faithful `foreign` decl.
+`pointer = "multi"` selects Odin's `[^]T` foreign-pointer spelling. It does not
+change ABI. `by_ptr = true` changes the Odin call shape without a procedure
+body and is idiomatic-only; it requires an explicit non-null, call-borrowed
+contract. C `const` is not enough to infer it. `require_results` emits the Odin
+attribute on the named foreign procedures.
 
-**Where that work lives.** Wrapper generation is deferred — ROADMAP Milestone 6, not started. Two things must stay true if it is ever taken up:
+**What this section does, and what it does not.** Everything above adjusts a
+faithful foreign declaration. None of it is a wrapper. Out-parameter results
+and pointer-plus-count slices change arity or layout, so each needs a generated
+procedure sitting in front of the faithful declaration.
+
+Wrapper configuration is declarative and procedure-local:
+
+```lua
+config.procs.wrappers = {
+    cgltf_parse = h2o.proc.wrapper {
+        out_params = { "out_data" },
+    },
+    consume = h2o.proc.wrapper {
+        slices = {
+            { pointer = "data", count = "count", name = "data" },
+        },
+    },
+}
+```
+
+The first closed set is out-parameter-to-result and pointer-plus-count input
+slice. Borrowed output slices require an explicit lifetime contract and arrive
+later. Generic `string`/`cstring` conversion is not in the initial set because
+allocation, ownership, and returned-string lifetime are not header facts.
+
+Wrapper generation is Milestone 6 and is specified by
+[spec 0011](specs/0011-vendor-parity-and-idiomatic-wrappers.md). The following
+remain invariant:
 
 - The **generator** authors the wrapper, from a closed, auditable conversion set. Config selects a conversion by name; it never supplies procedure text (see *Values, not generated code*).
 - A user who wants an ergonomic layer beyond that closed set writes it as ordinary hand-written Odin on top of the raw bindings. That is what `output.footer_per_header` exists to make pleasant.
+- `procs.wrappers` is rejected unless `type_mode = "idiomatic"`; ABI mode never emits a procedure body.
 
-Until then, `config.procs` adjusts signatures and nothing more.
+Until Milestone 6 lands, the current `config.procs` implementation adjusts
+signatures and defaults only; the future keys above are not accepted yet.
 
 ---
 
@@ -468,12 +509,25 @@ Until then, `config.procs` adjusts signatures and nothing more.
 config.foreign.import_lib  = "sqlite3.lib"
 config.foreign.link_prefix = "sqlite3_"
 
+config.foreign.targets = {
+    windows_amd64 = { libraries = { "lib/sqlite3.lib" } },
+    linux_amd64   = { libraries = { "lib/libsqlite3.a" }, system = { "pthread" } },
+    fallback      = { libraries = { "system:sqlite3" } },
+}
+
 config.output.layout            = "merged" -- or "per_header"
 config.output.procedures_at_end = true
 config.output.footer_per_header = true
 ```
 
 **Why `link_prefix` is under `foreign`, not `naming`.** `link_prefix` is the *external C symbol* name — what the linker resolves — not the Odin-facing procedure name. Putting it under `foreign` keeps the "Odin name vs. C symbol" distinction clear; it is the counterpart to renaming, not a form of it.
+
+`foreign.targets` is the planned structured replacement for hand-authored OS
+link stanzas. The generator validates target keys and library values and owns
+the emitted `when` / `foreign import` source. `foreign.import_lib` remains the
+portable single-system-library shorthand. Captured function calling
+conventions are ABI facts and do not require policy; config does not silently
+coerce an unsupported convention to `"c"`.
 
 `output.layout = "per_header"` emits one Odin file per `config.inputs` header into `output_folder` (required). Placement follows each declaration's home input header; synthesized macro-group enums and bit sets inherit documented placement rules. Each file carries its own prelude because Odin `import` / `foreign import` names are file-local. (`output.imports_file` was removed for that reason — [spec 0006](specs/0006-remove-imports-file.md).) Full rules: [spec 0003](specs/0003-multi-file-odin-emission.md).
 

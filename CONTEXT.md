@@ -14,8 +14,9 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: Milestones 0–5 and 7–**15** complete; Milestone 6 (idiomatic wrappers)
-is deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
+Status: Milestones 0–5 and 7–**15** complete. Milestone 16 closes ABI/platform
+parity before Milestone 6 adds idiomatic wrappers. **H2Odin is self-hosted**:
+Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `./scripts/regen-libclang` — spec 0002).
 
@@ -28,7 +29,8 @@ collision/shadow validation ([spec 0008](docs/specs/0008-symbol-collision-valida
 and calling-convention capture on funcs/proc types (emission still `"c"`).
 Evidence and residual quality work (pointer diagnostics, CI wiring) live in
 [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md)
-and [`ROADMAP.md`](ROADMAP.md).
+and [`ROADMAP.md`](ROADMAP.md). The parity boundary and wrapper scope are fixed
+in [spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md).
 
 ---
 
@@ -183,15 +185,14 @@ rather than bend it silently.
   Odin names introduced by `import` and `foreign import` are file-local. See
   [`docs/specs/0003-multi-file-odin-emission.md`](docs/specs/0003-multi-file-odin-emission.md).
 
-- **Wrappers are NOT implemented.** Milestone 6 (generated wrapper procs:
-  `cstring→string`, pointer+length→slice, flag-enum→`bit_set`) is **deferred and
-  has never existed** in the codebase — earlier roadmap boxes that implied
-  otherwise were corrected. Idiomatic mode today means "faithful bindings spelled
-  in native Odin types, one `foreign` decl per function" — no authored procedure
-  bodies, no paired `__abi` decls. Anything that authors procedure *logic* (bodies,
-  temp vars, allocator calls) fights principles 1 and 2 and is out of scope until
-  that milestone is deliberately taken up. Analysis already records the
-  length-like-neighbour facts a future pointer+length→slice decision would consume.
+- **Wrappers are not implemented yet, but their boundary is specified.** Today
+  idiomatic mode means faithful bindings with proven native spellings and no
+  authored procedure bodies. Spec 0011 limits Milestone 6 to generator-authored
+  out-parameter-result and pointer-plus-count input-slice wrappers over a retained
+  faithful foreign declaration. ABI mode remains wrapper-free. Generic string
+  conversion, borrowed output slices, struct pair folding, and library-specific
+  helpers are outside the initial set. Analysis already records length-like
+  neighbour candidates; policy must still select semantic conversions.
 
 - **Config is Lua via `require "h2odin"`.** A program builds a sectioned object
   with `h2o.config()` — data for the easy path (`package`, `foreign.import_lib`,
@@ -203,9 +204,9 @@ rather than bend it silently.
 
 - **Config selects; it never authors Odin.** This is about *who writes the source*,
   and it is permanent. It is not the same claim as "the generator emits no wrapper
-  procedures," which is merely today's state (Milestone 6, deferred). If wrappers
-  ever land, the generator authors them from a closed conversion set and config
-  only names the conversion. Conflating the two claims is a recurring confusion.
+  procedures," which is merely today's state. When wrappers land, the generator
+  authors them from spec 0011's closed conversion set and config only names the
+  conversion. Conflating the two claims is a recurring confusion.
 
 - **The config surface is the sectioned `h2o` model** in
   [`docs/config-spec.md`](docs/config-spec.md). Milestones 8–10 landed the

@@ -1,10 +1,20 @@
 # Vendor-library example audit — 2026-07-11
 
+> **Historical discovery record.** The red statuses and recommendations below
+> describe the audit-time generator, before Milestone 15 closed. In the current
+> worktree, pure-void handles, final-name validation, foreign provenance/POSIX
+> mapping, and the example gate are implemented; fff, sqlite3, bit_fields,
+> raylib, Box3D, cgltf, curl, and miniaudio pass `odin check`. `ggml` was added
+> later as a separate known-red stress example and is not in that eight-package
+> gate. Current forward decisions are in
+> [spec 0011](specs/0011-vendor-parity-and-idiomatic-wrappers.md) and
+> [`ROADMAP.md`](../ROADMAP.md), not in this audit's ordered closure plan.
+
 ## Scope and evidence standard
 
-This audit covers the current generator, tests, roadmap, and the recently added real-world examples derived from Odin `vendor:` libraries. It uses only repository primary sources: source, tests, checked-in headers/configs/generated bindings, project documentation, and local validation commands. Statements labelled **Direct evidence** are demonstrated by those artifacts; statements labelled **Inference** are proposed explanations or design consequences that still need a focused reproducer.
+This audit covers the audit-time generator, tests, roadmap, and the then-recently added real-world examples derived from Odin `vendor:` libraries. It uses only repository primary sources: source, tests, checked-in headers/configs/generated bindings, project documentation, and local validation commands. Statements labelled **Direct evidence** are demonstrated by those artifacts; statements labelled **Inference** are proposed explanations or design consequences that still need a focused reproducer.
 
-## Executive summary
+## Audit-time executive summary
 
 The validation corpus has done its job: it shows that the core pipeline is mature on three substantial APIs, but it also exposes three correctness failures that should now outrank deferred wrapper work and most polish:
 
@@ -26,7 +36,7 @@ unit/e2e results did **not** imply real-world example validity.
 > `./scripts/validate-examples` is the automated vendor-example validation
 > that this audit called for.
 
-## Validation status
+## Audit-time validation status
 
 | Surface | Evidence at audit time | Status (audit day) |
 |---|---|---|
@@ -208,7 +218,9 @@ Keep wrappers deferred. After P0 correctness work, classify repeated callback/ou
 **Direct evidence**
 
 - Curl exercises platform callbacks and its comparison notes calling-convention curation (`examples/curl/README.md:50-54`).
-- The roadmap states `clang_getFunctionTypeCallingConv` is unused and `__stdcall`/`__fastcall` are silently dropped (`ROADMAP.md:360-363`).
+- At audit time, `clang_getFunctionTypeCallingConv` was unused and
+  `__stdcall`/`__fastcall` were silently dropped. Calling-convention capture
+  subsequently landed; convention-aware emission remains Milestone 16 work.
 - Windows multi-library import parity is separately deferred (`ROADMAP.md:491-493`).
 
 **Recommendation**

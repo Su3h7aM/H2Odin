@@ -74,7 +74,7 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `structs.fields` | `"Struct.field"` → `{ type?, tag? }` | field type spelling and/or tag |
 | `structs.field` | `function(field) → nil\|{type?,tag?}` | same, as a callback |
 | `structs.align` | string → positive int | `#align(N)` on a named struct |
-| `procs.params` | `"Proc.param"` → `{ type?, default? }` | param type spelling and/or default |
+| `procs.params` | `"Proc.param"` → `{ type?, default? }` | raw foreign param type spelling and/or default; does not create a wrapper |
 | `procs.param` | `function(param) → nil\|{type?,default?}` | same, as a callback |
 | `procs.results` | `"Proc"` → `{ type? }` | return type spelling |
 | `procs.result` | `function(result) → nil\|{type?}` | same, as a callback |
@@ -281,7 +281,7 @@ config.procs.params = {
 config.procs.results = { GetKeyPressed = { type = "c.int" } }
 ```
 
-Keys use C names (`Struct.field`, `Proc.param`) and are applied **before** naming, so strip/rename does not break the maps. These adjust *spellings and defaults only* — no wrappers (see ROADMAP Milestone 6).
+Keys use C names (`Struct.field`, `Proc.param`) and are applied **before** naming, so strip/rename does not break the maps. These adjust *spellings and defaults only* — no wrappers. In particular, setting a raw foreign parameter to `[]T` does not combine a C pointer and count; an Odin slice is two words and requires the future idiomatic wrapper layer in spec 0011.
 
 ## Foreign link prefix
 
@@ -327,7 +327,11 @@ Determinism claim: *the same headers plus the same config tree produce byte-iden
 
 Configuration is consulted only during Transformation, and only through the policy layer. The generator loads and executes the configuration once at startup. Extraction, analysis, and emission never touch Lua.
 
-Pass order inside Transformation (config-spec): macro grouping → enum policies → type rewrites → symbol removal → naming.
+Pass order inside Transformation is: pointer/leaf lowering → macro grouping →
+enum policies → opaque/foreign type handling → type rewrites → struct/proc
+adjustments → symbol removal → naming → final-name validation. Output planning
+runs right after Transformation in `main`; bit-field fallback planning and
+diagnostics reporting follow before and after emission respectively.
 
 ## Migration from the flat surface
 
@@ -350,4 +354,7 @@ Pass order inside Transformation (config-spec): macro grouping → enum policies
 
 ## What we deliberately keep out for now
 
-Generated wrapper procs (Milestone 6). That can land without disturbing the sectioned shape.
+Generated wrapper procs and structured per-target foreign linkage (spec 0011).
+The first wrapper set is out-parameter results and pointer-plus-count input
+slices in idiomatic mode. Generic string conversion and library-specific helper
+bodies are not part of that first set.

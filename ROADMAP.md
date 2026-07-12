@@ -59,15 +59,34 @@ Reaching this means the architecture works. Everything after is widening a prove
 
 ## Milestone 6 — Conversions (idiomatic wrappers)
 
-> **Deferred.** Wrapper/conversion work has not started — the four boxes that were marked done described code that never existed. Slices (`pointer+length → []T`) and `cstring → string` both change arity or layout, so neither is a pure type swap: each needs a generated wrapper proc sitting in front of a faithful `foreign` decl, which is the bulk of this milestone. The plumbing is forward-looking: Analysis already records length-like-neighbour facts (`analyze.odin`) that a future pointer+length→slice decision will consume.
+> **Specified, implementation pending.** [Spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md)
+> narrows this milestone to a closed ergonomic layer in idiomatic mode. ABI
+> mode remains wrapper-free. Platform linkage and calling-convention emission
+> are Milestone 16 prerequisites, not wrapper work.
 >
 > The generator authors any wrapper it emits, from the closed conversion set below. Config *names* a conversion; it never supplies its text. That boundary is permanent and does not depend on this milestone landing.
 
-- [ ] Closed conversion set as a union carrying its own data; `nil` = no conversion.
-- [ ] Two-layer emission: faithful ABI foreign decl + generated wrapper.
-- [ ] `cstring` parameter→`string` wrapper parameter; return `cstring` stays ABI-shaped until ownership/lifetime policy exists.
-- [ ] pointer+length→slice (config-driven).
-- [ ] `wrappers = false` falls back to ABI form per declaration.
+- [ ] Wrapper-plan IR: a closed union carrying out-result and input-slice data;
+      `nil` means no wrapper. Transformation owns planning; Emission serializes.
+- [ ] Two-layer idiomatic emission: retain a faithful foreign declaration and
+      generate a public wrapper. ABI mode emits only the faithful declaration.
+- [ ] Out-parameter → named result (config-selected), retaining the C return
+      value unless policy explicitly marks it non-semantic.
+- [ ] Pointer + count → input slice (config-selected), with checked count-width
+      conversion and `raw_data` forwarding.
+- [ ] Wrapper planning consumes the curated faithful surface from Milestone 16
+      (`[^]T`, policy-selected `#by_ptr`, and `require_results`) without
+      reinterpreting or weakening those contracts.
+- [ ] Wrapper naming/collision validation, per-header placement, imports, docs,
+      diagnostics, and deterministic output.
+- [ ] Negative tests: nullable/retained `#by_ptr`, count overflow, ambiguous
+      pointer/count pairs, unsupported output lifetimes, and ABI-mode rejection.
+- [ ] Vendor acceptance: reproduce the three `vendor:cgltf` out-parameter
+      wrappers and representative pointer/count slice inputs through policy.
+
+Not in this milestone: generic `string`/`cstring` conversion (allocation and
+lifetime contract absent), borrowed output slices, struct field-pair folding,
+static-inline C translation, or library-specific helper bodies.
 
 Flag enum→`bit_set` was once listed here. It needs no wrapper — it rewrites a declaration and its members' values (`value → log2(value)`), which is Transformation's ordinary work. It moves to Milestone 9.
 
@@ -353,10 +372,10 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
       Fixed: when the enum backing is unsigned, capture via
       `get_enum_constant_decl_unsigned_value` and store the bit pattern as
       `i64` (emission already reinterprets with `u64` for unsigned backings).
-- **Calling-convention capture is promoted to Milestone 15.**
-      `clang_getFunctionTypeCallingConv` is unused; `__stdcall`/`__fastcall`
-      in Windows headers are silently dropped. The authoritative checklist
-      item now lives with the validation work below.
+- [x] **Calling-convention capture.**
+      Extraction records libclang's calling-convention fact in the IR.
+      Emission and target-sensitive validation remain open and are tracked in
+      Milestone 16.
 - [x] **Flaky e2e observed (2026-07-11):**
       `test_opaque_tags_idiomatic_default_handle` once failed all four
       `expect_contains` under the multi-thread runner (empty/truncated stdout;
@@ -374,12 +393,12 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
       plus `./scripts/regen-libclang` + `git diff --exit-code` and
       `./scripts/validate-examples`.
 
-## Milestone 15 — Close the real-world validation gaps (current priority)
+## Milestone 15 — Close the real-world validation gaps (complete)
 
 The five-library vendor corpus ([`examples/`](examples/) — raylib, box3d,
 cgltf, curl, miniaudio), together with the fff/sqlite3/bit-fields fixtures,
-changed the next milestone. Broad feature work, wrappers, and polish are paused
-until all eight packages generate without a panic and pass `odin check` with an
+changed that milestone. Broad feature work, wrappers, and polish were paused
+until all eight packages generated without a panic and passed `odin check` with an
 honest config. See the investigation report,
 [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md),
 for evidence, failure traces, and the acceptance matrix.
@@ -465,10 +484,68 @@ default rather than a panic or an apparently successful generation.
 - [x] Every fixed root cause has a minimal regression test, and the example
       READMEs contain no temporary-workaround status for these issues.
 
+## Milestone 16 — ABI and platform parity with official vendor bindings
+
+This is the next implementation priority. It closes correctness and packaging
+gaps that the official vendor bindings demonstrate before Milestone 6 changes
+any public call shape. Decisions and ordering are in
+[spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md).
+
+### P0 — ABI facts must reach emission
+
+- [ ] Map captured `Calling_Conv` values to Odin conventions for direct foreign
+      procedures and callback/procedure types. Never silently emit `"c"` for a
+      known non-C convention; unsupported/unknown non-default values are errors.
+- [ ] Add fixtures for cdecl, stdcall, fastcall, and one unsupported convention;
+      check direct declarations and nested callback types.
+- [ ] Resolve the compiler/libclang provenance gap: record the loaded libclang
+      version and the selected builtin-header resource directory under
+      `-verbose`, with an explicit configuration override.
+
+### P1 — Structured target linkage and platform types
+
+- [ ] Specify and implement `foreign.targets`: closed target keys, ordered
+      libraries, system dependencies, fallback, path validation, and deterministic
+      `when` emission. Keep `foreign.import_lib` as the single-library shorthand.
+- [ ] Add Windows foreign-type mappings/aliases matching the defining Odin
+      package (`win32.sockaddr`, `win32.fd_set`, and corpus-required names);
+      retain spec 0010's Unix allowlist discipline and config precedence.
+- [ ] Validate generated linkage files on Linux and Windows targets, including
+      static/shared and system fallback forms represented by raylib, Box3D,
+      cgltf, curl, and miniaudio.
+- [ ] Make output publication transactional and track generated files so a
+      failed multi-target/per-header run cannot leave mixed or stale output.
+
+### P2 — Curated faithful surface
+
+- [ ] Add structured, ABI-identical pointer curation (`pointer = "multi"`) and
+      use it for array parameters proven by declaration shape or explicit policy.
+- [ ] Add policy-controlled `require_results`; use block-level emission only
+      when every procedure in that block shares the setting.
+- [ ] Add idiomatic-only, explicit `#by_ptr` with non-null/call-borrowed policy;
+      never infer it from `const T *` alone.
+- [ ] Curate the five vendor examples against recurring patterns and record
+      declaration-level parity metrics separately from helper/module counts.
+- [ ] Bring `ggml` into the gate by resolving its dual-prefix collisions,
+      dangling renamed type spellings, and parameter/type shadowing through
+      generator diagnostics plus an honest corpus config.
+
+### Exit gate
+
+- [ ] ABI mode remains procedure-body-free across all fixtures and examples.
+- [ ] Calling conventions and target linkage are checked on at least one Unix
+      and one Windows target.
+- [ ] All current gate examples plus ggml generate without error diagnostics
+      and pass `odin check` for their supported target configurations.
+- [ ] Failed generation publishes no partial generation and removes no prior
+      accepted generation.
+- [ ] Milestone 6 can add wrappers without changing the faithful ABI module's
+      interface or implementation.
+
 
 ## Later
 
-- [ ] Milestone 6 (wrappers) when deliberately taken up — see above.
+- [ ] Milestone 6 after Milestone 16's ABI/platform prerequisites.
 - [x] **Deprecated C declarations — propagate by default, drop on opt-in.**
       Decided in
       [`docs/specs/0009-deprecated-declarations.md`](docs/specs/0009-deprecated-declarations.md):
@@ -492,9 +569,12 @@ default rather than a panic or an apparently successful generation.
       surface (array params like `CXUnsavedFile *` as `^Unsaved_File`,
       out-params, …). Spec 0002 scoped self-host to Extraction's needs; this
       is the follow-up polish.
-- [ ] Windows multi-lib `foreign import` parity for the generated libclang
-      package (the hand binding had a `when ODIN_OS` stanza; generated output
-      is Unix `system:clang` only — documented out of scope in spec 0002).
+- [ ] Borrowed output-slice wrappers after policy has an explicit lifetime
+      vocabulary (spec 0011).
+- [ ] Struct pointer/count folding after a whole-record layout proof exists
+      (spec 0011).
+- [ ] Generic string wrappers only after allocation, ownership, and return
+      lifetime contracts are specified.
 - [ ] Multi-target runs (generate per target, merge).
 - [ ] A license.
 
@@ -506,10 +586,8 @@ Milestones 0–5 and 7–**15** are complete — including **self-hosted libclan
 bindings (13)**, **multi-file Odin emission (14)**, and **real-world
 validation closure (15)**. Regenerate the checked-in libclang package with
 `./scripts/regen-libclang`; regenerate the vendor corpus with
-`./scripts/validate-examples`. **Milestone 6 (wrappers)** remains deferred.
+`./scripts/validate-examples`. **Milestone 16 (ABI/platform vendor parity)** is
+next; **Milestone 6 (idiomatic wrappers)** follows its prerequisites.
 
-Optional follow-ups from M15 that are *not* exit-gate blockers: pointer-
-lowering diagnostic curation, CI wiring for `validate-examples`, and
-emitting non-default calling conventions once a Windows validation target
-exists. Broader hardening and multi-lib emission can resume independently.
-
+CI wiring and the remaining code-health items continue in parallel where they
+do not change the parity sequence.
