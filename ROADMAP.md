@@ -318,8 +318,9 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       symlink escaping the config dir is rejected) — pin that load-bearing
       behavior with a test so a `core:os` change can't silently regress it.
       On Windows, `GetFullPathNameW` is purely lexical, so a symlink/junction
-      could escape. `path_is_under` also mis-rejects descendants when the
-      root is `/` and compares case-sensitively on case-insensitive volumes.
+      could escape. `path_is_under` now accepts descendants of roots that end
+      with a separator (including `/`); remaining gap is case-insensitive
+      volume comparison on Windows.
 - [ ] **Dead diagnostic — `naming_ambiguity` cannot fire.**
       `longest_known_at` counts equal-length exact matches at one index, but
       `known_tokens` map keys are unique, so `match_count > 1` is unreachable.
