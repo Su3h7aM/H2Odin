@@ -321,12 +321,12 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       could escape. `path_is_under` now accepts descendants of roots that end
       with a separator (including `/`); remaining gap is case-insensitive
       volume comparison on Windows.
-- [ ] **Dead diagnostic — `naming_ambiguity` cannot fire.**
-      `longest_known_at` counts equal-length exact matches at one index, but
-      `known_tokens` map keys are unique, so `match_count > 1` is unreachable.
-      Real ambiguity is competing segmentations (`ABC = AB+C` vs `A+BC`),
-      which needs a different detection. Implement that, or retire the
-      diagnostic and the doc comment promising it (`src/naming.odin`).
+- [x] **Dead diagnostic — `naming_ambiguity` cannot fire.**
+      Equal-length key collisions were unreachable (`known_tokens` map keys
+      are unique). Fixed by detecting competing segmentations: when longest
+      match wins at an index but a shorter known key also matches and another
+      known key continues after it (`ABC = AB|…` vs `A|BC`), tokenize marks
+      ambiguous and Transformation emits `naming_ambiguity`.
 - [x] **Validation gap — Lua list fields accept hybrid tables.**
       `policy_string_list_field` / `policy_string_or_list_field`
       (`src/policy_lua.odin`) only scanned non-index keys when `luaL_len` is 0,

@@ -81,3 +81,67 @@ test_naming_apply_case_by_kind :: proc(t: ^testing.T) {
 	testing.expect_value(t, member, "Key_Null")
 	delete(member)
 }
+
+@(test)
+test_naming_competing_segmentations_are_ambiguous :: proc(t: ^testing.T) {
+	known := make(map[string]string)
+	defer {
+		for k, v in known {
+			delete(k)
+			delete(v)
+		}
+		delete(known)
+	}
+	// ABC = AB|C (longest) vs A|BC — dictionary cannot choose alone.
+	known[strings.clone("AB")] = strings.clone("ab")
+	known[strings.clone("A")] = strings.clone("a")
+	known[strings.clone("BC")] = strings.clone("bc")
+
+	tokens, amb := naming_tokenize("ABC", known)
+	testing.expect(t, amb)
+	testing.expect_value(t, len(tokens), 2)
+	testing.expect_value(t, tokens[0], "ab")
+	testing.expect_value(t, tokens[1], "c")
+	for tok in tokens {
+		delete(tok)
+	}
+	delete(tokens)
+
+	// Whole-word + parts: NOMEM vs NO|MEM.
+	known[strings.clone("NOMEM")] = strings.clone("no_mem")
+	known[strings.clone("NO")] = strings.clone("no")
+	known[strings.clone("MEM")] = strings.clone("mem")
+	tokens2, amb2 := naming_tokenize("NOMEM", known)
+	testing.expect(t, amb2)
+	for tok in tokens2 {
+		delete(tok)
+	}
+	delete(tokens2)
+}
+
+@(test)
+test_naming_shorter_known_without_continuation_is_not_ambiguous :: proc(t: ^testing.T) {
+	known := make(map[string]string)
+	defer {
+		for k, v in known {
+			delete(k)
+			delete(v)
+		}
+		delete(known)
+	}
+	// AB and A both match, but nothing known continues after A.
+	known[strings.clone("AB")] = strings.clone("ab")
+	known[strings.clone("A")] = strings.clone("a")
+
+	snake, amb := naming_snake_case("ABcd", known)
+	testing.expect(t, !amb)
+	testing.expect_value(t, snake, "ab_cd")
+	delete(snake)
+
+	// Sole dictionary hit is never ambiguous.
+	known[strings.clone("SQLite3")] = strings.clone("sqlite3")
+	snake2, amb2 := naming_snake_case("SQLite3_open", known)
+	testing.expect(t, !amb2)
+	testing.expect_value(t, snake2, "sqlite3_open")
+	delete(snake2)
+}

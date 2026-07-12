@@ -195,8 +195,8 @@ statements, imports, and output text.
    complete. Milestone 16 is now the next priority.
 8. The old Milestone 6 included generic `cstring -> string` conversion without
    an allocation/lifetime contract. It is removed from the initial wrapper set.
-9. `naming_ambiguity` remains documented in code health as unreachable under
-   the current tokenizer implementation.
+9. `naming_ambiguity` was unreachable under equal-length key counting; it now
+   fires on competing known-token segmentations (see code health / naming).
 10. Multi-file output remains non-transactional and stale generated files are
     not tracked.
 11. The clang resource directory comes from `clang` on `PATH`, which may not

@@ -10,8 +10,11 @@ import "core:strings"
 //
 // known maps exact surface spellings (e.g. "SQLite3", "UTF8", "NOMEM") to a
 // lower form that may itself contain underscores ("no_mem" → two atoms).
-// Longest match wins at each position. When two known keys of equal length
-// both match at the same index, the split is ambiguous (naming_ambiguity).
+// Longest match wins at each position. When a shorter known key also matches
+// at the same index and another known key continues after it — competing
+// segmentations such as ABC = AB|C vs A|BC — the split is ambiguous
+// (naming_ambiguity). Map keys are unique, so equal-length collisions cannot
+// occur; real dictionary ambiguity is overlapping lengths.
 //
 // Heuristic (when no known token matches):
 //   - underscores are separators
@@ -36,11 +39,11 @@ naming_tokenize :: proc(name: string, known: map[string]string = nil, allocator 
 			continue
 		}
 
-		best_key, match_count := longest_known_at(name, i, keys)
-		if match_count > 1 {
-			ambiguous = true
-		}
+		best_key := longest_known_at(name, i, keys)
 		if best_key != "" {
+			if known_segmentation_ambiguous_at(name, i, keys, len(best_key)) {
+				ambiguous = true
+			}
 			lower := known[best_key]
 			for part in strings.split(lower, "_", context.temp_allocator) {
 				if part != "" {
@@ -85,25 +88,49 @@ naming_tokenize :: proc(name: string, known: map[string]string = nil, allocator 
 	return out[:], ambiguous
 }
 
-// Longest known key matching name[i:]. match_count is how many keys share
-// that longest length (>1 → dictionary cannot disambiguate).
-longest_known_at :: proc(name: string, i: int, keys: []string) -> (best_key: string, match_count: int) {
-	best_len := 0
+// Longest known key matching name[i:]. Keys are unique map surfaces, so at
+// most one key of a given length can match; longer always wins when present.
+longest_known_at :: proc(name: string, i: int, keys: []string) -> string {
 	for key in keys {
-		if len(key) < best_len {
-			break
-		}
 		if i + len(key) <= len(name) && name[i:i + len(key)] == key {
-			if len(key) > best_len {
-				best_len = len(key)
-				best_key = key
-				match_count = 1
-			} else if len(key) == best_len {
-				match_count += 1
-			}
+			return key
 		}
 	}
-	return best_key, match_count
+	return ""
+}
+
+// True when a strictly shorter known key matches at i and another known key
+// continues after it — so the dictionary admits a different tiling than pure
+// longest-match (e.g. AB vs A+BC on "ABC").
+known_segmentation_ambiguous_at :: proc(name: string, i: int, keys: []string, best_len: int) -> bool {
+	if best_len <= 1 {
+		return false
+	}
+	for key in keys {
+		s := len(key)
+		if s == 0 || s >= best_len {
+			continue
+		}
+		if i + s > len(name) || name[i:i + s] != key {
+			continue
+		}
+		if known_match_at(name, i + s, keys) {
+			return true
+		}
+	}
+	return false
+}
+
+known_match_at :: proc(name: string, i: int, keys: []string) -> bool {
+	if i >= len(name) {
+		return false
+	}
+	for key in keys {
+		if i + len(key) <= len(name) && name[i:i + len(key)] == key {
+			return true
+		}
+	}
+	return false
 }
 
 known_token_keys_longest_first :: proc(known: map[string]string, allocator := context.allocator) -> []string {
