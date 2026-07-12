@@ -336,14 +336,11 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       (`src/main.odin`): a config-relative path degrades to cwd-relative,
       which can select the wrong header or output dir. Fixed: join failure
       is fatal and reports both path components; callers propagate `ok`.
-- [ ] **Multi-file output is not transactional.**
-      `write_emit_to_config_folder` writes in sequence, so a mid-run failure
-      leaves a mixed generation, and files from since-removed headers are
-      never cleaned up. Render everything first, write to temp files, rename
-      into place; consider a generated-file manifest for stale cleanup. Also
-      document (not just in a code comment) that output is written *before*
-      error-severity diagnostics are reported — builds must gate on exit
-      code, not file existence.
+- [x] **Multi-file output is not transactional.**
+      Writes stage under `.h2odin-stage`, rename into place, track basenames
+      in `.h2odin-generated` for stale cleanup; prior generation left intact
+      if staging fails. Documented: publication runs before error-severity
+      diagnostics — gate builds on exit code.
 - [ ] **Structure — deep `os.exit` in `src/policy_callbacks.odin`**
       (18 call sites): skips main's defers, makes negative callback paths
       untestable, and diverges from the `(value, ok)` style elsewhere.
@@ -514,7 +511,7 @@ Land as a short stack (not one commit):
 - [x] Add Windows foreign-type mappings/aliases matching the defining Odin
       package (`win32.sockaddr`, `win32.fd_set`, and corpus-required names);
       retain spec 0010's Unix allowlist discipline and config precedence.
-- [ ] Make output publication transactional and track generated files so a
+- [x] Make output publication transactional and track generated files so a
       failed multi-target/per-header run cannot leave mixed or stale output.
 - [ ] Validate generated linkage files on Linux and Windows targets, including
       static/shared and system fallback forms represented by raylib, Box3D,
