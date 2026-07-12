@@ -84,6 +84,17 @@ check_generated_output :: proc(t: ^testing.T, content: []byte, out_dir: string) 
 	testing.expect(t, ok)
 }
 
+// Cross-target check of an already-written package directory (no rewrite).
+check_generated_output_target :: proc(t: ^testing.T, out_dir: string, target: string) {
+	flag := strings.concatenate({"-target:", target})
+	defer delete(flag)
+	cmd := [?]string{"odin", "check", out_dir, "-no-entry-point", flag}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	testing.expectf(t, ok, "odin check -target:%s failed", target)
+}
+
 @(test)
 test_add_fixture_abi_mode :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/add.lua"}
@@ -1240,7 +1251,8 @@ test_calling_conv_supported_emits_stdcall_and_callback_types :: proc(t: ^testing
 
 @(test)
 test_foreign_targets_emits_when_chain :: proc(t: ^testing.T) {
-	// Milestone 16 P1.1: structured foreign.targets → deterministic when/else.
+	// Structured foreign.targets → deterministic when/else; package checks on
+	// host plus Windows and Linux targets (paths need not exist for check).
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/foreign_targets.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
 	defer delete(stdout)
@@ -1260,6 +1272,11 @@ test_foreign_targets_emits_when_chain :: proc(t: ^testing.T) {
 	// Shorthand system: path must not appear when targets are set.
 	expect_not_contains(t, stdout, `foreign import lib "system:ftargs"`)
 	expect_contains(t, stdout, "add :: proc")
+
+	out_dir := "/tmp/h2odin-foreign-targets-check"
+	check_generated_output(t, stdout, out_dir)
+	check_generated_output_target(t, out_dir, "windows_amd64")
+	check_generated_output_target(t, out_dir, "linux_amd64")
 }
 
 @(test)

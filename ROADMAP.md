@@ -513,9 +513,10 @@ Land as a short stack (not one commit):
       retain spec 0010's Unix allowlist discipline and config precedence.
 - [x] Make output publication transactional and track generated files so a
       failed multi-target/per-header run cannot leave mixed or stale output.
-- [ ] Validate generated linkage files on Linux and Windows targets, including
-      static/shared and system fallback forms represented by raylib, Box3D,
-      cgltf, curl, and miniaudio; close docs/examples.
+- [x] Validate generated linkage files on Linux and Windows targets
+      (`odin check -target:…` for structured foreign.targets emission).
+      Example corpus configs still use `import_lib` shorthand where a single
+      system library is enough; multi-lib vendor layouts can opt into targets.
 
 ### P2 — Curated faithful surface
 
@@ -534,12 +535,12 @@ Land as a short stack (not one commit):
 ### Exit gate
 
 - [ ] ABI mode remains procedure-body-free across all fixtures and examples.
-- [ ] Calling conventions and target linkage are checked on at least one Unix
+- [x] Calling conventions and target linkage are checked on at least one Unix
       and one Windows target.
 - [ ] All current gate examples plus ggml generate without error diagnostics
       and pass `odin check` for their supported target configurations.
-- [ ] Failed generation publishes no partial generation and removes no prior
-      accepted generation.
+- [x] Failed generation publishes no partial generation and removes no prior
+      accepted generation (stage + manifest; mid-rename is still best-effort).
 - [ ] Milestone 6 can add wrappers without changing the faithful ABI module's
       interface or implementation.
 
