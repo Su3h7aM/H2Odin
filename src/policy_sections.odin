@@ -976,7 +976,7 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 
-	params, params_ok := policy_member_action_map(L, "procs", "params", allow_tag = false, allow_default = true)
+	params, params_ok := policy_member_action_map(L, "procs", "params", allow_tag = false, allow_default = true, allow_pointer = true)
 	if !params_ok {
 		return false
 	}

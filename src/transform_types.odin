@@ -339,8 +339,21 @@ lower_type :: proc(ir: ^IR, handle: Type_Handle) {
 	#partial switch variant in info.variant {
 	case Type_Pointer:
 		lower_type(ir, variant.pointee)
-		lowering := lower_pointer(ir, variant.pointee)
-		info.variant = lowering
+		// Array-parameter decay is a declaration-shape proof of array
+		// semantics — ABI-identical [^]T, not a guess (spec 0011).
+		if variant.is_array_param_decay {
+			// Still honor proven void*/const char*/function special cases if
+			// the array element was one of those (rare); otherwise Multi.
+			base := lower_pointer(ir, variant.pointee)
+			if base.kind == .Single {
+				base.kind = .Multi
+				base.confidence = .Proven
+				base.reason = .Array_Param_Decay
+			}
+			info.variant = base
+		} else {
+			info.variant = lower_pointer(ir, variant.pointee)
+		}
 		ir.types[int(handle)] = info
 	case Type_Array:
 		lower_type(ir, variant.element)
@@ -367,6 +380,26 @@ lower_pointer :: proc(ir: ^IR, pointee: Type_Handle) -> Type_Lowered_Pointer {
 	}
 
 	return Type_Lowered_Pointer{pointee = pointee, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}
+}
+
+// Force a lowered single (or already multi) pointer to [^]T. Returns false when
+// the type is not a suitable data pointer (rawptr / cstring / proc / non-ptr).
+force_multi_pointer :: proc(ir: ^IR, handle: Type_Handle, reason: Pointer_Lowering_Reason) -> bool {
+	info := ir_type(ir, handle)
+	lowered, is_lowered := info.variant.(Type_Lowered_Pointer)
+	if !is_lowered {
+		return false
+	}
+	#partial switch lowered.kind {
+	case .Single, .Multi:
+		lowered.kind = .Multi
+		lowered.confidence = .Proven
+		lowered.reason = reason
+		info.variant = lowered
+		ir.types[int(handle)] = info
+		return true
+	}
+	return false
 }
 
 report_pointer_lowering_guesses :: proc(ir: ^IR, opaque_records: []bool = nil) {

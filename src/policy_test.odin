@@ -90,6 +90,7 @@ delete_member_action_map :: proc(m: ^map[string]Member_Action) {
 		delete(action.type)
 		delete(action.tag)
 		delete(action.default)
+		delete(action.pointer)
 	}
 	delete(m^)
 	m^ = nil

@@ -501,8 +501,9 @@ remain invariant:
 - A user who wants an ergonomic layer beyond that closed set writes it as ordinary hand-written Odin on top of the raw bindings. That is what `output.footer_per_header` exists to make pleasant.
 - `procs.wrappers` is rejected unless `type_mode = "idiomatic"`; ABI mode never emits a procedure body.
 
-Until Milestone 6 lands, the current `config.procs` implementation adjusts
-signatures and defaults only; the future keys above are not accepted yet.
+`pointer = "multi"` is implemented (array-parameter decay also selects
+`[^]T` automatically). `by_ptr`, `require_results`, and `procs.wrappers`
+land with Milestone 16 P2 / Milestone 6 respectively.
 
 ---
 

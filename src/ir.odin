@@ -138,11 +138,15 @@ Type_Idiomatic_Leaf :: struct {
 }
 
 Type_Pointer :: struct {
-	pointee: Type_Handle,
+	pointee:              Type_Handle,
+	// Extraction: this pointer came from a C array parameter form that decayed
+	// at the ABI boundary. Proven multi-pointer candidate (spec 0011).
+	is_array_param_decay: bool,
 }
 
 Pointer_Lowering_Kind :: enum {
 	Single, // T* → ^T
+	Multi, // T* with array semantics → [^]T (ABI-identical)
 	Rawptr, // void* → rawptr
 	CString, // const char* → cstring
 	Proc, // function pointer → proc "c" (...)
@@ -158,6 +162,8 @@ Pointer_Lowering_Reason :: enum {
 	Const_Char_Pointer,
 	Function_Pointer,
 	Single_Pointer_Default,
+	Array_Param_Decay, // C array parameter form decayed to pointer (Extraction fact)
+	Configured_Multi, // procs.params pointer = "multi"
 }
 
 Type_Lowered_Pointer :: struct {

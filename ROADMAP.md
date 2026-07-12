@@ -520,7 +520,7 @@ Land as a short stack (not one commit):
 
 ### P2 — Curated faithful surface
 
-- [ ] Add structured, ABI-identical pointer curation (`pointer = "multi"`) and
+- [x] Add structured, ABI-identical pointer curation (`pointer = "multi"`) and
       use it for array parameters proven by declaration shape or explicit policy.
 - [ ] Add policy-controlled `require_results`; use block-level emission only
       when every procedure in that block shares the setting.

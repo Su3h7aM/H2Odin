@@ -220,7 +220,7 @@ policy_proc_param_action :: proc(policy: ^Policy, proc_name, param_name, type_sp
 		os.exit(1)
 	}
 	defer lua.pop(L, 2)
-	return policy_read_member_action_result(L, "procs.param", param_name, allow_tag = false, allow_default = true)
+	return policy_read_member_action_result(L, "procs.param", param_name, allow_tag = false, allow_default = true, allow_pointer = true)
 }
 
 // procs.result(result) → nil | { type? }
@@ -252,6 +252,7 @@ policy_read_member_action_result :: proc(
 	subject: string,
 	allow_tag: bool,
 	allow_default: bool,
+	allow_pointer := false,
 ) -> (
 	action: Member_Action,
 	decided: bool,
@@ -270,6 +271,9 @@ policy_read_member_action_result :: proc(
 	}
 	if allow_default {
 		append(&allowed, "default")
+	}
+	if allow_pointer {
+		append(&allowed, "pointer")
 	}
 	// Only allow known keys on the action table.
 	lua.pushnil(L)
@@ -313,7 +317,22 @@ policy_read_member_action_result :: proc(
 		}
 		lua.pop(L, 1)
 	}
-	if action.type == "" && action.tag == "" && action.default == "" {
+	if allow_pointer {
+		if lua.getfield(L, -1, "pointer"); !lua.isnil(L, -1) {
+			if lua.type(L, -1) != .STRING {
+				user_errorf("h2odin: config %s for %q: pointer must be a string", callback_path, subject)
+				os.exit(1)
+			}
+			ptr_s := string(lua.tostring(L, -1))
+			if ptr_s != "multi" {
+				user_errorf("h2odin: config %s for %q: pointer must be \"multi\" (got %q)", callback_path, subject, ptr_s)
+				os.exit(1)
+			}
+			action.pointer = strings.clone(ptr_s)
+		}
+		lua.pop(L, 1)
+	}
+	if action.type == "" && action.tag == "" && action.default == "" && action.pointer == "" {
 		return {}, false
 	}
 	return action, true

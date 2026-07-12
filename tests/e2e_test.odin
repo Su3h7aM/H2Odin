@@ -1250,6 +1250,26 @@ test_calling_conv_supported_emits_stdcall_and_callback_types :: proc(t: ^testing
 }
 
 @(test)
+test_array_param_and_configured_multi_pointer :: proc(t: ^testing.T) {
+	// Array-form params → [^]T (proven); bare T* with pointer="multi" → [^]T.
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/array_param.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "fill_buf :: proc(buf: [^]c.int")
+	expect_contains(t, stdout, "flex :: proc(items: [^]c.int")
+	expect_contains(t, stdout, "bare :: proc(p: [^]c.int")
+	// No guessed diagnostic for array-decay or configured multi.
+	expect_not_contains(t, stderr, "fill_buf")
+	expect_not_contains(t, stderr, "pointer_lowering_guess")
+	check_generated_output(t, stdout, "/tmp/h2odin-array-param")
+}
+
+@(test)
 test_foreign_targets_emits_when_chain :: proc(t: ^testing.T) {
 	// Structured foreign.targets → deterministic when/else; package checks on
 	// host plus Windows and Linux targets (paths need not exist for check).

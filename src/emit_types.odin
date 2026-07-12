@@ -86,6 +86,11 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		case .Proc:
 			write_type(b, ir, variant.pointee, indent, emit_comments, imports)
 			return
+		case .Multi:
+			// Foreign multi-pointer: same representation as ^T, documents array use.
+			strings.write_string(b, "[^]")
+			write_type(b, ir, variant.pointee, indent, emit_comments, imports)
+			return
 		case .Single:
 		}
 		strings.write_string(b, "^")

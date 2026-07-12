@@ -7,7 +7,9 @@ import clang "vendored:libclang"
 capture_param_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_Handle, ok: bool) {
 	handle = capture_type(state, type) or_return
 	if array, is_array := ir_type(state.ir, handle).variant.(Type_Array); is_array {
-		handle = ir_add_type(state.ir, Type_Info{variant = Type_Pointer{pointee = array.element}})
+		// C array parameters are pointers at the ABI; mark the decay so
+		// Transformation can emit [^]T without guessing.
+		handle = ir_add_type(state.ir, Type_Info{variant = Type_Pointer{pointee = array.element, is_array_param_decay = true}})
 	}
 	return handle, true
 }

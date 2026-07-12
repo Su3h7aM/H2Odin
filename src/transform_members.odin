@@ -65,13 +65,13 @@ apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy) {
 				key := fmt.tprintf("%s.%s", fn.name, key_name)
 				if has_params {
 					if action, ok := policy.proc_params[key]; ok {
-						apply_member_action_to_param(&param, action)
+						apply_member_action_to_param(&param, action, ir)
 					}
 				}
 				if policy.has_proc_param {
 					view_type := type_name_for_view(ir, param.type)
 					if action, decided := policy_proc_param_action(policy, fn.name, param.name, view_type); decided {
-						apply_member_action_to_param(&param, action)
+						apply_member_action_to_param(&param, action, ir)
 					}
 				}
 			}
@@ -94,12 +94,25 @@ apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy) {
 	}
 }
 
-apply_member_action_to_param :: proc(param: ^Param, action: Member_Action) {
+apply_member_action_to_param :: proc(param: ^Param, action: Member_Action, ir: ^IR) {
 	if action.type != "" {
 		param.type_spelling = action.type
 	}
 	if action.default != "" {
 		param.default = action.default
+	}
+	// pointer = "multi" rewrites the lowered type when the user did not
+	// supply a full type spelling (that spelling is authoritative).
+	if action.pointer == "multi" && action.type == "" {
+		if !force_multi_pointer(ir, param.type, .Configured_Multi) {
+			// Soft: leave ^T (or other lowering) and note why multi failed.
+			ir_diag(
+				ir,
+				.Pointer_Lowering_Guess,
+				"procs.params pointer = \"multi\" ignored for parameter %q: type is not a single data pointer",
+				param.name if param.name != "" else "_",
+			)
+		}
 	}
 }
 

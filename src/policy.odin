@@ -96,12 +96,14 @@ Enum_Bit_Set_Rule :: struct {
 	diag_overrides: Diag_Local_Overrides,
 }
 
-// A type/tag (or type/default) action from structs.fields / procs.params.
+// A type/tag/default/pointer action from structs.fields / procs.params.
 // Empty strings mean "not set"; callbacks may refine further.
 Member_Action :: struct {
 	type:    string,
 	tag:     string, // structs only
 	default: string, // procs only
+	// procs only: "" | "multi" — foreign multipointer [^]T (ABI-identical).
+	pointer: string,
 }
 
 // config.output.layout — closed enum; unknown strings fail config loading.
