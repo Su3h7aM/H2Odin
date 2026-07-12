@@ -56,16 +56,34 @@ main :: proc() {
 	if !includes_ok {
 		os.exit(1)
 	}
+	// CLI -resource-dir: beats config.preprocess.resource_dir.
+	resource_dir := cli.resource_dir
+	if resource_dir == "" {
+		resource_dir = policy.resource_dir
+	}
+	if resource_dir != "" {
+		resolved_resource, resource_ok := resolve_path(resource_dir, policy.config_dir)
+		if !resource_ok {
+			os.exit(1)
+		}
+		resource_dir = resolved_resource
+	}
 	preprocess := Extract_Preprocess {
-		include_paths = include_paths,
-		defines       = policy.defines,
+		include_paths    = include_paths,
+		defines          = policy.defines,
+		resource_dir     = resource_dir,
+		clang_executable = policy.clang_executable,
 	}
 
 	ir: IR
 	ir_init(&ir)
 
-	if !extract(headers, &ir, preprocess) {
+	provenance: Clang_Provenance
+	if !extract(headers, &ir, preprocess, &provenance) {
 		os.exit(1)
+	}
+	if cli.verbose {
+		report_clang_provenance(provenance)
 	}
 	analyze(&ir)
 	transform(&ir, mode, &policy)
@@ -94,6 +112,7 @@ main :: proc() {
 		append(&ir.diagnostics, diagnostic)
 	}
 	report_pointer_lowering_guesses(&ir, bit_field_plan.opaque_records)
+	report_unsupported_calling_conventions(&ir)
 	result := emit(&ir, plan, opts)
 
 	if !write_emit_result(result, &policy, cli.destination) {
@@ -107,10 +126,11 @@ main :: proc() {
 }
 
 CLI :: struct {
-	config_path: string,
-	destination: Output_Destination,
-	quiet:       bool,
-	verbose:     bool,
+	config_path:  string,
+	destination:  Output_Destination,
+	quiet:        bool,
+	verbose:      bool,
+	resource_dir: string, // -resource-dir:; empty = use config / clang driver
 }
 
 // Parse process-level flags and resolve the config path. Returns false on
@@ -122,6 +142,7 @@ parse_cli :: proc(args: []string) -> (cli: CLI, ok: bool) {
 	destination_set := false
 	quiet := false
 	verbose := false
+	resource_dir: string
 
 	for arg in args {
 		switch {
@@ -166,6 +187,20 @@ parse_cli :: proc(args: []string) -> (cli: CLI, ok: bool) {
 			}
 			destination = dest
 			destination_set = true
+		case strings.has_prefix(arg, "-resource-dir:"), strings.has_prefix(arg, "--resource-dir:"):
+			if resource_dir != "" {
+				fmt.eprintln("h2odin: -resource-dir: specified more than once")
+				return {}, false
+			}
+			prefix_len := len("-resource-dir:")
+			if strings.has_prefix(arg, "--resource-dir:") {
+				prefix_len = len("--resource-dir:")
+			}
+			resource_dir = arg[prefix_len:]
+			if resource_dir == "" {
+				fmt.eprintln("h2odin: -resource-dir: requires a path")
+				return {}, false
+			}
 		case strings.has_prefix(arg, "-"):
 			fmt.eprintfln("h2odin: unknown argument %q", arg)
 			return {}, false
@@ -189,7 +224,7 @@ parse_cli :: proc(args: []string) -> (cli: CLI, ok: bool) {
 		return {}, false
 	}
 
-	return CLI{config_path = resolved, destination = destination, quiet = quiet, verbose = verbose}, true
+	return CLI{config_path = resolved, destination = destination, quiet = quiet, verbose = verbose, resource_dir = resource_dir}, true
 }
 
 parse_destination :: proc(value: string) -> (Output_Destination, bool) {
@@ -424,7 +459,8 @@ usage :: proc() -> ! {
 	fmt.eprintln("  -destination:dest     where to write bindings: config (default) or stdout")
 	fmt.eprintln("  -d:dest               short for -destination")
 	fmt.eprintln("  -quiet, -q            suppress warnings and errors on stderr")
-	fmt.eprintln("  -verbose, -v          detailed diagnostic reports (cause + config fixes)")
+	fmt.eprintln("  -verbose, -v          provenance (libclang/resource-dir) + diagnostic guidance")
+	fmt.eprintln("  -resource-dir:path    override clang builtin-header resource directory")
 	fmt.eprintln("  -help, -h             show this help")
 	fmt.eprintln("")
 	fmt.eprintln("By default, bindings are written under config.output_folder.")

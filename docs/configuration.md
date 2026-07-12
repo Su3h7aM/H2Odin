@@ -53,6 +53,8 @@ The config file must **return** the config table. Prefer building it with `h2o.c
 | `output_folder` | string | directory for generated `.odin` files (relative to the config dir; required unless `-destination:stdout`) |
 | `preprocess.include_paths` | list of strings | `-I` paths (relative to the config dir) |
 | `preprocess.defines` | string → string | `-DNAME=value` (empty value → `-DNAME`) |
+| `preprocess.resource_dir` | string | explicit clang builtin-header resource directory (`-resource-dir=`); relative to the config dir. Empty: query the clang driver (see `preprocess.clang`) |
+| `preprocess.clang` | string | clang driver used only for `-print-resource-dir` when `resource_dir` is empty (default: `"clang"` on PATH) |
 | `foreign.import_lib` | string | `foreign import` system library name (default: first header stem) |
 | `foreign.link_prefix` | string | `@(link_prefix=…)` on the foreign block (C symbol prefix) |
 | `naming.strip_prefixes` | `{ proc?, type?, const?, enum_value? }` | string or list of strings |
@@ -96,7 +98,7 @@ Also rejected explicitly (roadmap-only top-level names): `headers`, `include_dir
 
 **Inputs / output.** `config.inputs` is required (list at least one header). Relative `inputs`, `preprocess.include_paths`, and `output_folder` resolve against the config file's directory. By default the CLI writes under `config.output_folder`; if that field is unset the run fails (use `-destination:stdout` for a single merged unit on stdout). `output.layout = "per_header"` writes one `.odin` file per input under `output_folder` (same package); each file repeats the imports and `foreign import` it needs because those names are file-local. See [spec 0003](specs/0003-multi-file-odin-emission.md).
 
-**CLI.** Common case: `h2odin <project-dir>` loads `H2Odin.lua` from that directory. `-config:file.lua` selects an explicit config path when the default name is unavailable. Process knobs: `-destination:config|stdout` / `-d:` (default `config`), `-quiet` / `-q` (suppress diagnostics on stderr), `-verbose` / `-v` (detailed cause + config fix guidance), `-help` / `-h`. Type mode, package name, headers, and all other policy are config fields — not flags.
+**CLI.** Common case: `h2odin <project-dir>` loads `H2Odin.lua` from that directory. `-config:file.lua` selects an explicit config path when the default name is unavailable. Process knobs: `-destination:config|stdout` / `-d:` (default `config`), `-quiet` / `-q` (suppress diagnostics on stderr), `-verbose` / `-v` (libclang/resource-dir provenance plus detailed cause + config fix guidance), `-resource-dir:path` (override builtin-header resource directory; beats `preprocess.resource_dir`), `-help` / `-h`. Type mode, package name, headers, and all other policy are config fields — not flags.
 
 ## Naming convention (foreign porting)
 
@@ -240,6 +242,7 @@ config.diagnostics = {
   incomplete_extern_array   = "warn",
   opaque_record_complete    = "error", -- default: types.opaque on a complete record
   symbol_collision          = "error", -- default: post-rename name clashes / type shadowing (spec 0008)
+  unsupported_calling_conv  = "error", -- default: C convention has no Odin spelling (spec 0011 / M16 P0)
   -- reserved (no emitter yet): duplicate_enum_value, unsupported_macro
   -- unresolved_type is emitted for foreign by-value layouts and similar (spec 0010)
 }

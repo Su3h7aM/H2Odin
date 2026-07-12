@@ -697,7 +697,7 @@ policy_read_preprocess :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	if !policy_reject_unknown_subkeys(L, "preprocess", []cstring{"include_paths", "defines"}) {
+	if !policy_reject_unknown_subkeys(L, "preprocess", []cstring{"include_paths", "defines", "resource_dir", "clang"}) {
 		return false
 	}
 
@@ -714,6 +714,18 @@ policy_read_preprocess :: proc(policy: ^Policy) -> bool {
 	// Allow non-string values only if we want -DNAME without value via true?
 	// Spec shows string values. Keep string→string.
 	policy.defines = defs
+
+	resource_dir, resource_ok := policy_optional_string_field(L, "preprocess", "resource_dir")
+	if !resource_ok {
+		return false
+	}
+	policy.resource_dir = resource_dir
+
+	clang_exe, clang_ok := policy_optional_string_field(L, "preprocess", "clang")
+	if !clang_ok {
+		return false
+	}
+	policy.clang_executable = clang_exe
 	return true
 }
 

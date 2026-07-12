@@ -302,7 +302,16 @@ emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: 
 	if func.link_name != "" {
 		fmt.sbprintfln(b, "\t@(link_name = %q)", func.link_name)
 	}
-	fmt.sbprintf(b, "\t%s :: proc(", func.name)
+	// Foreign blocks default to cdecl; emit an explicit convention only when
+	// the captured fact is not C/default (or when it is unrepresentable — the
+	// diagnostic is raised separately so we never silently rewrite a known
+	// non-C convention without notice).
+	if calling_conv_is_foreign_default(func.calling_conv) {
+		fmt.sbprintf(b, "\t%s :: proc(", func.name)
+	} else {
+		spelling, _ := calling_conv_odin_spelling(func.calling_conv)
+		fmt.sbprintf(b, "\t%s :: proc \"%s\" (", func.name, spelling)
+	}
 	write_params(b, ir, func.params, func.is_variadic, emit_comments, imports)
 	strings.write_string(b, ")")
 	if func.return_type_spelling != "" {

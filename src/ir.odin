@@ -174,9 +174,9 @@ Type_Array :: struct {
 }
 
 // C calling convention as measured by libclang (Extraction fact). Emission
-// may later map non-default conventions to Odin `"stdcall"` / `"fastcall"` /
-// …; until then every foreign proc still emits `proc "c"`. Zero value is
-// Default (CXCallingConv_Default).
+// maps supported values to Odin spellings (`"c"`, `"stdcall"`, …); unsupported
+// non-default values become an error diagnostic rather than silent `"c"`.
+// Zero value is Default (CXCallingConv_Default).
 Calling_Conv :: enum u8 {
 	Default,
 	C,
@@ -186,7 +186,7 @@ Calling_Conv :: enum u8 {
 	Vectorcall,
 	Win64,
 	Sys_V,
-	// Anything libclang reports that we do not yet map to an Odin convention
+	// Anything libclang reports that we do not map to an Odin convention
 	// string (Swift, AAPCS, Preserve*, …). Still a fact: not silently C.
 	Other,
 	// libclang returned Invalid / Unexposed.

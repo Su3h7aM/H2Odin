@@ -219,9 +219,12 @@ config.preprocess.defines = {
     SQLITE_ENABLE_FTS5 = "1",
     SQLITE_THREADSAFE  = "1",
 }
+-- Optional: pin builtin headers when PATH clang and the linked libclang diverge.
+-- config.preprocess.resource_dir = "/usr/lib/clang/22"
+-- config.preprocess.clang = "clang-22"  -- only used for -print-resource-dir when resource_dir is unset
 ```
 
-**Why "preprocess," not "clang."** The public concept is *preprocessing a C header* — include paths and defines are what the user reasons about. That H2Odin uses libclang internally is an implementation detail the user should not need to know, and naming the section after the tool would leak that detail and lock the public API to a specific backend.
+**Why "preprocess," not "clang."** The public concept is *preprocessing a C header* — include paths and defines are what the user reasons about. That H2Odin uses libclang internally is an implementation detail the user should not need to know, and naming the section after the tool would leak that detail and lock the public API to a specific backend. `resource_dir` / `clang` exist only to make the builtin-header provenance correct and inspectable (`-verbose` prints the linked libclang version and the selected resource directory).
 
 ---
 

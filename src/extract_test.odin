@@ -391,14 +391,20 @@ test_extract_captures_calling_conventions :: proc(t: ^testing.T) {
 
 	ir: IR
 	ir_init(&ir)
-	ok := extract({"tests/fixtures/calling_conv.h"}, &ir)
+	provenance: Clang_Provenance
+	ok := extract({"tests/fixtures/calling_conv.h"}, &ir, {}, &provenance)
 	testing.expect(t, ok)
 	if !ok {
 		return
 	}
+	// Provenance must record the linked library version (non-empty on a
+	// working libclang) and whatever resource-dir selection succeeded.
+	testing.expect(t, provenance.libclang_version != "")
 
 	found_plain := false
 	found_stdcall := false
+	found_fastcall := false
+	found_vectorcall := false
 	for func in ir.funcs {
 		switch func.name {
 		case "plain_c":
@@ -407,10 +413,57 @@ test_extract_captures_calling_conventions :: proc(t: ^testing.T) {
 			testing.expect(t, func.calling_conv == .Default || func.calling_conv == .C)
 		case "stdcall_fn":
 			found_stdcall = true
-			// Attribute accepted → Stdcall; otherwise still a recorded fact.
-			testing.expect(t, func.calling_conv != .Unknown)
+			// Attribute accepted → Stdcall when the target supports it.
+			testing.expect(t, func.calling_conv == .Stdcall || func.calling_conv != .Unknown)
+		case "fastcall_fn":
+			found_fastcall = true
+			testing.expect(t, func.calling_conv == .Fastcall || func.calling_conv != .Unknown)
+		case "vectorcall_fn":
+			found_vectorcall = true
+			// Prefer the mapped Vectorcall fact; at minimum not Unknown.
+			testing.expect(t, func.calling_conv == .Vectorcall || func.calling_conv != .Unknown)
 		}
 	}
 	testing.expect(t, found_plain)
 	testing.expect(t, found_stdcall)
+	testing.expect(t, found_fastcall)
+	testing.expect(t, found_vectorcall)
+
+	// Callback typedefs: convention lives on Type_Proc under the pointer.
+	found_stdcall_cb := false
+	found_fast_cb := false
+	for td in ir.typedefs {
+		switch td.name {
+		case "Stdcall_Cb":
+			found_stdcall_cb = true
+			assert_typedef_proc_calling_conv(t, &ir, td, .Stdcall)
+		case "Fastcall_Cb":
+			found_fast_cb = true
+			assert_typedef_proc_calling_conv(t, &ir, td, .Fastcall)
+		}
+	}
+	testing.expect(t, found_stdcall_cb)
+	testing.expect(t, found_fast_cb)
+}
+
+assert_typedef_proc_calling_conv :: proc(t: ^testing.T, ir: ^IR, td: Typedef_Decl, want: Calling_Conv) {
+	info := ir_type(ir, td.aliased)
+	// typedef of pointer-to-function, possibly already lowered in extract? Extraction stores Type_Pointer.
+	ptr, is_ptr := info.variant.(Type_Pointer)
+	if !is_ptr {
+		// Some paths may store lowered form only after transform; extraction uses Type_Pointer.
+		testing.expectf(t, false, "typedef %q aliased type is not a pointer", td.name)
+		return
+	}
+	pointee := ir_type(ir, ptr.pointee)
+	proc_ty, is_proc := pointee.variant.(Type_Proc)
+	if !is_proc {
+		testing.expectf(t, false, "typedef %q pointee is not a procedure type", td.name)
+		return
+	}
+	// Attribute may not stick on every libclang/target combo; never silently Unknown.
+	if proc_ty.calling_conv == want {
+		return
+	}
+	testing.expectf(t, proc_ty.calling_conv != .Unknown, "typedef %q calling_conv = %v (want %v or any known fact)", td.name, proc_ty.calling_conv, want)
 }

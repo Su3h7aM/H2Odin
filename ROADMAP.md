@@ -352,12 +352,11 @@ claim was *disproven* on Linux and survives only as the Windows note below).
       repeated dispatch boilerplate. (Same-area trivia: `delete_int_map` /
       `delete_string_bool_map` in `src/policy_test.odin` are identical bodies
       — one generic helper suffices.)
-- [ ] **Provenance — builtin headers may not match the loaded libclang.**
-      `clang_resource_dir_arg` (`src/extract.odin`) shells out to whatever
-      `clang` is in `PATH`, which can belong to a different LLVM than the
-      linked `libclang`. Make the executable/resource-dir configurable and
-      print `clang_getClangVersion()` + the chosen resource dir under
-      `-verbose`.
+- [x] **Provenance — builtin headers may not match the loaded libclang.**
+      Resource dir is configurable (`preprocess.resource_dir` /
+      `preprocess.clang` / CLI `-resource-dir:`); `-verbose` prints
+      `clang_getClangVersion()` and the selected resource dir. Default still
+      queries the clang driver on PATH when no override is set (Milestone 16 P0).
 The 2026-07 libclang usage review (extraction audited against the vendored
 bindings, claims probe-verified) also settled two non-issues worth pinning so
 they are not "fixed" later: **`clang_Cursor_Evaluate` returns nil for macro
@@ -493,14 +492,16 @@ any public call shape. Decisions and ordering are in
 
 ### P0 — ABI facts must reach emission
 
-- [ ] Map captured `Calling_Conv` values to Odin conventions for direct foreign
+- [x] Map captured `Calling_Conv` values to Odin conventions for direct foreign
       procedures and callback/procedure types. Never silently emit `"c"` for a
-      known non-C convention; unsupported/unknown non-default values are errors.
-- [ ] Add fixtures for cdecl, stdcall, fastcall, and one unsupported convention;
+      known non-C convention; unsupported/unknown non-default values are errors
+      (`unsupported_calling_conv`, default error).
+- [x] Add fixtures for cdecl, stdcall, fastcall, and one unsupported convention;
       check direct declarations and nested callback types.
-- [ ] Resolve the compiler/libclang provenance gap: record the loaded libclang
+- [x] Resolve the compiler/libclang provenance gap: record the loaded libclang
       version and the selected builtin-header resource directory under
-      `-verbose`, with an explicit configuration override.
+      `-verbose`, with an explicit configuration override
+      (`preprocess.resource_dir` / `preprocess.clang` / CLI `-resource-dir:`).
 
 ### P1 — Structured target linkage and platform types
 

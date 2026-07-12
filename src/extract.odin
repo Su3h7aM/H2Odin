@@ -43,13 +43,38 @@ Extract_State :: struct {
 // Preprocess knobs passed into libclang as -I / -D. Paths and define values
 // are already resolved by the caller (config-dir relative paths expanded).
 Extract_Preprocess :: struct {
-	include_paths: []string,
-	defines:       map[string]string, // NAME → value; empty value → -DNAME
+	include_paths:    []string,
+	defines:          map[string]string, // NAME → value; empty value → -DNAME
+	// Explicit builtin-header resource directory (`-resource-dir=`). Empty:
+	// query the `clang` driver on PATH (or the executable named by
+	// `clang_executable` when set).
+	resource_dir:     string,
+	// Optional path/name of the clang driver used only for
+	// `-print-resource-dir` when `resource_dir` is empty. Default: "clang".
+	clang_executable: string,
+}
+
+// Where the selected resource directory came from (for -verbose provenance).
+Resource_Dir_Source :: enum u8 {
+	None, // no resource dir available
+	Override, // preprocess.resource_dir / CLI -resource-dir:
+	Clang_Driver, // `clang -print-resource-dir` (or configured executable)
+}
+
+// Linked libclang + resource-dir selection for a run. Filled by extract;
+// printed under -verbose so mismatches between the loaded library and the
+// builtin headers are visible (Milestone 16 P0).
+Clang_Provenance :: struct {
+	libclang_version:    string, // arena-copied clang_getClangVersion()
+	resource_dir:        string, // selected path, or ""
+	resource_dir_source: Resource_Dir_Source,
 }
 
 // Extract every header into one IR. Shared decl_map dedupes by USR across
 // translation units so multi-header inputs do not re-declare the same type.
-extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess = {}) -> bool {
+// When `provenance` is non-nil, it is filled with the linked libclang version
+// and the resource directory chosen for this run.
+extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess = {}, provenance: ^Clang_Provenance = nil) -> bool {
 	if len(header_paths) == 0 {
 		user_error("h2odin: no input headers")
 		return false
@@ -67,8 +92,16 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 	// Build the shared clang args once: comments, resource dir, -I, -D.
 	base_args := make([dynamic]cstring, context.temp_allocator)
 	append(&base_args, "-fparse-all-comments")
-	if resource_arg, found := clang_resource_dir_arg(); found {
-		append(&base_args, resource_arg)
+	resource_dir, resource_source := resolve_clang_resource_dir(preprocess.resource_dir, preprocess.clang_executable)
+	if resource_dir != "" {
+		append(&base_args, strings.clone_to_cstring(fmt.tprintf("-resource-dir=%s", resource_dir), context.temp_allocator))
+	}
+	if provenance != nil {
+		provenance^ = Clang_Provenance {
+			libclang_version    = clone_clang_string(clang.get_clang_version()),
+			resource_dir        = strings.clone(resource_dir) if resource_dir != "" else "",
+			resource_dir_source = resource_source,
+		}
 	}
 	for path in preprocess.include_paths {
 		append(&base_args, strings.clone_to_cstring(fmt.tprintf("-I%s", path), context.temp_allocator))
@@ -208,22 +241,49 @@ check_parse_diagnostics :: proc(tu: clang.Translation_Unit, header_path: string)
 	return ok
 }
 
-// The location of clang's builtin headers (stddef.h, stdbool.h, …). This
-// binding does not expose it, but the clang driver knows it exactly. Without
-// the right resource dir those headers are missing and clang error-recovers
-// size_t to int — a silently wrong ABI, the worst failure mode there is.
-// When the driver is unavailable the flag is simply omitted; the parse
-// diagnostics then report whatever actually breaks.
-clang_resource_dir_arg :: proc() -> (arg: cstring, ok: bool) {
-	state, stdout, _, err := os.process_exec({command = {"clang", "-print-resource-dir"}}, context.temp_allocator)
+// Resolve the builtin-header resource directory. Prefer an explicit override
+// (config/CLI); otherwise shell out to the clang driver. The linked libclang
+// may still belong to a different LLVM — callers print both under -verbose.
+resolve_clang_resource_dir :: proc(override_dir: string, clang_executable: string) -> (dir: string, source: Resource_Dir_Source) {
+	if override_dir != "" {
+		return override_dir, .Override
+	}
+	exe := clang_executable if clang_executable != "" else "clang"
+	if printed, ok := clang_print_resource_dir(exe); ok {
+		return printed, .Clang_Driver
+	}
+	return "", .None
+}
+
+// Ask a clang driver for its resource directory (`-print-resource-dir`).
+// Result is temp-allocated. Empty/`ok=false` when the driver is missing or
+// fails — the parse-diagnostics gate then reports whatever breaks.
+clang_print_resource_dir :: proc(clang_executable: string) -> (dir: string, ok: bool) {
+	state, stdout, _, err := os.process_exec({command = {clang_executable, "-print-resource-dir"}}, context.temp_allocator)
 	if err != nil || !state.exited || state.exit_code != 0 {
 		return "", false
 	}
-	dir := strings.trim_space(string(stdout))
+	dir = strings.trim_space(string(stdout))
 	if dir == "" {
 		return "", false
 	}
-	return strings.clone_to_cstring(fmt.tprintf("-resource-dir=%s", dir), context.temp_allocator), true
+	return dir, true
+}
+
+// Print linked libclang version and the chosen resource directory on stderr.
+// Intended for -verbose so provenance mismatches are visible without changing
+// generation.
+report_clang_provenance :: proc(p: Clang_Provenance) {
+	version := p.libclang_version if p.libclang_version != "" else "(unknown)"
+	user_errorf("h2odin: libclang: %s", version)
+	switch p.resource_dir_source {
+	case .Override:
+		user_errorf("h2odin: resource-dir: %s (override)", p.resource_dir)
+	case .Clang_Driver:
+		user_errorf("h2odin: resource-dir: %s (clang driver)", p.resource_dir)
+	case .None:
+		user_error("h2odin: resource-dir: (none; clang driver unavailable and no override)")
+	}
 }
 
 visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {

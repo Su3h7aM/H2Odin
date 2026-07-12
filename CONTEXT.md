@@ -26,7 +26,10 @@ landed for the gate: pure `typedef void` → `distinct rawptr`; foreign types
 via [spec 0010](docs/specs/0010-posix-libc-type-mapping.md)
 (`posix.sockaddr`, `libc.time_t`, system-header provenance); post-rename
 collision/shadow validation ([spec 0008](docs/specs/0008-symbol-collision-validation.md));
-and calling-convention capture on funcs/proc types (emission still `"c"`).
+and calling-convention capture on funcs/proc types. Milestone 16 P0 emits
+supported conventions (`"c"` / `"stdcall"` / `"fastcall"` / `"win64"` /
+`"sysv"`) and fails closed on unrepresentable ones; `-verbose` reports
+libclang version and resource-dir provenance.
 Evidence and residual quality work (pointer diagnostics, CI wiring) live in
 [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md)
 and [`ROADMAP.md`](ROADMAP.md). The parity boundary and wrapper scope are fixed

@@ -35,6 +35,8 @@ Diag_Category :: enum u8 {
 	Unresolved_Type,
 	Unsupported_Macro,
 	Symbol_Collision,
+	// C calling convention has no Odin spelling (Milestone 16 P0).
+	Unsupported_Calling_Conv,
 }
 
 Diagnostic :: struct {
@@ -80,6 +82,8 @@ diag_category_name :: proc(c: Diag_Category) -> string {
 		return "unsupported_macro"
 	case .Symbol_Collision:
 		return "symbol_collision"
+	case .Unsupported_Calling_Conv:
+		return "unsupported_calling_conv"
 	}
 	return "unknown"
 }
@@ -118,6 +122,8 @@ diag_category_from_name :: proc(name: string) -> (Diag_Category, bool) {
 		return .Unsupported_Macro, true
 	case "symbol_collision":
 		return .Symbol_Collision, true
+	case "unsupported_calling_conv":
+		return .Unsupported_Calling_Conv, true
 	}
 	return {}, false
 }
@@ -296,6 +302,9 @@ diag_verbose_guidance :: proc(c: Diag_Category) -> (cause: string, fix: string) 
 	case .Symbol_Collision:
 		return "After renaming, two symbols share an Odin name, or a field/parameter name shadows a type used in the same declaration.",
 			"Disambiguate with naming.overrides / naming.override (kind-aware for fields and params), adjust strip_prefixes, or symbols.remove."
+	case .Unsupported_Calling_Conv:
+		return "libclang reported a calling convention that Odin cannot spell on a foreign procedure or procedure type.",
+			"This is not config-overridable: the C ABI cannot be represented faithfully. Drop the declaration (symbols.remove) or bind it by hand outside the generator."
 	}
 	return "", ""
 }

@@ -129,6 +129,12 @@ Policy :: struct {
 	inputs:              []string,
 	include_paths:       []string,
 	defines:             map[string]string, // NAME → value ("" when -DNAME alone)
+	// preprocess.resource_dir — explicit -resource-dir for builtin headers.
+	// Empty: query the clang driver (see clang_executable).
+	resource_dir:        string,
+	// preprocess.clang — driver used only for `-print-resource-dir` when
+	// resource_dir is empty. Empty → "clang" on PATH.
+	clang_executable:    string,
 
 	// Output layout.
 	output_folder:       string,
@@ -295,6 +301,8 @@ policy_set_diag_defaults :: proc(policy: ^Policy) {
 	policy.diag_severity[.Opaque_Record_Complete] = .Error
 	// Colliding or self-shadowing Odin names produce broken output (spec 0008).
 	policy.diag_severity[.Symbol_Collision] = .Error
+	// Unrepresentable calling conventions must not silently become `"c"` (spec 0011).
+	policy.diag_severity[.Unsupported_Calling_Conv] = .Error
 }
 
 policy_config_dir :: proc(path: string) -> (dir: string, ok: bool) {

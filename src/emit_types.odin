@@ -102,7 +102,9 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 		write_type(b, ir, variant.element, indent, emit_comments, imports)
 
 	case Type_Proc:
-		strings.write_string(b, "proc \"c\" (")
+		// Procedure types default to `"odin"` outside a foreign block, so the
+		// C convention must always be stated — including the common `"c"` case.
+		write_proc_type_prefix(b, variant.calling_conv)
 		write_params(b, ir, variant.params, variant.is_variadic, emit_comments, imports)
 		strings.write_string(b, ")")
 		if !type_is_void(ir, variant.return_type) {
@@ -167,5 +169,147 @@ note_param_spelling_imports :: proc(imports: ^Emit_Imports, params: []Param) {
 		if p.type_spelling != "" {
 			note_import_for_spelling(imports, p.type_spelling)
 		}
+	}
+}
+
+// Human label for diagnostics and tests (not the Odin spelling).
+calling_conv_label :: proc(cc: Calling_Conv) -> string {
+	switch cc {
+	case .Default:
+		return "default"
+	case .C:
+		return "c"
+	case .Stdcall:
+		return "stdcall"
+	case .Fastcall:
+		return "fastcall"
+	case .Thiscall:
+		return "thiscall"
+	case .Vectorcall:
+		return "vectorcall"
+	case .Win64:
+		return "win64"
+	case .Sys_V:
+		return "sysv"
+	case .Other:
+		return "other"
+	case .Unknown:
+		return "unknown"
+	}
+	return "unknown"
+}
+
+// Map an IR calling convention to an Odin procedure-type spelling. `ok` is
+// false when the convention has no Odin representation — callers must not
+// treat that as C without a diagnostic (spec 0011 / Milestone 16 P0).
+// Fallback spelling on failure is still `"c"` so emission stays parseable;
+// the error-severity diagnostic is what fails the run.
+calling_conv_odin_spelling :: proc(cc: Calling_Conv) -> (spelling: string, ok: bool) {
+	switch cc {
+	case .Default, .C:
+		return "c", true
+	case .Stdcall:
+		return "stdcall", true
+	case .Fastcall:
+		return "fastcall", true
+	case .Win64:
+		return "win64", true
+	case .Sys_V:
+		return "sysv", true
+	case .Thiscall, .Vectorcall, .Other, .Unknown:
+		return "c", false
+	}
+	return "c", false
+}
+
+// True when the convention is C/default and a foreign-block declaration may
+// omit an explicit `proc "c"` (foreign default is cdecl).
+calling_conv_is_foreign_default :: proc(cc: Calling_Conv) -> bool {
+	return cc == .Default || cc == .C
+}
+
+// Write `proc "cc" (` for a procedure type or foreign declaration that needs
+// an explicit convention string.
+write_proc_type_prefix :: proc(b: ^strings.Builder, cc: Calling_Conv) {
+	spelling, _ := calling_conv_odin_spelling(cc)
+	fmt.sbprintf(b, "proc \"%s\" (", spelling)
+}
+
+// Report every unrepresentable calling convention on *emitted* funcs and on
+// procedure types still reachable from live declarations. Symbols dropped by
+// filter_declarations stay in the pools but are not in `ir.order`, so they
+// must not fail the run. Defaults to error severity (policy_set_diag_defaults).
+report_unsupported_calling_conventions :: proc(ir: ^IR) {
+	for ref in ir.order {
+		if ref.kind != .Func {
+			continue
+		}
+		func := ir.funcs[ref.index]
+		if _, ok := calling_conv_odin_spelling(func.calling_conv); ok {
+			continue
+		}
+		ir_diag(
+			ir,
+			.Unsupported_Calling_Conv,
+			"function %q uses calling convention %s which has no Odin spelling",
+			func.name,
+			calling_conv_label(func.calling_conv),
+		)
+	}
+
+	// Procedure types that appear in emitted signatures / typedefs. Walk types
+	// referenced from live decls rather than the whole pool (which retains
+	// types only used by removed symbols).
+	seen_types := make(map[Type_Handle]bool, context.temp_allocator)
+	for ref in ir.order {
+		switch ref.kind {
+		case .Invalid, .Macro, .Bit_Set:
+		case .Func:
+			func := ir.funcs[ref.index]
+			report_unsupported_calling_conv_in_type(ir, func.return_type, &seen_types)
+			for p in func.params {
+				report_unsupported_calling_conv_in_type(ir, p.type, &seen_types)
+			}
+		case .Var:
+			report_unsupported_calling_conv_in_type(ir, ir.vars[ref.index].type, &seen_types)
+		case .Typedef:
+			report_unsupported_calling_conv_in_type(ir, ir.typedefs[ref.index].aliased, &seen_types)
+		case .Record:
+			record := ir.records[ref.index]
+			for f in record.fields {
+				report_unsupported_calling_conv_in_type(ir, f.type, &seen_types)
+			}
+		case .Enum:
+		}
+	}
+}
+
+report_unsupported_calling_conv_in_type :: proc(ir: ^IR, handle: Type_Handle, seen: ^map[Type_Handle]bool) {
+	if handle == 0 || handle in seen^ {
+		return
+	}
+	seen^[handle] = true
+	info := ir_type(ir, handle)
+	switch variant in info.variant {
+	case Type_Proc:
+		if _, ok := calling_conv_odin_spelling(variant.calling_conv); !ok {
+			ir_diag(
+				ir,
+				.Unsupported_Calling_Conv,
+				"procedure type uses calling convention %s which has no Odin spelling",
+				calling_conv_label(variant.calling_conv),
+			)
+		}
+		report_unsupported_calling_conv_in_type(ir, variant.return_type, seen)
+		for p in variant.params {
+			report_unsupported_calling_conv_in_type(ir, p.type, seen)
+		}
+	case Type_Pointer:
+		report_unsupported_calling_conv_in_type(ir, variant.pointee, seen)
+	case Type_Lowered_Pointer:
+		report_unsupported_calling_conv_in_type(ir, variant.pointee, seen)
+	case Type_Array:
+		report_unsupported_calling_conv_in_type(ir, variant.element, seen)
+	case Type_Builtin, Type_Std, Type_Idiomatic_Leaf, Type_Record_Ref, Type_Enum_Ref, Type_Typedef_Ref, Type_Bit_Set:
 	}
 }
