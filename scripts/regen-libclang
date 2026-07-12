@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate vendored/libclang with the current binary"
+#MISE depends=["build"]
+#MISE sources=["src/**/*.odin", "vendored/libclang/**/*", "scripts/regen-libclang", "scripts/_common.sh"]
+#MISE outputs=["vendored/libclang/**/*.odin"]
+#
+# Bootstrap: regenerate vendored/libclang. Standalone: ./scripts/regen-libclang
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+ensure_built
+"$BIN" vendored/libclang
+run_odin check vendored/libclang -no-entry-point "${COLLECTION_FLAGS[@]}"

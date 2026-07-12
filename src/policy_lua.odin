@@ -35,7 +35,7 @@ policy_string_list_field :: proc(L: ^lua.State, table_name: string, field_key: c
 		return nil, true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintfln("h2odin: config: %s.%s must be a list of strings", table_name, field_key)
+		user_errorf("h2odin: config: %s.%s must be a list of strings", table_name, field_key)
 		lua.pop(L, 1)
 		return nil, false
 	}
@@ -57,7 +57,7 @@ policy_read_string_list_at_top :: proc(L: ^lua.State, table_name: string, field_
 	for i in 0 ..< n {
 		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
 		if elem_type != c.int(lua.Type.STRING) {
-			fmt.eprintfln("h2odin: config: %s.%s[%d] must be a string", table_name, field_key, i + 1)
+			user_errorf("h2odin: config: %s.%s[%d] must be a string", table_name, field_key, i + 1)
 			lua.pop(L, 1)
 			return nil, false
 		}
@@ -74,13 +74,13 @@ policy_require_pure_list :: proc(L: ^lua.State, table_name: string, field_key: c
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if !bool(lua.isinteger(L, -2)) {
-			fmt.eprintfln("h2odin: config: %s.%s must be a pure list of strings (got a non-integer key)", table_name, field_key)
+			user_errorf("h2odin: config: %s.%s must be a pure list of strings (got a non-integer key)", table_name, field_key)
 			lua.pop(L, 2)
 			return false
 		}
 		idx := int(lua.tointeger(L, -2))
 		if idx < 1 || idx > n {
-			fmt.eprintfln("h2odin: config: %s.%s must be a dense list of strings (unexpected index %d; expected 1..%d)", table_name, field_key, idx, n)
+			user_errorf("h2odin: config: %s.%s must be a dense list of strings (unexpected index %d; expected 1..%d)", table_name, field_key, idx, n)
 			lua.pop(L, 2)
 			return false
 		}
@@ -88,7 +88,7 @@ policy_require_pure_list :: proc(L: ^lua.State, table_name: string, field_key: c
 		lua.pop(L, 1) // value; leave key for next
 	}
 	if count != n {
-		fmt.eprintfln("h2odin: config: %s.%s must be a dense list of strings (length %d but %d entries)", table_name, field_key, n, count)
+		user_errorf("h2odin: config: %s.%s must be a dense list of strings (length %d but %d entries)", table_name, field_key, n, count)
 		return false
 	}
 	return true
@@ -112,7 +112,7 @@ policy_member_action_map :: proc(
 		return nil, true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintfln("h2odin: config: %s.%s must be a table", parent_name, key)
+		user_errorf("h2odin: config: %s.%s must be a table", parent_name, key)
 		lua.pop(L, 1)
 		return nil, false
 	}
@@ -122,13 +122,13 @@ policy_member_action_map :: proc(
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintfln("h2odin: config: %s.%s keys must be strings", parent_name, key)
+			user_errorf("h2odin: config: %s.%s keys must be strings", parent_name, key)
 			lua.pop(L, 2)
 			return nil, false
 		}
 		map_key := strings.clone(string(lua.tostring(L, -2)))
 		if !lua.istable(L, -1) {
-			fmt.eprintfln("h2odin: config: %s.%s[%q] must be a table", parent_name, key, map_key)
+			user_errorf("h2odin: config: %s.%s[%q] must be a table", parent_name, key, map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
@@ -168,7 +168,7 @@ policy_member_action_map :: proc(
 			action.default = def_s
 		}
 		if action.type == "" && action.tag == "" && action.default == "" {
-			fmt.eprintfln("h2odin: config: %s.%s[%q] must set at least one of type/tag/default", parent_name, key, map_key)
+			user_errorf("h2odin: config: %s.%s[%q] must set at least one of type/tag/default", parent_name, key, map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
@@ -186,7 +186,7 @@ policy_int_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstring) 
 		return nil, true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintfln("h2odin: config: %s.%s must be a table of integers", parent_name, key)
+		user_errorf("h2odin: config: %s.%s must be a table of integers", parent_name, key)
 		lua.pop(L, 1)
 		return nil, false
 	}
@@ -196,19 +196,19 @@ policy_int_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstring) 
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintfln("h2odin: config: %s.%s keys must be strings", parent_name, key)
+			user_errorf("h2odin: config: %s.%s keys must be strings", parent_name, key)
 			lua.pop(L, 2)
 			return nil, false
 		}
 		map_key := strings.clone(string(lua.tostring(L, -2)))
 		if !lua.isnumber(L, -1) {
-			fmt.eprintfln("h2odin: config: %s.%s[%q] must be an integer", parent_name, key, map_key)
+			user_errorf("h2odin: config: %s.%s[%q] must be an integer", parent_name, key, map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
 		n := int(lua.tointeger(L, -1))
 		if n <= 0 {
-			fmt.eprintfln("h2odin: config: %s.%s[%q] must be a positive integer", parent_name, key, map_key)
+			user_errorf("h2odin: config: %s.%s[%q] must be a positive integer", parent_name, key, map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
@@ -223,13 +223,13 @@ policy_reject_unknown_subkeys :: proc(L: ^lua.State, table_name: string, allowed
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintfln("h2odin: config: %s keys must be strings", table_name)
+			user_errorf("h2odin: config: %s keys must be strings", table_name)
 			lua.pop(L, 2)
 			return false
 		}
 		sub := string(lua.tostring(L, -2))
 		if !config_key_in(sub, allowed) {
-			fmt.eprintfln("h2odin: config: unknown %s key %q", table_name, sub)
+			user_errorf("h2odin: config: unknown %s key %q", table_name, sub)
 			lua.pop(L, 2)
 			return false
 		}
@@ -245,7 +245,7 @@ policy_reject_nested_if_set :: proc(L: ^lua.State, parent: string, key: cstring)
 	if field_type == c.int(lua.Type.NIL) {
 		return true
 	}
-	fmt.eprintfln("h2odin: config: %s.%s is not yet supported", parent, key)
+	user_errorf("h2odin: config: %s.%s is not yet supported", parent, key)
 	return false
 }
 
@@ -268,7 +268,7 @@ policy_strip_kinds_from :: proc(L: ^lua.State, field_key: cstring) -> (kinds: St
 		return {}, true
 	}
 	if outer_type != c.int(lua.Type.TABLE) {
-		fmt.eprintfln("h2odin: config: %s must be a table", path)
+		user_errorf("h2odin: config: %s must be a table", path)
 		lua.pop(L, 1)
 		return {}, false
 	}
@@ -316,7 +316,7 @@ policy_string_or_list_field :: proc(L: ^lua.State, table_name: string, field_key
 	case .TABLE:
 	// fall through
 	case:
-		fmt.eprintfln("h2odin: config: %s.%s must be a string or list of strings", table_name, field_key)
+		user_errorf("h2odin: config: %s.%s must be a string or list of strings", table_name, field_key)
 		lua.pop(L, 1)
 		return nil, false
 	}
@@ -340,7 +340,7 @@ policy_optional_string_top :: proc(policy: ^Policy, key: cstring) -> (value: str
 		return "", true
 	}
 	if field_type != c.int(lua.Type.STRING) {
-		fmt.eprintfln("h2odin: config: %s must be a string", key)
+		user_errorf("h2odin: config: %s must be a string", key)
 		lua.pop(L, 1)
 		return "", false
 	}
@@ -355,7 +355,7 @@ policy_optional_string_field :: proc(L: ^lua.State, table_name: string, field_ke
 		return "", true
 	}
 	if field_type != c.int(lua.Type.STRING) {
-		fmt.eprintfln("h2odin: config: %s.%s must be a string", table_name, field_key)
+		user_errorf("h2odin: config: %s.%s must be a string", table_name, field_key)
 		lua.pop(L, 1)
 		return "", false
 	}
@@ -372,7 +372,7 @@ policy_bool_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstring)
 		return nil, true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintfln("h2odin: config: %s.%s must be a table of booleans", parent_name, key)
+		user_errorf("h2odin: config: %s.%s must be a table of booleans", parent_name, key)
 		lua.pop(L, 1)
 		return nil, false
 	}
@@ -382,12 +382,12 @@ policy_bool_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstring)
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintfln("h2odin: config: %s.%s keys must be strings", parent_name, key)
+			user_errorf("h2odin: config: %s.%s keys must be strings", parent_name, key)
 			lua.pop(L, 2)
 			return nil, false
 		}
 		if lua.type(L, -1) != .BOOLEAN {
-			fmt.eprintfln("h2odin: config: %s.%s[%q] must be a boolean", parent_name, key, lua.tostring(L, -2))
+			user_errorf("h2odin: config: %s.%s[%q] must be a boolean", parent_name, key, lua.tostring(L, -2))
 			lua.pop(L, 2)
 			return nil, false
 		}
@@ -407,7 +407,7 @@ policy_string_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstrin
 		return nil, true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintfln("h2odin: config: %s.%s must be a table", parent_name, key)
+		user_errorf("h2odin: config: %s.%s must be a table", parent_name, key)
 		lua.pop(L, 1)
 		return nil, false
 	}
@@ -417,12 +417,12 @@ policy_string_map_nested :: proc(L: ^lua.State, parent_name: string, key: cstrin
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintfln("h2odin: config: %s.%s keys must be strings", parent_name, key)
+			user_errorf("h2odin: config: %s.%s keys must be strings", parent_name, key)
 			lua.pop(L, 2)
 			return nil, false
 		}
 		if lua.type(L, -1) != .STRING {
-			fmt.eprintfln("h2odin: config: %s.%s[%q] must be a string", parent_name, key, lua.tostring(L, -2))
+			user_errorf("h2odin: config: %s.%s[%q] must be a string", parent_name, key, lua.tostring(L, -2))
 			lua.pop(L, 2)
 			return nil, false
 		}

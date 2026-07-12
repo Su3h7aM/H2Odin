@@ -116,7 +116,7 @@ policy_install_require :: proc(L: ^lua.State, config_dir: string) -> bool {
 
 	// package.preload["h2odin"] = opener
 	if lua.getfield(L, -1, "preload") != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: internal error: package.preload missing")
+		user_error("h2odin: internal error: package.preload missing")
 		lua.pop(L, 2)
 		return false
 	}
@@ -126,13 +126,13 @@ policy_install_require :: proc(L: ^lua.State, config_dir: string) -> bool {
 
 	// package.searchers = { preload_searcher, config_dir_searcher }
 	if lua.getfield(L, -1, "searchers") != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: internal error: package.searchers missing")
+		user_error("h2odin: internal error: package.searchers missing")
 		lua.pop(L, 2)
 		return false
 	}
 	// stack: package, searchers
 	if lua.rawgeti(L, -1, 1); !lua.isfunction(L, -1) {
-		fmt.eprintln("h2odin: internal error: package.searchers[1] is not the preload searcher")
+		user_error("h2odin: internal error: package.searchers[1] is not the preload searcher")
 		lua.pop(L, 3)
 		return false
 	}

@@ -15,7 +15,7 @@ with Odin's hand-written `vendor:cgltf`.
 ## Regenerate
 
 ```sh
-make build
+./scripts/build
 ./build/h2odin examples/cgltf
 odin check examples/cgltf -no-entry-point -collection:vendored=$(pwd)/vendored
 ```

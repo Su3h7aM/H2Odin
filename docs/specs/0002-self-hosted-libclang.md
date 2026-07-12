@@ -66,9 +66,9 @@ A dry run against `clang-c/Index.h` already produces ~6k lines that pass
 5. **Bootstrap is generation-over-generation.** Generation N is produced by
    an `h2odin` binary built against the checked-in bindings from generation
    N−1. The first generation is built against the hand package; after the
-   switch is verified (`make test`, examples, `odin check`), the hand package
+   switch is verified (`./scripts/test`, examples, `odin check`), the hand package
    is deleted and the cycle sustains itself because the generated output is
-   checked in. A `make regen-libclang` (name flexible) target encodes the
+   checked in. `./scripts/regen-libclang` (also `mise run regen-libclang`) encodes the
    workflow.
 
 ## Definition of done
@@ -79,7 +79,7 @@ A dry run against `clang-c/Index.h` already produces ~6k lines that pass
 2. Bit-field layouts correct for the types Extraction needs
    (`CXIndexOptions` at minimum) — spec 0001 acceptance.
 3. `src/extract.odin` builds and runs against the generated package.
-4. `make test` (unit + e2e) and the checked-in examples stay green.
+4. `./scripts/test` (unit + e2e) and the checked-in examples stay green.
 5. The hand-written package is removed (not dual-tracked) once verified.
 6. Regeneration workflow and header pinning documented.
 
@@ -105,7 +105,7 @@ A dry run against `clang-c/Index.h` already produces ~6k lines that pass
 
 ## Post-landing findings (2026-07-10)
 
-The switch landed (definition of done met; `make regen-libclang` sustains the
+The switch landed (definition of done met; `./scripts/regen-libclang` sustains the
 bootstrap). A review of the generated package against the replaced hand
 binding surfaced:
 

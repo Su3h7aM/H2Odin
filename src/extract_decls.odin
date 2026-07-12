@@ -2,7 +2,6 @@ package h2odin
 
 import "base:runtime"
 import "core:c"
-import "core:fmt"
 
 import clang "vendored:libclang"
 
@@ -76,13 +75,13 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 
 	// static file-scope variables have no linkable symbol to bind.
 	if clang.cursor_get_storage_class(cursor) == .Static {
-		fmt.eprintfln("h2odin: skipping %q: static variables have no external symbol", name)
+		user_errorf("h2odin: skipping %q: static variables have no external symbol", name)
 		return
 	}
 
 	type, type_ok := capture_type(state, clang.get_cursor_type(cursor))
 	if !type_ok {
-		fmt.eprintfln("h2odin: skipping %q: unsupported type", name)
+		user_errorf("h2odin: skipping %q: unsupported type", name)
 		return
 	}
 	// C permits extern arrays with unknown bounds. Odin has no incomplete
@@ -143,7 +142,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 	aliased, aliased_ok := capture_type(state, clang.get_typedef_decl_underlying_type(cursor))
 	if !aliased_ok {
 		state.ir.typedefs[int(handle)].is_unresolvable = true
-		fmt.eprintfln("h2odin: typedef %q aliases an unsupported type; skipped along with its uses", decl.name)
+		user_errorf("h2odin: typedef %q aliases an unsupported type; skipped along with its uses", decl.name)
 		return handle
 	}
 	state.ir.typedefs[int(handle)].aliased = aliased
@@ -506,13 +505,13 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 
 	// static (usually static inline) functions have no linkable symbol.
 	if clang.cursor_get_storage_class(cursor) == .Static {
-		fmt.eprintfln("h2odin: skipping %q: static functions have no external symbol", name)
+		user_errorf("h2odin: skipping %q: static functions have no external symbol", name)
 		return
 	}
 
 	return_type, return_ok := capture_type(state, clang.get_cursor_result_type(cursor))
 	if !return_ok {
-		fmt.eprintfln("h2odin: skipping %q: unsupported return type", name)
+		user_errorf("h2odin: skipping %q: unsupported return type", name)
 		return
 	}
 
@@ -522,7 +521,7 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		arg := clang.cursor_get_argument(cursor, c.uint(i))
 		param_type, param_ok := capture_param_type(state, clang.get_cursor_type(arg))
 		if !param_ok {
-			fmt.eprintfln("h2odin: skipping %q: unsupported type of parameter %d", name, i)
+			user_errorf("h2odin: skipping %q: unsupported type of parameter %d", name, i)
 			return
 		}
 		params[i] = Param {

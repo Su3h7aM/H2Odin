@@ -18,12 +18,12 @@ hand-written `vendor:miniaudio`.
 ## Regenerate
 
 ```sh
-make build
+./scripts/build
 ./build/h2odin examples/miniaudio
 odin check examples/miniaudio -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
-Or the full corpus gate: `make validate-examples`.
+Or the full corpus gate: `./scripts/validate-examples`.
 
 ## Status
 

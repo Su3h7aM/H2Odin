@@ -70,7 +70,7 @@ workaround because the generator has no concept of an opaque handle.
 A fixture with two incomplete-record handles must emit `distinct rawptr` for
 both and reject cross-assignment under `odin check`; a fixture with two
 typedefs of one record must keep them mutually assignable; regenerated
-examples and the libclang package pass `odin check` and `make test`.
+examples and the libclang package pass `odin check` and `./scripts/test`.
 
 ## See also
 

@@ -246,7 +246,7 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 
 	L := lua.L_newstate()
 	if L == nil {
-		fmt.eprintln("h2odin: failed to create the Lua state")
+		user_error("h2odin: failed to create the Lua state")
 		return {}, false
 	}
 
@@ -264,12 +264,12 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 
 	config_path := strings.clone_to_cstring(path, context.temp_allocator)
 	if lua.L_dofile(L, config_path) != 0 {
-		fmt.eprintfln("h2odin: config error: %s", lua.tostring(L, -1))
+		user_errorf("h2odin: config error: %s", lua.tostring(L, -1))
 		lua.close(L)
 		return {}, false
 	}
 	if !lua.istable(L, -1) {
-		fmt.eprintfln("h2odin: config %q must return a table", path)
+		user_errorf("h2odin: config %q must return a table", path)
 		lua.close(L)
 		return {}, false
 	}
@@ -300,7 +300,7 @@ policy_set_diag_defaults :: proc(policy: ^Policy) {
 policy_config_dir :: proc(path: string) -> (dir: string, ok: bool) {
 	abs_path, abs_err := filepath.abs(path, context.temp_allocator)
 	if abs_err != nil {
-		fmt.eprintfln("h2odin: cannot resolve config path %q", path)
+		user_errorf("h2odin: cannot resolve config path %q", path)
 		return "", false
 	}
 	dir_part := filepath.dir(abs_path)
@@ -319,7 +319,7 @@ policy_validate_keys :: proc(policy: ^Policy) -> bool {
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintln("h2odin: config: keys must be strings")
+			user_error("h2odin: config: keys must be strings")
 			lua.pop(L, 2)
 			return false
 		}
@@ -328,15 +328,15 @@ policy_validate_keys :: proc(policy: ^Policy) -> bool {
 		case config_key_in(key, CONFIG_KNOWN_KEYS[:]):
 			lua.pop(L, 1)
 		case config_key_in(key, CONFIG_LEGACY_KEYS[:]):
-			fmt.eprintfln("h2odin: config: %s", legacy_key_message(key))
+			user_errorf("h2odin: config: %s", legacy_key_message(key))
 			lua.pop(L, 2)
 			return false
 		case config_key_in(key, CONFIG_UNSUPPORTED_KEYS[:]):
-			fmt.eprintfln("h2odin: config: %q is not yet supported", key)
+			user_errorf("h2odin: config: %q is not yet supported", key)
 			lua.pop(L, 2)
 			return false
 		case:
-			fmt.eprintfln("h2odin: config: unknown key %q (use h2o.config() sections: package, type_mode, naming, types, symbols, foreign, …)", key)
+			user_errorf("h2odin: config: unknown key %q (use h2o.config() sections: package, type_mode, naming, types, symbols, foreign, …)", key)
 			lua.pop(L, 2)
 			return false
 		}
@@ -401,7 +401,7 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 		policy.type_mode = .Idiomatic
 		policy.type_mode_is_set = true
 	case:
-		fmt.eprintfln("h2odin: config: type_mode must be \"abi\" or \"idiomatic\", got %q", mode)
+		user_errorf("h2odin: config: type_mode must be \"abi\" or \"idiomatic\", got %q", mode)
 		return false
 	}
 
@@ -441,7 +441,7 @@ policy_reject_if_set :: proc(policy: ^Policy, key: cstring) -> bool {
 			return true
 		}
 	}
-	fmt.eprintfln("h2odin: config: %s is not yet supported", key)
+	user_errorf("h2odin: config: %s is not yet supported", key)
 	return false
 }
 

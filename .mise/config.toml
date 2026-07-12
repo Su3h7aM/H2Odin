@@ -1,0 +1,19 @@
+# Repository-local mise config.
+# Docs: https://mise.jdx.dev/configuration.html  (.mise/config.toml)
+#       https://mise.jdx.dev/tasks/file-tasks.html
+#
+# Tasks are the executable scripts under scripts/ (with #MISE annotations).
+# They remain standalone: ./scripts/test works without mise. mise discovers
+# them via task_config.includes and adds depends/sources/completions metadata.
+
+min_version = "2025.1.0"
+
+[tools]
+# Pin the Odin nightly used for development and CI (roadmap reproducibility).
+odin = "dev-2026-07a"
+
+# File-task directory: scripts/ replaces the default mise-tasks paths for this
+# project so we do not need a parallel .mise/tasks tree.
+# https://mise.jdx.dev/tasks/task-configuration.html#task-config-includes
+[task_config]
+includes = ["scripts"]

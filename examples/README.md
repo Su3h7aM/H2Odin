@@ -10,7 +10,7 @@ directory and loads `H2Odin.lua`.
 ## Regenerate and check (Milestone 15 gate)
 
 ```sh
-make validate-examples
+./scripts/validate-examples
 ```
 
 That target rebuilds `build/h2odin`, regenerates every package below, runs
@@ -18,7 +18,7 @@ That target rebuilds `build/h2odin`, regenerates every package below, runs
 manual loop:
 
 ```sh
-make build
+./scripts/build
 for ex in fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio; do
   ./build/h2odin "examples/$ex"
   odin check "examples/$ex" -no-entry-point -collection:vendored=$(pwd)/vendored

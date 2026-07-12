@@ -3,7 +3,7 @@
 -- H2Odin generates the libclang bindings its own Extraction stage imports.
 -- Generated Odin lives at this package root (import path vendored:libclang).
 -- Bootstrap is generation-over-generation: build/h2odin (linked against the
--- checked-in package) regenerates these files in place via make regen-libclang.
+-- checked-in package) regenerates these files in place via ./scripts/regen-libclang.
 --
 -- Layout (next to this config):
 --

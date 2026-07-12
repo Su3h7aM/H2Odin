@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#MISE description="Build build/h2odin (skips if sources are unchanged)"
+#MISE alias="b"
+#MISE sources=["src/**/*.odin", "scripts/build", "scripts/_common.sh"]
+#MISE outputs=["build/h2odin"]
+#
+# Build build/h2odin. Standalone: ./scripts/build
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+if ! need_rebuild; then
+	exit 0
+fi
+
+mkdir -p "$(dirname "$BIN")"
+run_odin build "$SRC_DIR" -out:"$BIN" "${ODIN_FLAGS[@]}" "${COLLECTION_FLAGS[@]}"

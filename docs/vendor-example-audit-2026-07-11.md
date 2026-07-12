@@ -12,20 +12,32 @@ The validation corpus has done its job: it shows that the core pipeline is matur
 2. Naming transforms are not validated in Odin scope, allowing type/field cycles and other post-rename collisions.
 3. Non-input system declarations can leak into generated output.
 
-The checked-in status is honest: raylib, box3d, and cgltf are documented as passing; curl and miniaudio are documented as failing. The full automated suite is green, but it does not execute this vendor-example matrix. `make test` passed locally (78 unit tests and 47 e2e tests), while the example README explicitly leaves curl/miniaudio outside its `odin check` commands (`examples/README.md:11-30`). Consequently, green CI-equivalent tests do **not** imply real-world example validity.
+The checked-in status is honest: raylib, box3d, and cgltf are documented as
+passing; curl and miniaudio are documented as failing. At audit time the unit
+and e2e suite was green but did not execute this vendor-example matrix
+(`./scripts/test` equivalent then: 78 unit and 47 e2e tests), and the example
+README left curl/miniaudio outside routine checks. Consequently, green
+unit/e2e results did **not** imply real-world example validity.
+
+> **Workflow note (post-audit):** project tasks now live under `scripts/` and
+> mise file tasks (`.mise/config.toml`, `#MISE` annotations). Use
+> `./scripts/test`, `./scripts/build`, and `./scripts/validate-examples`
+> (or `mise run …`) instead of the former Makefile targets. The M15 gate
+> `./scripts/validate-examples` is the automated vendor-example validation
+> that this audit called for.
 
 ## Validation status
 
-| Surface | Current evidence | Status |
+| Surface | Evidence at audit time | Status (audit day) |
 |---|---|---|
-| Unit + e2e suite | `Makefile:48-58`; local `make test`: 78 unit and 47 e2e tests passed | Green |
-| Build | `Makefile:41-43`; local `make build` passed | Green |
-| raylib | Matrix says pass (`examples/README.md:51-54`) | Documented green |
-| box3d | Matrix says pass (`examples/README.md:51-55`) | Documented green |
-| cgltf | Generation/check are OK with official-style prefixed type names (`examples/cgltf/README.md:23-34`) | Green; separate collision reproducer needed |
-| curl | Generation requires dropping opaque typedefs; generated output then fails (`examples/curl/README.md:24-48`) | Red |
-| miniaudio | Generation requires dropping opaque typedefs; output still fails (`examples/miniaudio/README.md:24-46`) | Red |
-| Example automation | README lists manual commands and omits checks for known-red examples (`examples/README.md:11-30`); `Makefile:34-73` has no example-validation target | Missing |
+| Unit + e2e suite | Local suite green (78 unit + 47 e2e) | Green |
+| Build | Local generator build passed | Green |
+| raylib | Matrix says pass (`examples/README.md`) | Documented green |
+| box3d | Matrix says pass (`examples/README.md`) | Documented green |
+| cgltf | Generation/check OK with official-style prefixed type names (`examples/cgltf/README.md`) | Green; separate collision reproducer needed |
+| curl | Generation requires dropping opaque typedefs; generated output then fails (`examples/curl/README.md`) | Red |
+| miniaudio | Generation requires dropping opaque typedefs; output still fails (`examples/miniaudio/README.md`) | Red |
+| Example automation | Manual commands only; no dedicated validation target yet | Missing at audit (now: `./scripts/validate-examples`) |
 
 A fresh local run on 2026-07-11 built the current generator, regenerated all
 eight examples, and ran `odin check -no-entry-point` against each package.
@@ -35,10 +47,11 @@ miniaudio failed exactly as documented. Curl's first errors are the two
 `sockaddr` declarations followed by unresolved `CURL`; miniaudio's first errors
 are `thread: thread` / `format: format` cycles followed by unresolved dropped
 opaque names. This confirms that the READMEs describe current behavior, not
-only historical observations. The reproducible command shape is:
+only historical observations. The reproducible command shape today is:
 
 ```sh
-make build
+./scripts/build
+# or full gate: ./scripts/validate-examples
 for example in fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio; do
     ./build/h2odin "examples/$example"
     odin check "examples/$example" -no-entry-point -collection:vendored=$(pwd)/vendored
@@ -46,8 +59,8 @@ done
 ```
 
 The generated files were restored after the probe; this report records the
-observed exit status, while the proposed validation target will make the result
-a durable automated artifact.
+observed exit status. The durable automated gate is now
+`./scripts/validate-examples` (also `mise run validate-examples`).
 
 ### Validation caveats
 
@@ -155,10 +168,10 @@ Create a reduced fixture where an input-owned `struct lib_sockaddr` contains a f
 
 **Direct evidence**
 
-- The examples documentation provides manual generation/check commands (`examples/README.md:11-30`).
-- `Makefile` exposes source checks, build, unit/e2e tests, formatting, and libclang regeneration, but no vendor-example validation target (`Makefile:34-73`).
-- The main matrix explicitly records three passing and two failing vendor benchmarks (`examples/README.md:51-57`).
-- The roadmap notes there is no CI or pinned Odin release (`ROADMAP.md:370-375`).
+- The examples documentation provided manual generation/check commands (`examples/README.md`).
+- At audit time there was no automated vendor-example validation target (only unit/e2e, format, and libclang regen). **Follow-up:** `./scripts/validate-examples` / `mise run validate-examples` is that gate; Odin is pinned in `.mise/config.toml`.
+- The main matrix explicitly records three passing and two failing vendor benchmarks (`examples/README.md`).
+- The roadmap still tracks full CI as open (Odin pin via mise is done).
 
 **Impact**
 
@@ -168,10 +181,10 @@ Checked-in generated outputs and README status can drift from generator behavior
 
 Add two layers after the P0 investigations establish expected behavior:
 
-1. Small deterministic e2e fixtures for each bug pattern, run in `make test`.
-2. An example-validation target that regenerates to temporary directories and checks expected-green packages. Keep expected-red probes as explicit tests for their known diagnostic/nonzero behavior until fixed.
+1. Small deterministic e2e fixtures for each bug pattern, run in `./scripts/test` (or `mise run test`).
+2. An example-validation target that regenerates and checks expected-green packages (landed as `./scripts/validate-examples`). Keep expected-red probes as explicit tests for their known diagnostic/nonzero behavior until fixed.
 
-Pin the tested Odin version before making full-corpus checks a merge gate.
+Pin the tested Odin version before making full-corpus checks a merge gate (landed: `.mise/config.toml` → `odin = "dev-2026-07a"`).
 
 ### P1 — Pointer/callback curation remains a practical quality gap
 
@@ -240,7 +253,7 @@ The sequence below is ordered by dependency and by the shortest path from crashi
    hand-written `vendor:curl`.
 6. **Turn the reduced red fixtures green.** Require generation without workarounds, no panic, no dangling names, correct diagnostics, and `odin check`. Keep focused tests separate enough to identify which layer regressed.
 7. **Close real examples in dependency order.** Keep cgltf green in its official-style prefixed configuration while a reduced fixture verifies the conflicting strip is diagnosed; then close curl (remove the pure-void deletion workaround and verify provenance); then close miniaudio (remove the pure-void deletion workaround and resolve all naming scopes at scale). Reconfirm raylib and box3d after each shared naming/type change.
-8. **Automate the full acceptance matrix.** Add a Make target that regenerates into temporary locations, compares or reviews deterministic output, and runs `odin check` for every expected-green example. Pin the Odin version and add CI before making this a required merge gate (`ROADMAP.md:370-375`).
+8. **Automate the full acceptance matrix.** Add a validation entry point that regenerates and runs `odin check` for every expected-green example (landed as `./scripts/validate-examples` / `mise run validate-examples`). Pin the Odin version (landed in `.mise/config.toml`) and add CI before making this a required merge gate.
 8. **Capture calling conventions as extraction facts.** Do this before Windows parity, then add targeted callback ABI tests. It need not block the initial Linux green matrix unless an example requires a non-default convention.
 9. **Curate pointer/callback shapes and diagnostics.** Improve faithful ABI usability without pulling forward arity-changing wrappers.
 10. **Harden output transactions.** Render and validate all units before atomic replacement; add stale-file cleanup/manifest behavior.
@@ -262,8 +275,8 @@ This order is now reflected directly in Roadmap Milestone 15 (`ROADMAP.md:376-46
 | `cgltf` | Passes with official-style type prefixes retained (`examples/cgltf/README.md:23-34`) | Regenerate deterministically and `odin check`; a separate reduced fixture that enables the conflicting strip must produce a clear error rather than illegal Odin | Retaining `cgltf_` type names is valid reference parity, not itself a defect; missing collision detection is the defect |
 | `curl` | Generation panics without opaque workaround; workaround output fails (`examples/curl/README.md:24-48`) | Remove `CURL`/`CURLM`/`CURLSH` deletion workaround; no panic or dangling handle names; input-owned `curl_sockaddr` and foreign `struct sockaddr` do not become duplicate package `sockaddr`; final output `odin check`s | Requires pure-void semantics, nested reference rewriting, final-name validation, and foreign provenance fix |
 | `miniaudio` | Generation panics without workaround; workaround output fails on dangling opaques and naming cycles (`examples/miniaudio/README.md:24-46`) | Remove pure-void deletion workaround; no dangling names; all final naming scopes validate; no `format: format`/`thread: thread` illegal cycles; deterministic generation at full-header scale; `odin check` | Strongest scale/stress acceptance; pointer warnings may remain if actionable and non-fatal |
-| Generated libclang | Self-hosted package and regeneration are roadmap-complete (`ROADMAP.md:168-226`) | `make regen-libclang`; package `odin check`; source test suite remains green; generated diff deterministic | Must be rerun because handle/naming/provenance changes touch shared extraction and transformation paths |
-| Whole project | Local audit run: `make test` passed 78 unit + 47 e2e tests; build passed | `make format`, `make check`, `make test`, `make build`, full example target, and deterministic libclang regeneration under pinned compiler | CI/version pin remains required before claiming reproducible closure (`ROADMAP.md:370-375`) |
+| Generated libclang | Self-hosted package and regeneration are roadmap-complete (`ROADMAP.md`) | `./scripts/regen-libclang` (or `mise run regen-libclang`); package `odin check`; source test suite remains green; generated diff deterministic | Must be rerun because handle/naming/provenance changes touch shared extraction and transformation paths |
+| Whole project | Local audit run: unit+e2e green; build passed | `./scripts/format`, `./scripts/check`, `./scripts/test`, `./scripts/build` (or `mise run …`), `./scripts/validate-examples`, and deterministic libclang regeneration under pinned Odin (`.mise/config.toml`) | Full CI still open; Odin pin is in-repo via mise |
 
 ### Cross-example acceptance invariants
 

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#MISE description="check + build"
+#MISE depends=["check", "build"]
+#
+# Full local compile gate without tests. Standalone: ./scripts/all
+# Via mise, depends already ran check and build; body is a no-op.
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+# When mise runs this task, depends=["check","build"] already executed them.
+if [[ -n "${MISE_TASK_NAME:-}" ]]; then
+	exit 0
+fi
+
+"$ROOT/scripts/check"
+"$ROOT/scripts/build"

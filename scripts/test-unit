@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Unit tests only (odin test src)"
+#MISE sources=["src/**/*.odin", "scripts/test-unit", "scripts/_common.sh"]
+#MISE outputs={auto=true}
+#
+# Unit tests: odin test src (no generator binary required).
+# Standalone: ./scripts/test-unit
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+run_odin test "$SRC_DIR" "${ODIN_FLAGS[@]}" "${COLLECTION_FLAGS[@]}" "${TEST_DEFINES[@]}"

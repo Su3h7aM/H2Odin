@@ -213,9 +213,9 @@ report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false, verbose := 
 		// strings still match; mention errors when present.
 		if n_err == 0 {
 			label := "decision" if n == 1 else "decisions"
-			fmt.eprintfln("h2odin: %d non-certain %s:", n, label)
+			user_errorf("h2odin: %d non-certain %s:", n, label)
 		} else {
-			fmt.eprintfln(
+			user_errorf(
 				"h2odin: %d diagnostic%s (%d warning%s, %d error%s):",
 				n,
 				"" if n == 1 else "s",
@@ -228,14 +228,14 @@ report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false, verbose := 
 
 		for d, i in ir.diagnostics {
 			sev := severities[i]
-			fmt.eprintfln("  - %s[%s]: %s", diag_severity_name(sev), diag_category_name(d.category), d.message)
+			user_errorf("  - %s[%s]: %s", diag_severity_name(sev), diag_category_name(d.category), d.message)
 			if verbose {
 				cause, fix := diag_verbose_guidance(d.category)
 				if cause != "" {
-					fmt.eprintfln("      cause: %s", cause)
+					user_errorf("      cause: %s", cause)
 				}
 				if fix != "" {
-					fmt.eprintfln("      fix:   %s", fix)
+					user_errorf("      fix:   %s", fix)
 				}
 			}
 		}

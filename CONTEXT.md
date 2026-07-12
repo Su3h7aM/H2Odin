@@ -17,10 +17,10 @@ authoring output.
 Status: Milestones 0–5 and 7–**15** complete; Milestone 6 (idiomatic wrappers)
 is deferred. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
-regenerated generation-over-generation via `make regen-libclang` — spec 0002).
+regenerated generation-over-generation via `./scripts/regen-libclang` — spec 0002).
 
 **Milestone 15 (real-world validation) is closed.** All eight corpus packages
-regenerate and pass `odin check` via `make validate-examples`. Highlights that
+regenerate and pass `odin check` via `./scripts/validate-examples`. Highlights that
 landed for the gate: pure `typedef void` → `distinct rawptr`; foreign types
 via [spec 0010](docs/specs/0010-posix-libc-type-mapping.md)
 (`posix.sockaddr`, `libc.time_t`, system-header provenance); post-rename
@@ -226,7 +226,7 @@ rather than bend it silently.
   then `jj new` to leave a fresh empty working copy.
 - **Scoped commits.** One focused feature per commit, each independently buildable —
   never a whole milestone in one commit.
-- **Verification.** `make check` / `make build` / `make test` / `make format`
+- **Verification.** `./scripts/check` / `./scripts/build` / `./scripts/test` / `./scripts/format` (or `mise run …`)
   (odinfmt via `odinfmt.json`). For the examples, `odin check` them, e.g.
   `odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored`.
 - **Tests are isolated and runnable without libclang/Lua where possible.** Unit

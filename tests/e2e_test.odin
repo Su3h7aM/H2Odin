@@ -2,10 +2,22 @@ package h2odin_e2e
 
 import "core:os"
 import "core:strings"
+import "core:sync"
 import "core:testing"
 
+// os.process_start (used by process_exec) is not thread-safe. The e2e suite
+// runs multi-threaded and every test spawns build/h2odin; serialize only the
+// spawn/capture so the rest of each test stays free to run in parallel.
+process_mu: sync.Mutex
+
+run_process :: proc(command: []string) -> (state: os.Process_State, stdout: []byte, stderr: []byte, err: os.Error) {
+	sync.mutex_lock(&process_mu)
+	defer sync.mutex_unlock(&process_mu)
+	return os.process_exec(os.Process_Desc{command = command}, context.allocator)
+}
+
 run_h2odin :: proc(t: ^testing.T, command: []string) -> ([]byte, []byte, bool) {
-	state, stdout, stderr, err := os.process_exec(os.Process_Desc{command = command}, context.allocator)
+	state, stdout, stderr, err := run_process(command)
 	if err != nil {
 		testing.expectf(t, false, "process_exec failed: %v", err)
 		return stdout, stderr, false
@@ -18,7 +30,7 @@ run_h2odin :: proc(t: ^testing.T, command: []string) -> ([]byte, []byte, bool) {
 }
 
 run_h2odin_expect_failure :: proc(t: ^testing.T, command: []string) -> ([]byte, []byte, int, bool) {
-	state, stdout, stderr, err := os.process_exec(os.Process_Desc{command = command}, context.allocator)
+	state, stdout, stderr, err := run_process(command)
 	if err != nil {
 		testing.expectf(t, false, "process_exec failed: %v", err)
 		return stdout, stderr, 0, false

@@ -1,6 +1,5 @@
 package h2odin
 
-import "core:fmt"
 import "core:os"
 import "core:strings"
 
@@ -23,7 +22,7 @@ policy_rename :: proc(policy: ^Policy, ctx: Symbol_Context) -> (name: string, de
 	lua.remove(L, -2) // config, override
 	push_symbol_table(L, ctx)
 	if lua.pcall(L, 1, 1, 0) != 0 {
-		fmt.eprintfln("h2odin: config naming.override failed: %s", lua.tostring(L, -1))
+		user_errorf("h2odin: config naming.override failed: %s", lua.tostring(L, -1))
 		os.exit(1)
 	}
 	defer lua.pop(L, 2) // result, config
@@ -32,7 +31,7 @@ policy_rename :: proc(policy: ^Policy, ctx: Symbol_Context) -> (name: string, de
 		return "", false
 	}
 	if lua.type(L, -1) != .STRING {
-		fmt.eprintfln("h2odin: config naming.override for %q must return a string or nil", ctx.name)
+		user_errorf("h2odin: config naming.override for %q must return a string or nil", ctx.name)
 		os.exit(1)
 	}
 	return strings.clone(string(lua.tostring(L, -1))), true
@@ -54,7 +53,7 @@ policy_remove_where :: proc(policy: ^Policy, ctx: Symbol_Context) -> bool {
 	lua.remove(L, -2) // drop symbols → config, where
 	push_symbol_table(L, ctx)
 	if lua.pcall(L, 1, 1, 0) != 0 {
-		fmt.eprintfln("h2odin: config symbols.remove.where failed: %s", lua.tostring(L, -1))
+		user_errorf("h2odin: config symbols.remove.where failed: %s", lua.tostring(L, -1))
 		os.exit(1)
 	}
 
@@ -65,7 +64,7 @@ policy_remove_where :: proc(policy: ^Policy, ctx: Symbol_Context) -> bool {
 	case .BOOLEAN:
 		remove = bool(lua.toboolean(L, -1))
 	case:
-		fmt.eprintfln("h2odin: config symbols.remove.where for %q must return a boolean or nil", ctx.name)
+		user_errorf("h2odin: config symbols.remove.where for %q must return a boolean or nil", ctx.name)
 		os.exit(1)
 	}
 	lua.pop(L, 2) // result, config
@@ -105,7 +104,7 @@ policy_macro_include :: proc(policy: ^Policy, group: Macro_Group_Enum, decl: Mac
 	lua.remove(L, -2) // drop macros → config, include
 	push_macro_view(L, decl)
 	if lua.pcall(L, 1, 1, 0) != 0 {
-		fmt.eprintfln("h2odin: config macros.groups[%d].include failed: %s", group.lua_index, lua.tostring(L, -1))
+		user_errorf("h2odin: config macros.groups[%d].include failed: %s", group.lua_index, lua.tostring(L, -1))
 		os.exit(1)
 	}
 	include := false
@@ -115,7 +114,7 @@ policy_macro_include :: proc(policy: ^Policy, group: Macro_Group_Enum, decl: Mac
 	case .BOOLEAN:
 		include = bool(lua.toboolean(L, -1))
 	case:
-		fmt.eprintfln("h2odin: config macros.groups[%d].include for %q must return a boolean or nil", group.lua_index, decl.name)
+		user_errorf("h2odin: config macros.groups[%d].include for %q must return a boolean or nil", group.lua_index, decl.name)
 		os.exit(1)
 	}
 	lua.pop(L, 2) // result, config
@@ -156,7 +155,7 @@ policy_enum_member_remove :: proc(policy: ^Policy, enum_name, member_name: strin
 	lua.pushinteger(L, lua.Integer(value))
 	lua.setfield(L, -2, "value")
 	if lua.pcall(L, 1, 1, 0) != 0 {
-		fmt.eprintfln("h2odin: config enums.member failed: %s", lua.tostring(L, -1))
+		user_errorf("h2odin: config enums.member failed: %s", lua.tostring(L, -1))
 		os.exit(1)
 	}
 	defer lua.pop(L, 2) // result, config
@@ -165,7 +164,7 @@ policy_enum_member_remove :: proc(policy: ^Policy, enum_name, member_name: strin
 		return false
 	}
 	if !lua.istable(L, -1) {
-		fmt.eprintfln("h2odin: config enums.member for %q must return nil or a table", member_name)
+		user_errorf("h2odin: config enums.member for %q must return nil or a table", member_name)
 		os.exit(1)
 	}
 	lua.getfield(L, -1, "remove")
@@ -174,7 +173,7 @@ policy_enum_member_remove :: proc(policy: ^Policy, enum_name, member_name: strin
 		return false
 	}
 	if lua.type(L, -1) != .BOOLEAN {
-		fmt.eprintfln("h2odin: config enums.member for %q: remove must be a boolean", member_name)
+		user_errorf("h2odin: config enums.member for %q: remove must be a boolean", member_name)
 		os.exit(1)
 	}
 	return bool(lua.toboolean(L, -1))
@@ -195,7 +194,7 @@ policy_struct_field_action :: proc(policy: ^Policy, struct_name, field_name, typ
 	push_string_field(L, "name", field_name)
 	push_string_field(L, "type", type_spelling)
 	if lua.pcall(L, 1, 1, 0) != 0 {
-		fmt.eprintfln("h2odin: config structs.field failed: %s", lua.tostring(L, -1))
+		user_errorf("h2odin: config structs.field failed: %s", lua.tostring(L, -1))
 		os.exit(1)
 	}
 	defer lua.pop(L, 2)
@@ -217,7 +216,7 @@ policy_proc_param_action :: proc(policy: ^Policy, proc_name, param_name, type_sp
 	push_string_field(L, "name", param_name)
 	push_string_field(L, "type", type_spelling)
 	if lua.pcall(L, 1, 1, 0) != 0 {
-		fmt.eprintfln("h2odin: config procs.param failed: %s", lua.tostring(L, -1))
+		user_errorf("h2odin: config procs.param failed: %s", lua.tostring(L, -1))
 		os.exit(1)
 	}
 	defer lua.pop(L, 2)
@@ -239,7 +238,7 @@ policy_proc_result_action :: proc(policy: ^Policy, proc_name, type_spelling: str
 	push_string_field(L, "proc_name", proc_name)
 	push_string_field(L, "type", type_spelling)
 	if lua.pcall(L, 1, 1, 0) != 0 {
-		fmt.eprintfln("h2odin: config procs.result failed: %s", lua.tostring(L, -1))
+		user_errorf("h2odin: config procs.result failed: %s", lua.tostring(L, -1))
 		os.exit(1)
 	}
 	defer lua.pop(L, 2)
@@ -261,7 +260,7 @@ policy_read_member_action_result :: proc(
 		return {}, false
 	}
 	if !lua.istable(L, -1) {
-		fmt.eprintfln("h2odin: config %s for %q must return nil or a table", callback_path, subject)
+		user_errorf("h2odin: config %s for %q must return nil or a table", callback_path, subject)
 		os.exit(1)
 	}
 	allowed := make([dynamic]cstring, context.temp_allocator)
@@ -276,19 +275,19 @@ policy_read_member_action_result :: proc(
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintfln("h2odin: config %s for %q: action keys must be strings", callback_path, subject)
+			user_errorf("h2odin: config %s for %q: action keys must be strings", callback_path, subject)
 			os.exit(1)
 		}
 		k := string(lua.tostring(L, -2))
 		if !config_key_in(k, allowed[:]) {
-			fmt.eprintfln("h2odin: config %s for %q: unknown action key %q", callback_path, subject, k)
+			user_errorf("h2odin: config %s for %q: unknown action key %q", callback_path, subject, k)
 			os.exit(1)
 		}
 		lua.pop(L, 1)
 	}
 	if lua.getfield(L, -1, "type"); !lua.isnil(L, -1) {
 		if lua.type(L, -1) != .STRING {
-			fmt.eprintfln("h2odin: config %s for %q: type must be a string", callback_path, subject)
+			user_errorf("h2odin: config %s for %q: type must be a string", callback_path, subject)
 			os.exit(1)
 		}
 		action.type = strings.clone(string(lua.tostring(L, -1)))
@@ -297,7 +296,7 @@ policy_read_member_action_result :: proc(
 	if allow_tag {
 		if lua.getfield(L, -1, "tag"); !lua.isnil(L, -1) {
 			if lua.type(L, -1) != .STRING {
-				fmt.eprintfln("h2odin: config %s for %q: tag must be a string", callback_path, subject)
+				user_errorf("h2odin: config %s for %q: tag must be a string", callback_path, subject)
 				os.exit(1)
 			}
 			action.tag = strings.clone(string(lua.tostring(L, -1)))
@@ -307,7 +306,7 @@ policy_read_member_action_result :: proc(
 	if allow_default {
 		if lua.getfield(L, -1, "default"); !lua.isnil(L, -1) {
 			if lua.type(L, -1) != .STRING {
-				fmt.eprintfln("h2odin: config %s for %q: default must be a string", callback_path, subject)
+				user_errorf("h2odin: config %s for %q: default must be a string", callback_path, subject)
 				os.exit(1)
 			}
 			action.default = strings.clone(string(lua.tostring(L, -1)))

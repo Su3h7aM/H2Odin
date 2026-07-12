@@ -11,7 +11,7 @@ API revision as the official binding.
 ## Regenerate
 
 ```sh
-make build
+./scripts/build
 ./build/h2odin examples/box3d
 odin check examples/box3d -no-entry-point -collection:vendored=$(pwd)/vendored
 ```

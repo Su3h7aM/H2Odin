@@ -195,7 +195,7 @@ Land the feature as focused, independently checkable changes:
    unplaced live declarations all fail before writes.
 7. Per-header footer lookup appends the matching footer only.
 8. The generated multi-file fixture and libclang package pass `odin check`; the
-   full `make format && make check && make test && make build` gate passes.
+   full `./scripts/format && ./scripts/check && ./scripts/test && ./scripts/build` gate passes.
 
 ## Out of scope
 

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#MISE description="Run build/h2odin (pass CLI args after the task name)"
+#MISE depends=["build"]
+#MISE raw_args=true
+#
+# Run build/h2odin with the given arguments. Standalone: ./scripts/run [args...]
+# With mise: mise run run -- -help   (or: mise run -- run -help)
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+ensure_built
+exec "$BIN" "$@"

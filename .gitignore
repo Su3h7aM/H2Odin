@@ -1,2 +1,7 @@
 build/
 *.tar.gz
+
+# mise local overrides (machine-specific; not shared)
+mise.local.toml
+.mise.local.toml
+.mise/config.local.toml

@@ -6,7 +6,7 @@ compare them with the hand-written package in Odin's `vendor:raylib`.
 ## Regenerate
 
 ```sh
-make build
+./scripts/build
 ./build/h2odin examples/raylib
 odin check examples/raylib -no-entry-point -collection:vendored=$(pwd)/vendored
 ```

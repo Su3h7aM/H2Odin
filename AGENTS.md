@@ -30,12 +30,14 @@ This project uses **Jujutsu (`jj`)** as its VCS — always use `jj`, not raw `gi
 **Before every `jj new` (and before considering a change finished):**
 
 ```sh
-make format && make check && make test && make build
+./scripts/format && ./scripts/check && ./scripts/test && ./scripts/build
+# or, with mise (pinned Odin; file tasks under scripts/ with #MISE annotations):
+# mise run format && mise run check && mise run test && mise run build
 ```
 
 Fix any failure; if the fix is formatting or a small correction that belongs in an earlier commit of the stack, use `jj absorb` (or squash into the right change) rather than leaving a drive-by follow-up commit.
 
-If `make check` fails inside Odin's own `base/runtime` (e.g. `Invalid build tag platform: bedrock`), the compiler binary and `ODIN_ROOT` are mismatched — the Makefile pairs them automatically; ensure `which odin` is the toolchain you intend (mise nightly vs system package).
+If `./scripts/check` fails inside Odin's own `base/runtime` (e.g. `Invalid build tag platform: bedrock`), the compiler binary and `ODIN_ROOT` are mismatched — `scripts/_common.sh` pairs them automatically; ensure `which odin` is the toolchain you intend (mise-pinned `dev-2026-07a` vs system package).
 
 ## Style
 
@@ -49,22 +51,27 @@ These are guidelines, not law. If docs and code disagree, or a task fights an in
 
 ## Verification
 
-Run from the repo root. Prefer the Makefile targets:
+Run from the repo root. Tasks are the executables in `scripts/` (each has
+`#MISE` annotations for description/depends/sources). Run them directly, or via
+mise (`.mise/config.toml` points `task_config.includes` at `scripts/`):
 
 ```sh
-make check              # odin check src (vet + strict-style)
-make build              # build/h2odin
-make test               # unit tests (src/*_test.odin) + e2e (tests/)
-make format             # odinfmt via odinfmt.json
-make regen-libclang     # rebuild + rewrite vendored/libclang (self-host package)
-make validate-examples  # regen all eight examples + odin check (M15 gate)
+./scripts/check              # odin check src (vet + strict-style)
+./scripts/build              # build/h2odin
+./scripts/test               # unit tests (src/*_test.odin) + e2e (tests/)
+./scripts/format             # odinfmt via odinfmt.json
+./scripts/regen-libclang     # rebuild + rewrite vendored/libclang (self-host package)
+./scripts/validate-examples  # regen all eight examples + odin check (M15 gate)
+
+mise tasks                   # list (descriptions from #MISE)
+mise run test                # same as ./scripts/test, with depends/sources
 ```
 
 After extraction, transformation, or emission changes that affect emission
 shape, run the corpus gate:
 
 ```sh
-make validate-examples
+./scripts/validate-examples
 ```
 
 All eight packages (fff, sqlite3, bit_fields, raylib, box3d, cgltf, curl,

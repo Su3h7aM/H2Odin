@@ -199,8 +199,8 @@ Depends on Milestone 12 (bit-fields) — without it `CXIndexOptions` ships opaqu
 - [x] Bootstrap explicitly: generation N is produced by a binary built against
       the checked-in bindings from generation N−1; the generated package is
       checked in, so the cycle never needs the old hand binding again after
-      the switch (`make regen-libclang`).
-- [x] `make test` stays green against the generated package; clang-c headers
+      the switch (`./scripts/regen-libclang`).
+- [x] `./scripts/test` stays green against the generated package; clang-c headers
       stay pinned in `vendored/libclang/headers/`.
 
 ## Milestone 14 — Multi-file Odin emission
@@ -357,17 +357,22 @@ necessary, not a reimplementation; and the **empty `Platform.odin` /
       `clang_getFunctionTypeCallingConv` is unused; `__stdcall`/`__fastcall`
       in Windows headers are silently dropped. The authoritative checklist
       item now lives with the validation work below.
-- [ ] **Flaky e2e observed (2026-07-11):**
+- [x] **Flaky e2e observed (2026-07-11):**
       `test_opaque_tags_idiomatic_default_handle` once failed all four
-      `expect_contains` (empty/truncated stdout?) under the 16-thread runner
-      right after a rebuild; rerun and direct invocation pass. Watch for
-      recurrence; suspect a process-spawn/stdout-read race in `run_h2odin`.
-- [ ] **Reproducibility — no pinned Odin release, no CI.**
-      Document the tested compiler (currently `dev-2026-07a` nightly via
-      mise) and a minimum version; add CI running the AGENTS.md sequence
-      (`make format && make check && make test && make build`) plus
-      `make regen-libclang` + `git diff --exit-code` and the example
-      `odin check`s.
+      `expect_contains` under the multi-thread runner (empty/truncated stdout;
+      `os.process_start` is not thread-safe). Fixed by serializing only
+      process capture in e2e helpers (tests stay multi-threaded) and building
+      `build/h2odin` once before the suite runs (`scripts/build`).
+- [x] **Pinned Odin via mise (repo-local).**
+      `.mise/config.toml` pins `odin = "dev-2026-07a"` and
+      `task_config.includes = ["scripts"]`. Executables under `scripts/` carry
+      `#MISE` annotations (description, depends, sources) and stay runnable
+      without mise (`./scripts/test`).
+- [ ] **CI.**
+      Add CI running the AGENTS.md sequence
+      (`./scripts/format && ./scripts/check && ./scripts/test && ./scripts/build`)
+      plus `./scripts/regen-libclang` + `git diff --exit-code` and
+      `./scripts/validate-examples`.
 
 ## Milestone 15 — Close the real-world validation gaps (current priority)
 
@@ -432,7 +437,7 @@ default rather than a panic or an apparently successful generation.
 
 ### P2 — Turn the corpus into a regression gate
 
-- [x] **Validation target:** `make validate-examples` rebuilds H2Odin,
+- [x] **Validation target:** `./scripts/validate-examples` rebuilds H2Odin,
       regenerates all eight packages, reformats generated Odin, and runs
       `odin check` on each. Documented in `AGENTS.md`, root `README.md`, and
       `examples/README.md`. Wire into CI when a CI runner lands
@@ -454,7 +459,7 @@ default rather than a panic or an apparently successful generation.
 
 - [x] `./build/h2odin examples/{fff,sqlite3,bit_fields,raylib,box3d,cgltf,curl,miniaudio}`
       completes without panic or error-severity diagnostics
-      (`make validate-examples`).
+      (`./scripts/validate-examples`).
 - [x] All eight generated packages pass `odin check`; curl and miniaudio no
       longer depend on dropping declarations that remain referenced.
 - [x] Every fixed root cause has a minimal regression test, and the example
@@ -473,7 +478,7 @@ default rather than a panic or an apparently successful generation.
       types and a `Deprecated:` doc line on consts/vars (no Odin attribute
       there); `symbols.remove.deprecated = true` drops them;
       `sym.deprecated` joins the callback view. Dogfood acceptance:
-      `make regen-libclang` annotates exactly the five `clang_getRemappings*`
+      `./scripts/regen-libclang` annotates exactly the five `clang_getRemappings*`
       procs that `Index.h` marks `CINDEX_DEPRECATED` today.
 - [x] **Incomplete tag records — mode default + `types.opaque` overrides**
       (sqlite3-style `typedef struct T T;` used as `T *`). Decided in
@@ -500,8 +505,8 @@ default rather than a panic or an apparently successful generation.
 Milestones 0–5 and 7–**15** are complete — including **self-hosted libclang
 bindings (13)**, **multi-file Odin emission (14)**, and **real-world
 validation closure (15)**. Regenerate the checked-in libclang package with
-`make regen-libclang`; regenerate the vendor corpus with
-`make validate-examples`. **Milestone 6 (wrappers)** remains deferred.
+`./scripts/regen-libclang`; regenerate the vendor corpus with
+`./scripts/validate-examples`. **Milestone 6 (wrappers)** remains deferred.
 
 Optional follow-ups from M15 that are *not* exit-gate blockers: pointer-
 lowering diagnostic curation, CI wiring for `validate-examples`, and

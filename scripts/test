@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#MISE description="Build once (if needed), then unit + e2e tests"
+#MISE alias="t"
+#MISE depends=["build"]
+#
+# Full test suite. Standalone: ./scripts/test
+# (depends=["build"] is used by mise; ensure_built covers direct execution.)
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+ensure_built
+"$ROOT/scripts/test-unit"
+"$ROOT/scripts/test-e2e"

@@ -27,13 +27,13 @@ plan_outputs :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) 
 	case .Per_Header:
 		return plan_per_header(ir, policy)
 	}
-	fmt.eprintln("h2odin: internal error: unknown output layout")
+	user_error("h2odin: internal error: unknown output layout")
 	return {}, false
 }
 
 plan_merged :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) {
 	if len(ir.input_headers) < 2 {
-		fmt.eprintln("h2odin: internal error: no input headers registered for output planning")
+		user_error("h2odin: internal error: no input headers registered for output planning")
 		return {}, false
 	}
 	// First real header (slot 0 is the empty sentinel).
@@ -55,13 +55,13 @@ plan_merged :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) {
 
 plan_per_header :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) {
 	if policy.output_folder == "" {
-		fmt.eprintln("h2odin: output.layout = \"per_header\" requires config.output_folder")
+		user_error("h2odin: output.layout = \"per_header\" requires config.output_folder")
 		return {}, false
 	}
 	// Real headers: slots 1..n-1 of input_headers.
 	n := len(ir.input_headers) - 1
 	if n < 1 {
-		fmt.eprintln("h2odin: internal error: no input headers registered for per_header planning")
+		user_error("h2odin: internal error: no input headers registered for per_header planning")
 		return {}, false
 	}
 
@@ -73,7 +73,7 @@ plan_per_header :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: boo
 		stem := filepath.stem(filepath.base(path))
 		stems[i] = stem
 		if prev, found := stem_owner[stem]; found {
-			fmt.eprintfln("h2odin: duplicate output filename %q.odin from inputs %q and %q", stem, prev, path)
+			user_errorf("h2odin: duplicate output filename %q.odin from inputs %q and %q", stem, prev, path)
 			return {}, false
 		}
 		stem_owner[stem] = path
@@ -88,12 +88,12 @@ plan_per_header :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: boo
 		home := ir_decl_home(ir, ref)
 		if home == 0 {
 			name := decl_ref_name(ir, ref)
-			fmt.eprintfln("h2odin: live declaration %q has no home input header (cannot place in per_header layout)", name if name != "" else "(anonymous)")
+			user_errorf("h2odin: live declaration %q has no home input header (cannot place in per_header layout)", name if name != "" else "(anonymous)")
 			return {}, false
 		}
 		idx := int(home) - 1
 		if idx < 0 || idx >= n {
-			fmt.eprintfln("h2odin: declaration home handle %d is out of range for %d input headers", int(home), n)
+			user_errorf("h2odin: declaration home handle %d is out of range for %d input headers", int(home), n)
 			return {}, false
 		}
 		append(&buckets[idx], ref)

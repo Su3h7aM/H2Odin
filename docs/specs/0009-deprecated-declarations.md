@@ -78,7 +78,7 @@ diagnostics report.
 
 ## Consequences
 
-- `make regen-libclang` annotates exactly the five `clang_getRemappings*`
+- `./scripts/regen-libclang` annotates exactly the five `clang_getRemappings*`
   procs in `vendored/libclang/Index.odin` — the built-in acceptance test.
   h2odin itself calls none of them, so its own build stays warning-free.
 - The IR grows two fields per declaration; the Lua symbol view grows one.
@@ -96,7 +96,7 @@ diagnostics report.
   - `symbols.remove.deprecated = true` drops all four;
   - a `where` predicate reading `sym.deprecated` sees `true` for them.
 - Attribute without a message → the fixed fallback text.
-- `make regen-libclang` + `git diff`: exactly five procs gain the attribute;
+- `./scripts/regen-libclang` + `git diff`: exactly five procs gain the attribute;
   `odin check` on the package and all examples stays green.
 
 ## See also

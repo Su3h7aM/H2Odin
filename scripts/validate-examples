@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#MISE description="Regen + odin check all validation packages (M15 gate)"
+#MISE depends=["build"]
+#MISE sources=["src/**/*.odin", "examples/**/*", "scripts/validate-examples", "scripts/_common.sh"]
+#MISE outputs={auto=true}
+#
+# Milestone 15 gate. Standalone: ./scripts/validate-examples
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+if ! command -v "$ODINFMT" >/dev/null 2>&1; then
+	echo "error: odinfmt not found on PATH (set ODINFMT=...)" >&2
+	exit 1
+fi
+
+ensure_built
+
+for ex in "${EXAMPLES[@]}"; do
+	echo "==> generate examples/$ex"
+	"$BIN" "examples/$ex"
+done
+
+"$ODINFMT" examples -config:odinfmt.json -w
+
+for ex in "${EXAMPLES[@]}"; do
+	echo "==> odin check examples/$ex"
+	run_odin check "examples/$ex" -no-entry-point "${COLLECTION_FLAGS[@]}"
+done
+
+echo "validate-examples: all ${#EXAMPLES[@]} packages OK"

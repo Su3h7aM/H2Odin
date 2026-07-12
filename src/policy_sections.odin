@@ -1,7 +1,6 @@
 package h2odin
 
 import "core:c"
-import "core:fmt"
 
 import lua "vendor:lua/5.4"
 
@@ -24,7 +23,7 @@ policy_read_comments :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		return true
 	case:
-		fmt.eprintln("h2odin: config: comments must be a boolean")
+		user_error("h2odin: config: comments must be a boolean")
 		lua.pop(L, 1)
 		return false
 	}
@@ -43,7 +42,7 @@ policy_read_diagnostics :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: diagnostics must be a table of category → \"warn\"|\"error\"")
+		user_error("h2odin: config: diagnostics must be a table of category → \"warn\"|\"error\"")
 		lua.pop(L, 1)
 		return false
 	}
@@ -69,26 +68,26 @@ policy_parse_diag_severity_table :: proc(L: ^lua.State, index: c.int, path: stri
 	for lua.next(L, idx) != 0 {
 		// stack: key, value
 		if lua.type(L, -2) != .STRING {
-			fmt.eprintfln("h2odin: config: %s keys must be category name strings", path)
+			user_errorf("h2odin: config: %s keys must be category name strings", path)
 			lua.pop(L, 2)
 			return {}, false
 		}
 		key := string(lua.tostring(L, -2))
 		cat, cat_ok := diag_category_from_name(key)
 		if !cat_ok {
-			fmt.eprintfln("h2odin: config: %s: unknown category %q (known: %s)", path, key, diag_known_category_list())
+			user_errorf("h2odin: config: %s: unknown category %q (known: %s)", path, key, diag_known_category_list())
 			lua.pop(L, 2)
 			return {}, false
 		}
 		if lua.type(L, -1) != .STRING {
-			fmt.eprintfln("h2odin: config: %s[%q] must be \"warn\" or \"error\"", path, key)
+			user_errorf("h2odin: config: %s[%q] must be \"warn\" or \"error\"", path, key)
 			lua.pop(L, 2)
 			return {}, false
 		}
 		sev_name := string(lua.tostring(L, -1))
 		sev, sev_ok := diag_severity_from_name(sev_name)
 		if !sev_ok {
-			fmt.eprintfln("h2odin: config: %s[%q] must be \"warn\" or \"error\", got %q", path, key, sev_name)
+			user_errorf("h2odin: config: %s[%q] must be \"warn\" or \"error\", got %q", path, key, sev_name)
 			lua.pop(L, 2)
 			return {}, false
 		}
@@ -114,7 +113,7 @@ policy_read_local_diag_overrides :: proc(L: ^lua.State, path: string) -> (out: D
 		}
 		return overrides, true
 	case:
-		fmt.eprintfln("h2odin: config: %s.diagnostics must be a table", path)
+		user_errorf("h2odin: config: %s.diagnostics must be a table", path)
 		lua.pop(L, 1)
 		return {}, false
 	}
@@ -131,7 +130,7 @@ policy_read_foreign :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: foreign must be a table")
+		user_error("h2odin: config: foreign must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -164,7 +163,7 @@ policy_read_naming :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: naming must be a table")
+		user_error("h2odin: config: naming must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -184,17 +183,17 @@ policy_read_naming :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		policy.has_rename = true
 	case .TABLE:
-		fmt.eprintln("h2odin: config: naming.override must be a function (plural naming.overrides is the data map)")
+		user_error("h2odin: config: naming.override must be a function (plural naming.overrides is the data map)")
 		lua.pop(L, 1)
 		return false
 	case:
-		fmt.eprintln("h2odin: config: naming.override must be a function")
+		user_error("h2odin: config: naming.override must be a function")
 		lua.pop(L, 1)
 		return false
 	}
 
 	if lua.Type(lua.getfield(L, -1, "overrides")) == .FUNCTION {
-		fmt.eprintln("h2odin: config: naming.overrides must be a table (plural is data; singular naming.override is the callback)")
+		user_error("h2odin: config: naming.overrides must be a table (plural is data; singular naming.override is the callback)")
 		lua.pop(L, 1)
 		return false
 	}
@@ -243,7 +242,7 @@ policy_read_types :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: types must be a table")
+		user_error("h2odin: config: types must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -258,13 +257,13 @@ policy_read_types :: proc(policy: ^Policy) -> bool {
 
 	// Plural is data.
 	if lua.Type(lua.getfield(L, -1, "overrides")) == .FUNCTION {
-		fmt.eprintln("h2odin: config: types.overrides must be a table (plural is data; singular types.override is the callback)")
+		user_error("h2odin: config: types.overrides must be a table (plural is data; singular types.override is the callback)")
 		lua.pop(L, 1)
 		return false
 	}
 	lua.pop(L, 1)
 	if lua.Type(lua.getfield(L, -1, "map")) == .FUNCTION {
-		fmt.eprintln("h2odin: config: types.map must be a table")
+		user_error("h2odin: config: types.map must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -307,7 +306,7 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: symbols must be a table")
+		user_error("h2odin: config: symbols must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -323,7 +322,7 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if remove_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: symbols.remove must be a table")
+		user_error("h2odin: config: symbols.remove must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -354,7 +353,7 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 		policy.remove_deprecated = bool(lua.toboolean(L, -1))
 		lua.pop(L, 1)
 	case:
-		fmt.eprintln("h2odin: config: symbols.remove.deprecated must be a boolean")
+		user_error("h2odin: config: symbols.remove.deprecated must be a boolean")
 		lua.pop(L, 1)
 		return false
 	}
@@ -369,11 +368,11 @@ policy_read_symbols :: proc(policy: ^Policy) -> bool {
 		policy.has_remove_where = true
 		return true
 	case .TABLE:
-		fmt.eprintln("h2odin: config: symbols.remove.where must be a function (predicate callback)")
+		user_error("h2odin: config: symbols.remove.where must be a function (predicate callback)")
 		lua.pop(L, 1)
 		return false
 	case:
-		fmt.eprintln("h2odin: config: symbols.remove.where must be a function")
+		user_error("h2odin: config: symbols.remove.where must be a function")
 		lua.pop(L, 1)
 		return false
 	}
@@ -390,7 +389,7 @@ policy_read_macros :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: macros must be a table")
+		user_error("h2odin: config: macros must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -406,7 +405,7 @@ policy_read_macros :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if groups_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: macros.groups must be a list of group tables")
+		user_error("h2odin: config: macros.groups must be a list of group tables")
 		lua.pop(L, 1)
 		return false
 	}
@@ -420,7 +419,7 @@ policy_read_macros :: proc(policy: ^Policy) -> bool {
 	for i in 0 ..< n {
 		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
 		if elem_type != c.int(lua.Type.TABLE) {
-			fmt.eprintfln("h2odin: config: macros.groups[%d] must be a table (use h2o.macro_group.enum{{...}})", i + 1)
+			user_errorf("h2odin: config: macros.groups[%d] must be a table (use h2o.macro_group.enum{{...}})", i + 1)
 			lua.pop(L, 1)
 			return false
 		}
@@ -444,7 +443,7 @@ policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: M
 
 	name, name_ok := policy_optional_string_field(L, "macros.groups[]", "name")
 	if !name_ok || name == "" {
-		fmt.eprintln("h2odin: config: macros.groups[] requires name")
+		user_error("h2odin: config: macros.groups[] requires name")
 		return {}, false
 	}
 	group.name = name
@@ -491,7 +490,7 @@ policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: M
 		group.emit_original_consts = bool(lua.toboolean(L, -1))
 		lua.pop(L, 1)
 	case:
-		fmt.eprintln("h2odin: config: macros.groups[].emit_original_consts must be a boolean")
+		user_error("h2odin: config: macros.groups[].emit_original_consts must be a boolean")
 		lua.pop(L, 1)
 		return {}, false
 	}
@@ -504,7 +503,7 @@ policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: M
 		lua.pop(L, 1)
 		group.has_include = true
 	case:
-		fmt.eprintln("h2odin: config: macros.groups[].include must be a function")
+		user_error("h2odin: config: macros.groups[].include must be a function")
 		lua.pop(L, 1)
 		return {}, false
 	}
@@ -529,7 +528,7 @@ policy_read_enums :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: enums must be a table")
+		user_error("h2odin: config: enums must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -547,11 +546,11 @@ policy_read_enums :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		policy.has_enum_member = true
 	case .TABLE:
-		fmt.eprintln("h2odin: config: enums.member must be a function")
+		user_error("h2odin: config: enums.member must be a function")
 		lua.pop(L, 1)
 		return false
 	case:
-		fmt.eprintln("h2odin: config: enums.member must be a function")
+		user_error("h2odin: config: enums.member must be a function")
 		lua.pop(L, 1)
 		return false
 	}
@@ -570,7 +569,7 @@ policy_read_enum_anonymous :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: enums.anonymous must be a list of tables")
+		user_error("h2odin: config: enums.anonymous must be a list of tables")
 		lua.pop(L, 1)
 		return false
 	}
@@ -584,7 +583,7 @@ policy_read_enum_anonymous :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 	for i in 0 ..< n {
 		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
 		if elem_type != c.int(lua.Type.TABLE) {
-			fmt.eprintfln("h2odin: config: enums.anonymous[%d] must be a table", i + 1)
+			user_errorf("h2odin: config: enums.anonymous[%d] must be a table", i + 1)
 			lua.pop(L, 1)
 			return false
 		}
@@ -596,7 +595,7 @@ policy_read_enum_anonymous :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 		first, first_ok := policy_optional_string_field(L, "enums.anonymous[]", "first_member")
 		lua.pop(L, 1)
 		if !name_ok || !first_ok || name == "" || first == "" {
-			fmt.eprintln("h2odin: config: enums.anonymous[] requires name and first_member")
+			user_error("h2odin: config: enums.anonymous[] requires name and first_member")
 			return false
 		}
 		append(&rules, Enum_Anonymous_Rule{name = name, first_member = first})
@@ -612,7 +611,7 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: enums.bit_sets must be a list of tables")
+		user_error("h2odin: config: enums.bit_sets must be a list of tables")
 		lua.pop(L, 1)
 		return false
 	}
@@ -626,7 +625,7 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 	for i in 0 ..< n {
 		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
 		if elem_type != c.int(lua.Type.TABLE) {
-			fmt.eprintfln("h2odin: config: enums.bit_sets[%d] must be a table", i + 1)
+			user_errorf("h2odin: config: enums.bit_sets[%d] must be a table", i + 1)
 			lua.pop(L, 1)
 			return false
 		}
@@ -641,14 +640,14 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 		local_diags, local_ok := policy_read_local_diag_overrides(L, "enums.bit_sets[]")
 		lua.pop(L, 1)
 		if !enum_ok || !name_ok || !mode_ok || enum_name == "" || name == "" {
-			fmt.eprintln("h2odin: config: enums.bit_sets[] requires enum, name, and mode")
+			user_error("h2odin: config: enums.bit_sets[] requires enum, name, and mode")
 			return false
 		}
 		if !local_ok {
 			return false
 		}
 		if mode != "log2" {
-			fmt.eprintfln("h2odin: config: enums.bit_sets[].mode must be \"log2\", got %q", mode)
+			user_errorf("h2odin: config: enums.bit_sets[].mode must be \"log2\", got %q", mode)
 			return false
 		}
 		append(&rules, Enum_Bit_Set_Rule{enum_name = enum_name, name = name, mode = mode, diag_overrides = local_diags})
@@ -692,7 +691,7 @@ policy_read_preprocess :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: preprocess must be a table")
+		user_error("h2odin: config: preprocess must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -729,7 +728,7 @@ policy_read_structs :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: structs must be a table")
+		user_error("h2odin: config: structs must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -741,7 +740,7 @@ policy_read_structs :: proc(policy: ^Policy) -> bool {
 
 	// Plural is data; singular is callback.
 	if lua.Type(lua.getfield(L, -1, "fields")) == .FUNCTION {
-		fmt.eprintln("h2odin: config: structs.fields must be a table (plural is data; singular structs.field is the callback)")
+		user_error("h2odin: config: structs.fields must be a table (plural is data; singular structs.field is the callback)")
 		lua.pop(L, 1)
 		return false
 	}
@@ -755,11 +754,11 @@ policy_read_structs :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		policy.has_struct_field = true
 	case .TABLE:
-		fmt.eprintln("h2odin: config: structs.field must be a function (plural structs.fields is the data map)")
+		user_error("h2odin: config: structs.field must be a function (plural structs.fields is the data map)")
 		lua.pop(L, 1)
 		return false
 	case:
-		fmt.eprintln("h2odin: config: structs.field must be a function")
+		user_error("h2odin: config: structs.field must be a function")
 		lua.pop(L, 1)
 		return false
 	}
@@ -789,7 +788,7 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: procs must be a table")
+		user_error("h2odin: config: procs must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -800,13 +799,13 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 	}
 
 	if lua.Type(lua.getfield(L, -1, "params")) == .FUNCTION {
-		fmt.eprintln("h2odin: config: procs.params must be a table (plural is data; singular procs.param is the callback)")
+		user_error("h2odin: config: procs.params must be a table (plural is data; singular procs.param is the callback)")
 		lua.pop(L, 1)
 		return false
 	}
 	lua.pop(L, 1)
 	if lua.Type(lua.getfield(L, -1, "results")) == .FUNCTION {
-		fmt.eprintln("h2odin: config: procs.results must be a table (plural is data; singular procs.result is the callback)")
+		user_error("h2odin: config: procs.results must be a table (plural is data; singular procs.result is the callback)")
 		lua.pop(L, 1)
 		return false
 	}
@@ -820,11 +819,11 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		policy.has_proc_param = true
 	case .TABLE:
-		fmt.eprintln("h2odin: config: procs.param must be a function (plural procs.params is the data map)")
+		user_error("h2odin: config: procs.param must be a function (plural procs.params is the data map)")
 		lua.pop(L, 1)
 		return false
 	case:
-		fmt.eprintln("h2odin: config: procs.param must be a function")
+		user_error("h2odin: config: procs.param must be a function")
 		lua.pop(L, 1)
 		return false
 	}
@@ -837,11 +836,11 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 		lua.pop(L, 1)
 		policy.has_proc_result = true
 	case .TABLE:
-		fmt.eprintln("h2odin: config: procs.result must be a function (plural procs.results is the data map)")
+		user_error("h2odin: config: procs.result must be a function (plural procs.results is the data map)")
 		lua.pop(L, 1)
 		return false
 	case:
-		fmt.eprintln("h2odin: config: procs.result must be a function")
+		user_error("h2odin: config: procs.result must be a function")
 		lua.pop(L, 1)
 		return false
 	}
@@ -871,7 +870,7 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		fmt.eprintln("h2odin: config: output must be a table")
+		user_error("h2odin: config: output must be a table")
 		lua.pop(L, 1)
 		return false
 	}
@@ -881,7 +880,7 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 	// the generic unknown-key check.
 	removed_type := lua.getfield(L, -1, "imports_file")
 	if removed_type != c.int(lua.Type.NIL) {
-		fmt.eprintln(
+		user_error(
 			`h2odin: config: "output.imports_file" was removed; Odin import and foreign import names are file-local, so a split imports file never compiled`,
 		)
 		lua.pop(L, 1)
@@ -907,11 +906,11 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 		case "per_header":
 			policy.output_layout = .Per_Header
 		case:
-			fmt.eprintfln("h2odin: config: output.layout must be \"merged\" or \"per_header\", got %q", layout_str)
+			user_errorf("h2odin: config: output.layout must be \"merged\" or \"per_header\", got %q", layout_str)
 			return false
 		}
 	case:
-		fmt.eprintln("h2odin: config: output.layout must be a string")
+		user_error("h2odin: config: output.layout must be a string")
 		lua.pop(L, 1)
 		return false
 	}
@@ -924,7 +923,7 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 		policy.procedures_at_end = bool(lua.toboolean(L, -1))
 		lua.pop(L, 1)
 	case:
-		fmt.eprintln("h2odin: config: output.procedures_at_end must be a boolean")
+		user_error("h2odin: config: output.procedures_at_end must be a boolean")
 		lua.pop(L, 1)
 		return false
 	}
@@ -937,7 +936,7 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 		policy.footer_per_header = bool(lua.toboolean(L, -1))
 		lua.pop(L, 1)
 	case:
-		fmt.eprintln("h2odin: config: output.footer_per_header must be a boolean")
+		user_error("h2odin: config: output.footer_per_header must be a boolean")
 		lua.pop(L, 1)
 		return false
 	}

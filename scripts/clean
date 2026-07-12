@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#MISE description="Remove build/"
+#
+# Remove build artifacts. Standalone: ./scripts/clean
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+rm -rf "$BUILD_DIR"

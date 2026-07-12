@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Type-check src (odin check, vet + strict-style)"
+#MISE alias="c"
+#MISE sources=["src/**/*.odin", "scripts/check", "scripts/_common.sh"]
+#MISE outputs={auto=true}
+#
+# Type-check the h2odin package. Standalone: ./scripts/check
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+run_odin check "$SRC_DIR" "${ODIN_FLAGS[@]}" "${COLLECTION_FLAGS[@]}"

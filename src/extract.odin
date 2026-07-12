@@ -51,7 +51,7 @@ Extract_Preprocess :: struct {
 // translation units so multi-header inputs do not re-declare the same type.
 extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess = {}) -> bool {
 	if len(header_paths) == 0 {
-		fmt.eprintln("h2odin: no input headers")
+		user_error("h2odin: no input headers")
 		return false
 	}
 	index := clang.create_index(0, 0) // diagnostics are printed by check_parse_diagnostics
@@ -87,7 +87,7 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 		path := strings.clone_to_cstring(header_path, context.temp_allocator)
 		tu := clang.parse_translation_unit(index, path, raw_data(base_args[:]), c.int(len(base_args)), nil, 0, {.Detailed_Preprocessing_Record})
 		if tu == nil {
-			fmt.eprintfln("h2odin: failed to parse %q", header_path)
+			user_errorf("h2odin: failed to parse %q", header_path)
 			return false
 		}
 		if !check_parse_diagnostics(tu, header_path) {
@@ -197,13 +197,13 @@ check_parse_diagnostics :: proc(tu: clang.Translation_Unit, header_path: string)
 		if severity == .Ignored {
 			continue
 		}
-		fmt.eprintln(clone_clang_string(clang.format_diagnostic(diag, clang.default_diagnostic_display_options())))
+		user_error(clone_clang_string(clang.format_diagnostic(diag, clang.default_diagnostic_display_options())))
 		if severity >= .Error {
 			ok = false
 		}
 	}
 	if !ok {
-		fmt.eprintfln("h2odin: %q did not parse cleanly; refusing to generate from a guessed AST", header_path)
+		user_errorf("h2odin: %q did not parse cleanly; refusing to generate from a guessed AST", header_path)
 	}
 	return ok
 }

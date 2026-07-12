@@ -18,12 +18,12 @@ a classic multi-header C API.
 ## Regenerate
 
 ```sh
-make build
+./scripts/build
 ./build/h2odin examples/curl
 odin check examples/curl -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
-Or the full corpus gate: `make validate-examples`.
+Or the full corpus gate: `./scripts/validate-examples`.
 
 ## Status
 
