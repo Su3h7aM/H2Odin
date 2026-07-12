@@ -21,7 +21,7 @@ COLLECTION_FLAGS=(-collection:vendored="$ROOT/vendored")
 TEST_DEFINES=(-define:ODIN_TEST_LOG_LEVEL=warning)
 
 # Validation corpus (Milestone 15). Keep in sync with examples/README.md.
-EXAMPLES=(fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio)
+EXAMPLES=(fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio ggml)
 
 # Pair the odin binary with its stdlib.
 #

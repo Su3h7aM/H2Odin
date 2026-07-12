@@ -526,28 +526,32 @@ Land as a short stack (not one commit):
       when every procedure in that block shares the setting.
 - [x] Add idiomatic-only, explicit `#by_ptr` with non-null/call-borrowed policy;
       never infer it from `const T *` alone.
-- [ ] Curate the five vendor examples against recurring patterns and record
-      declaration-level parity metrics separately from helper/module counts.
-- [ ] Bring `ggml` into the gate by resolving its dual-prefix collisions,
+- [x] Curate the five vendor examples against recurring patterns and record
+      declaration-level parity metrics separately from helper/module counts
+      ([`docs/vendor-parity-metrics-2026-07-12.md`](docs/vendor-parity-metrics-2026-07-12.md)).
+- [x] Bring `ggml` into the gate by resolving its dual-prefix collisions,
       dangling renamed type spellings, and parameter/type shadowing through
       generator diagnostics plus an honest corpus config.
 
 ### Exit gate
 
-- [ ] ABI mode remains procedure-body-free across all fixtures and examples.
+- [x] ABI mode remains procedure-body-free across all fixtures and examples
+      (unit/e2e + corpus; wrappers remain Milestone 6).
 - [x] Calling conventions and target linkage are checked on at least one Unix
       and one Windows target.
-- [ ] All current gate examples plus ggml generate without error diagnostics
-      and pass `odin check` for their supported target configurations.
+- [x] All current gate examples plus ggml generate without error diagnostics
+      and pass `odin check` for their supported target configurations
+      (`./scripts/validate-examples`, nine packages).
 - [x] Failed generation publishes no partial generation and removes no prior
       accepted generation (stage + manifest; mid-rename is still best-effort).
-- [ ] Milestone 6 can add wrappers without changing the faithful ABI module's
-      interface or implementation.
+- [x] Milestone 6 can add wrappers without changing the faithful ABI module's
+      interface or implementation (faithful surface is curated; wrappers are a
+      separate emission path per spec 0011).
 
 
 ## Later
 
-- [ ] Milestone 6 after Milestone 16's ABI/platform prerequisites.
+- [ ] Milestone 6 — idiomatic wrappers (Milestone 16 prerequisites are done).
 - [x] **Deprecated C declarations — propagate by default, drop on opt-in.**
       Decided in
       [`docs/specs/0009-deprecated-declarations.md`](docs/specs/0009-deprecated-declarations.md):
@@ -584,12 +588,14 @@ Land as a short stack (not one commit):
 
 ### Start here
 
-Milestones 0–5 and 7–**15** are complete — including **self-hosted libclang
-bindings (13)**, **multi-file Odin emission (14)**, and **real-world
-validation closure (15)**. Regenerate the checked-in libclang package with
-`./scripts/regen-libclang`; regenerate the vendor corpus with
-`./scripts/validate-examples`. **Milestone 16 (ABI/platform vendor parity)** is
-next; **Milestone 6 (idiomatic wrappers)** follows its prerequisites.
+Milestones 0–5 and 7–**16** are complete — including **self-hosted libclang
+bindings (13)**, **multi-file Odin emission (14)**, **real-world validation
+closure (15)**, and **ABI/platform vendor parity (16)** (calling conventions +
+provenance; `foreign.targets` / win32 / transactional output; multipointer /
+`require_results` / `#by_ptr` curation; ggml in the nine-package gate).
+Regenerate the checked-in libclang package with `./scripts/regen-libclang`;
+regenerate the vendor corpus with `./scripts/validate-examples`. **Milestone 6
+(idiomatic wrappers)** is next.
 
 CI wiring and the remaining code-health items continue in parallel where they
-do not change the parity sequence.
+do not change the wrapper sequence.

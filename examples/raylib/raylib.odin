@@ -1192,7 +1192,7 @@ foreign lib {
 	MinimizeWindow :: proc() ---
 	RestoreWindow :: proc() ---
 	SetWindowIcon :: proc(image: Image) ---
-	SetWindowIcons :: proc(images: ^Image, count: i32) ---
+	SetWindowIcons :: proc(images: [^]Image, count: i32) ---
 	SetWindowTitle :: proc(title: cstring) ---
 	SetWindowPosition :: proc(x: i32, y: i32) ---
 	SetWindowMonitor :: proc(monitor: i32) ---
@@ -1252,6 +1252,7 @@ foreign lib {
 	UnloadVrStereoConfig :: proc(config: VrStereoConfig) ---
 	// Shader management functions
 	// NOTE: Shader functionality is not available on OpenGL 1.1
+	@(require_results)
 	LoadShader :: proc(vsFileName: cstring, fsFileName: cstring) -> Shader ---
 	LoadShaderFromMemory :: proc(vsCode: cstring, fsCode: cstring) -> Shader ---
 	IsShaderValid :: proc(shader: Shader) -> bool ---
@@ -1300,10 +1301,12 @@ foreign lib {
 	MemRealloc :: proc(ptr: rawptr, size: u32) -> rawptr ---
 	MemFree :: proc(ptr: rawptr) ---
 	// File system management functions
+	@(require_results)
 	LoadFileData :: proc(fileName: cstring, dataSize: ^i32) -> ^u8 ---
 	UnloadFileData :: proc(data: ^u8) ---
 	SaveFileData :: proc(fileName: cstring, data: rawptr, dataSize: i32) -> bool ---
 	ExportDataAsCode :: proc(data: ^u8, dataSize: i32, fileName: cstring) -> bool ---
+	@(require_results)
 	LoadFileText :: proc(fileName: cstring) -> ^u8 ---
 	UnloadFileText :: proc(text: ^u8) ---
 	SaveFileText :: proc(fileName: cstring, text: cstring) -> bool ---
@@ -1501,6 +1504,7 @@ foreign lib {
 	GetCollisionRec :: proc(rec1: Rectangle, rec2: Rectangle) -> Rectangle ---
 	// Image loading functions
 	// NOTE: These functions do not require GPU access
+	@(require_results)
 	LoadImage :: proc(fileName: cstring) -> Image ---
 	LoadImageRaw :: proc(fileName: cstring, width: i32, height: i32, format: i32, headerSize: i32) -> Image ---
 	LoadImageAnim :: proc(fileName: cstring, frames: ^i32) -> Image ---
@@ -1586,6 +1590,7 @@ foreign lib {
 	ImageDrawTextEx :: proc(dst: ^Image, font: Font, text: cstring, position: Vector2, fontSize: f32, spacing: f32, tint: Color) ---
 	// Texture loading functions
 	// NOTE: These functions require GPU access
+	@(require_results)
 	LoadTexture :: proc(fileName: cstring) -> Texture2D ---
 	LoadTextureFromImage :: proc(image: Image) -> Texture2D ---
 	LoadTextureCubemap :: proc(image: Image, layout: i32) -> TextureCubemap ---
@@ -1627,13 +1632,14 @@ foreign lib {
 	GetPixelDataSize :: proc(width: i32, height: i32, format: i32) -> i32 ---
 	// Font loading/unloading functions
 	GetFontDefault :: proc() -> Font ---
+	@(require_results)
 	LoadFont :: proc(fileName: cstring) -> Font ---
 	LoadFontEx :: proc(fileName: cstring, fontSize: i32, codepoints: ^i32, codepointCount: i32) -> Font ---
 	LoadFontFromImage :: proc(image: Image, key: Color, firstChar: i32) -> Font ---
 	LoadFontFromMemory :: proc(fileType: cstring, fileData: ^u8, dataSize: i32, fontSize: i32, codepoints: ^i32, codepointCount: i32) -> Font ---
 	IsFontValid :: proc(font: Font) -> bool ---
 	LoadFontData :: proc(fileData: ^u8, dataSize: i32, fontSize: i32, codepoints: ^i32, codepointCount: i32, type: i32, glyphCount: ^i32) -> ^GlyphInfo ---
-	GenImageFontAtlas :: proc(glyphs: ^GlyphInfo, glyphRecs: ^^Rectangle, glyphCount: i32, fontSize: i32, padding: i32, packMethod: i32) -> Image ---
+	GenImageFontAtlas :: proc(glyphs: [^]GlyphInfo, glyphRecs: ^^Rectangle, glyphCount: i32, fontSize: i32, padding: i32, packMethod: i32) -> Image ---
 	UnloadFontData :: proc(glyphs: ^GlyphInfo, glyphCount: i32) ---
 	UnloadFont :: proc(font: Font) ---
 	ExportFontAsCode :: proc(font: Font, fileName: cstring) -> bool ---
@@ -1714,6 +1720,7 @@ foreign lib {
 	DrawRay :: proc(ray: Ray, color: Color) ---
 	DrawGrid :: proc(slices: i32, spacing: f32) ---
 	// Model management functions
+	@(require_results)
 	LoadModel :: proc(fileName: cstring) -> Model ---
 	LoadModelFromMesh :: proc(mesh: Mesh) -> Model ---
 	IsModelValid :: proc(model: Model) -> bool ---
@@ -1752,16 +1759,18 @@ foreign lib {
 	GenMeshCubicmap :: proc(cubicmap: Image, cubeSize: Vector3) -> Mesh ---
 	// Material loading/unloading functions
 	LoadMaterials :: proc(fileName: cstring, materialCount: ^i32) -> ^Material ---
+	@(require_results)
 	LoadMaterialDefault :: proc() -> Material ---
 	IsMaterialValid :: proc(material: Material) -> bool ---
 	UnloadMaterial :: proc(material: Material) ---
 	SetMaterialTexture :: proc(material: ^Material, mapType: i32, texture: Texture2D) ---
 	SetModelMeshMaterial :: proc(model: ^Model, meshId: i32, materialId: i32) ---
 	// Model animations loading/unloading functions
+	@(require_results)
 	LoadModelAnimations :: proc(fileName: cstring, animCount: ^i32) -> ^ModelAnimation ---
 	UpdateModelAnimation :: proc(model: Model, anim: ModelAnimation, frame: f32) ---
 	UpdateModelAnimationEx :: proc(model: Model, animA: ModelAnimation, frameA: f32, animB: ModelAnimation, frameB: f32, blend: f32) ---
-	UnloadModelAnimations :: proc(animations: ^ModelAnimation, animCount: i32) ---
+	UnloadModelAnimations :: proc(animations: [^]ModelAnimation, animCount: i32) ---
 	IsModelAnimationValid :: proc(model: Model, anim: ModelAnimation) -> bool ---
 	// Collision detection functions
 	CheckCollisionSpheres :: proc(center1: Vector3, radius1: f32, center2: Vector3, radius2: f32) -> bool ---
@@ -1779,9 +1788,11 @@ foreign lib {
 	SetMasterVolume :: proc(volume: f32) ---
 	GetMasterVolume :: proc() -> f32 ---
 	// Wave/Sound loading/unloading functions
+	@(require_results)
 	LoadWave :: proc(fileName: cstring) -> Wave ---
 	LoadWaveFromMemory :: proc(fileType: cstring, fileData: ^u8, dataSize: i32) -> Wave ---
 	IsWaveValid :: proc(wave: Wave) -> bool ---
+	@(require_results)
 	LoadSound :: proc(fileName: cstring) -> Sound ---
 	LoadSoundFromWave :: proc(wave: Wave) -> Sound ---
 	LoadSoundAlias :: proc(source: Sound) -> Sound ---
@@ -1807,6 +1818,7 @@ foreign lib {
 	LoadWaveSamples :: proc(wave: Wave) -> ^f32 ---
 	UnloadWaveSamples :: proc(samples: ^f32) ---
 	// Music management functions
+	@(require_results)
 	LoadMusicStream :: proc(fileName: cstring) -> Music ---
 	LoadMusicStreamFromMemory :: proc(fileType: cstring, data: ^u8, dataSize: i32) -> Music ---
 	IsMusicValid :: proc(music: Music) -> bool ---

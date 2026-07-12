@@ -26,15 +26,27 @@ odin check examples/raylib -no-entry-point -collection:vendored=$(pwd)/vendored
 - `type_mode = "idiomatic"`
 - `types.overrides` for Vector/Color/Quaternion/Matrix to match the vendor shapes
 - No strip/recase — raylib C is already PascalCase
+- `procs.params` multipointers: `SetWindowIcons.images`, `GenImageFontAtlas.glyphs`,
+  `UnloadModelAnimations.animations`
+- `procs.require_results` on Load* loaders (model/texture/font/sound/…)
+
+## Declaration-level metrics (curated)
+
+| Metric | Count |
+|--------|------:|
+| Foreign procs (approx.) | 600 |
+| `[^]T` sites | 3 |
+| `#by_ptr` params | 0 |
+| `@(require_results)` | 12 |
 
 ## Known gaps vs the hand binding
 
 These are intentional generator limitations or deferred polish, not silent
 ABI lies:
 
-1. **Foreign import** — single `system:raylib`. Official uses multi-OS static/shared libs and system frameworks.
+1. **Foreign import** — single `system:raylib`. Official uses multi-OS static/shared libs and system frameworks (`foreign.targets` is available when a package needs that shape).
 2. **Palette constants** — hand binding hard-codes `LIGHTGRAY`, `RAYWHITE`, …; the C header only has macros/comments, so we do not invent them.
-3. **`#by_ptr` / `require_results` / default calling convention** — not emitted (no generator surface yet).
+3. **`#by_ptr`** — not used on this surface (vendor does on some math-ish call sites); multipointer + require_results are curated instead.
 4. **Pointer lowering** — many `T*` stay `^T` where the hand binding uses multipointers or `cstring` with more context; see diagnostics on regenerate.
 5. **Extra modules** — official also ships `raymath`, `raygui`, `rlgl`, easings. This example is `raylib.h` only.
 

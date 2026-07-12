@@ -32,11 +32,23 @@ odin check examples/box3d -no-entry-point -collection:vendored=$(pwd)/vendored
 - `foreign.link_prefix = "b3"` with matching `naming.strip_prefixes`
 - `types.overrides` for `b3Vec2` / `b3Vec3` / `b3Pos` → `[N]f32`
 - Keeps PascalCase after strip (matches official; no snake_case)
+- `#by_ptr` on CreateWorld / Create*Shape definition and geometry parameters
+- `require_results` on those Create* factories
+
+## Declaration-level metrics (curated)
+
+| Metric | Count |
+|--------|------:|
+| Foreign procs (approx.) | 417 |
+| `[^]T` sites | 0 |
+| `#by_ptr` params | 5 |
+| `@(require_results)` | 5 |
 
 ## Known gaps vs the hand binding
 
 1. **File layout** — one merged unit instead of topic-split files.
-2. **`#by_ptr`** — official uses `#by_ptr def: WorldDef`; we emit `^WorldDef`.
+2. **`#by_ptr` coverage** — curated on the main Create* shape factories; not
+   every official call site is mirrored.
 3. **`b3Quat`** — C is `{ Vec3 v; float s }` (16 bytes). Official uses
    `quaternion128`. We keep the struct for ABI fidelity.
 4. **Math helpers** — official reimplements many pure math functions in Odin
@@ -45,6 +57,8 @@ odin check examples/box3d -no-entry-point -collection:vendored=$(pwd)/vendored
 5. **ID helper procs** — `IS_NULL`, `StoreWorldId`, … are hand-written
    `#force_inline` wrappers in the official package, not C exports.
 6. **Pointer lowering** — diagnostics list multipointer / out-param guesses.
+7. **Input surface** — only `box3d.h` is listed; collision.h helpers such as
+   `b3CreateMesh` are transitive and not emitted as "ours".
 
 ## Bug dogfood
 

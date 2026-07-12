@@ -9,6 +9,10 @@ local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "curl"
 config.type_mode = "idiomatic"
+-- Only declarations whose home is a config.inputs path are emitted. curl.h
+-- #includes easy.h / multi.h / urlapi.h, but those files are not "ours" unless
+-- listed — and they cannot be listed alone (they need CURL_EXTERN / types from
+-- curl.h). Curate require_results for symbols that actually live in curl.h.
 config.inputs = { "include/curl.h" }
 config.preprocess.include_paths = { "include" }
 config.output_folder = "."
@@ -29,6 +33,18 @@ config.naming = {
 			return "httppost_"
 		end
 	end,
+}
+
+-- Honest subset: only procs declared in curl.h itself (not easy.h/multi.h).
+-- vendor:curl marks many more; expanding the input surface is future work.
+config.procs.require_results = {
+	"curl_slist_append",
+	"curl_global_init",
+	"curl_share_init",
+	"curl_mime_init",
+	"curl_version_info",
+	"curl_easy_escape",
+	"curl_easy_unescape",
 }
 
 return config

@@ -26,7 +26,9 @@ odin check examples/cgltf -no-entry-point -collection:vendored=$(pwd)/vendored
 |------|--------|
 | Generate | OK |
 | `odin check` | **OK** |
-| Proc count (approx.) | ~36 foreign procs |
+| Foreign procs (approx.) | 36 |
+| `#by_ptr` params | 4 (`options` on parse/load) |
+| `@(require_results)` | 5 |
 
 Type names keep the `cgltf_` prefix. Stripping them is deliberately disabled:
 `cgltf_size` → `size` would collide with fields named `size`, and
@@ -37,5 +39,7 @@ config opts out so the package stays green without field renames.
 ## Gaps vs `vendor:cgltf`
 
 - Official multi-file / wasm layout; we emit one unit
-- Pointer multipointers often stay `^T` (see regenerate diagnostics)
+- Out-parameter → multi-result **wrappers** are Milestone 6 (spec 0011), not
+  this faithful surface
+- Remaining multipointers often stay `^T` (see regenerate diagnostics)
 - Header-only static inlines are skipped (no external symbol) — by design

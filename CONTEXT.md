@@ -14,23 +14,19 @@ header through libclang, builds its own description of the API, and emits clean 
 `foreign` bindings. A small Lua policy layer configures the run without ever
 authoring output.
 
-Status: Milestones 0–5 and 7–**15** complete. Milestone 16 closes ABI/platform
-parity before Milestone 6 adds idiomatic wrappers. **H2Odin is self-hosted**:
-Extraction runs on the libclang package
+Status: Milestones 0–5 and 7–**16** complete. Milestone 6 (idiomatic wrappers)
+is next. **H2Odin is self-hosted**: Extraction runs on the libclang package
 H2Odin itself generates (`vendored/libclang`, Odin naming convention,
 regenerated generation-over-generation via `./scripts/regen-libclang` — spec 0002).
 
-**Milestone 15 (real-world validation) is closed.** All eight corpus packages
-regenerate and pass `odin check` via `./scripts/validate-examples`. Highlights that
-landed for the gate: pure `typedef void` → `distinct rawptr`; foreign types
-via [spec 0010](docs/specs/0010-posix-libc-type-mapping.md)
-(`posix.sockaddr`, `libc.time_t`, system-header provenance); post-rename
-collision/shadow validation ([spec 0008](docs/specs/0008-symbol-collision-validation.md));
-and calling-convention capture on funcs/proc types. Milestone 16 P0 emits
-supported conventions (`"c"` / `"stdcall"` / `"fastcall"` / `"win64"` /
-`"sysv"`) and fails closed on unrepresentable ones; `-verbose` reports
-libclang version and resource-dir provenance.
-Evidence and residual quality work (pointer diagnostics, CI wiring) live in
+**Milestone 15 (real-world validation) is closed.** **Milestone 16
+(ABI/platform vendor parity) is closed:** calling conventions and libclang
+provenance; `foreign.targets` + Windows `win32.*` types + transactional
+output; curated `[^]T` / `require_results` / `#by_ptr`; ggml dual-prefix
+config in the nine-package `./scripts/validate-examples` gate. Declaration-level
+parity metrics:
+[`docs/vendor-parity-metrics-2026-07-12.md`](docs/vendor-parity-metrics-2026-07-12.md).
+Earlier evidence lives in
 [`docs/vendor-example-audit-2026-07-11.md`](docs/vendor-example-audit-2026-07-11.md)
 and [`ROADMAP.md`](ROADMAP.md). The parity boundary and wrapper scope are fixed
 in [spec 0011](docs/specs/0011-vendor-parity-and-idiomatic-wrappers.md).

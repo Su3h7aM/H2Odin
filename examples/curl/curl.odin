@@ -1995,6 +1995,7 @@ foreign lib {
 	 * Create a mime context and return its handle. The easy parameter is the
 	 * target handle.
 	 */
+	@(require_results)
 	mime_init :: proc(easy: ^CURL) -> mime ---
 	/*
 	 * NAME curl_mime_free()
@@ -2143,6 +2144,7 @@ foreign lib {
 	 * %XX versions). This function returns a new allocated string or NULL if an
 	 * error occurred.
 	 */
+	@(require_results)
 	easy_escape :: proc(handle: ^CURL, string: cstring, length: i32) -> ^u8 ---
 	/* the previous version: */
 	escape :: proc(string: cstring, length: i32) -> ^u8 ---
@@ -2157,6 +2159,7 @@ foreign lib {
 	 * Conversion Note: On non-ASCII platforms the ASCII %XX codes are
 	 * converted into the host encoding.
 	 */
+	@(require_results)
 	easy_unescape :: proc(handle: ^CURL, string: cstring, length: i32, outlength: ^i32) -> ^u8 ---
 	/* the previous version */
 	unescape :: proc(string: cstring, length: i32) -> ^u8 ---
@@ -2181,6 +2184,7 @@ foreign lib {
 	 * curl_version_info_data.features flag (fetch by curl_version_info()).
 	
 	 */
+	@(require_results)
 	global_init :: proc(flags: i64) -> CURLcode ---
 	/*
 	 * NAME curl_global_init_mem()
@@ -2227,6 +2231,7 @@ foreign lib {
 	 * Appends a string to a linked list. If no list exists, it will be created
 	 * first. Returns the new list, after appending.
 	 */
+	@(require_results)
 	slist_append :: proc(list: ^slist, data: cstring) -> ^slist ---
 	/*
 	 * NAME curl_slist_free_all()
@@ -2246,6 +2251,7 @@ foreign lib {
 	 * and should be set to NULL.
 	 */
 	getdate :: proc(p: cstring, unused: ^libc.time_t) -> libc.time_t ---
+	@(require_results)
 	share_init :: proc() -> ^CURLSH ---
 	share_setopt :: proc(share: ^CURLSH, option: CURLSHoption, #c_vararg _: ..any) -> CURLSHcode ---
 	share_cleanup :: proc(share: ^CURLSH) -> CURLSHcode ---
@@ -2257,6 +2263,7 @@ foreign lib {
 	 * This function returns a pointer to a static copy of the version info
 	 * struct. See above.
 	 */
+	@(require_results)
 	version_info :: proc(_: CURLversion) -> ^version_info_data ---
 	/*
 	 * NAME curl_easy_strerror()

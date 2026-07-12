@@ -33,11 +33,15 @@ Or the full corpus gate: `./scripts/validate-examples`.
 | `odin check` | **OK** |
 | Opaque handles | pure `typedef void` → `distinct rawptr` |
 | Shadowing | resolved via `naming.override` (spec 0008) |
+| Foreign procs (approx.) | 931 |
+| `[^]T` sites | 2 |
+| `#by_ptr` params | 5 |
+| `@(require_results)` | 9 |
 | Scale | Stress test: many `pointer_lowering_guess` diagnostics remain |
 
 ## Gaps vs `vendor:miniaudio`
 
 - Official multi-file layout (types / procs / backends / wasm)
 - Heavy hand curation of platform threads and backend structs
-- Pointer multipointers and out-params largely stay `^T` (quality work, not
+- Remaining multipointers and out-params largely stay `^T` (quality work, not
   a validity blocker)

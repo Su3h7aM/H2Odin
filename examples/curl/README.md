@@ -33,10 +33,17 @@ Or the full corpus gate: `./scripts/validate-examples`.
 | `odin check` | **OK** |
 | Opaque handles | `CURL` / `CURLM` / `CURLSH` as `distinct rawptr` |
 | System types | `addr: posix.sockaddr`, `time_t` → `libc.time_t` |
+| Foreign procs (approx.) | 41 (decls whose home is `curl.h` only) |
+| `@(require_results)` | 7 (honest subset declared in `curl.h`) |
 
 ## Gaps vs `vendor:curl`
 
+- **Input membership:** `easy.h` / `multi.h` / `urlapi.h` are included by
+  `curl.h` but are not config inputs, so their procedures are not emitted.
+  Listing them alone fails parse (`CURL_EXTERN` / types come from `curl.h`).
+  Expanding the input surface is future work; require_results only lists
+  symbols that actually appear.
 - Official multi-file package + OS-specific socket types (`platform_sockaddr`)
 - Hand-curated CURLOPT tables and per-OS calling conventions
-- No multi-lib / versioned `foreign import`
+- Single `system:curl` import (`foreign.targets` available when needed)
 - Pointer multipointers often stay `^T` (see regenerate diagnostics)

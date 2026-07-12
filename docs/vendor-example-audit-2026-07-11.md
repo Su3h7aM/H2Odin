@@ -1,14 +1,15 @@
 # Vendor-library example audit — 2026-07-11
 
 > **Historical discovery record.** The red statuses and recommendations below
-> describe the audit-time generator, before Milestone 15 closed. In the current
-> worktree, pure-void handles, final-name validation, foreign provenance/POSIX
-> mapping, and the example gate are implemented; fff, sqlite3, bit_fields,
-> raylib, Box3D, cgltf, curl, and miniaudio pass `odin check`. `ggml` was added
-> later as a separate known-red stress example and is not in that eight-package
-> gate. Current forward decisions are in
+> describe the audit-time generator, before Milestones 15–16 closed. In the
+> current worktree, pure-void handles, final-name validation, foreign
+> provenance/POSIX mapping, ABI/platform parity (calling conventions,
+> `foreign.targets`, multipointer / `require_results` / `#by_ptr`), and the
+> nine-package example gate (including ggml) are implemented. Current forward
+> decisions are in
 > [spec 0011](specs/0011-vendor-parity-and-idiomatic-wrappers.md) and
-> [`ROADMAP.md`](../ROADMAP.md), not in this audit's ordered closure plan.
+> [`ROADMAP.md`](../ROADMAP.md); declaration-level metrics live in
+> [`vendor-parity-metrics-2026-07-12.md`](vendor-parity-metrics-2026-07-12.md).
 
 ## Scope and evidence standard
 

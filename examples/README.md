@@ -7,19 +7,18 @@ generated Odin binding. Headers and output live in the config
 (`config.inputs`, `config.output_folder`); the CLI takes the project
 directory and loads `H2Odin.lua`.
 
-## Regenerate and check (Milestone 15 gate)
+## Regenerate and check (corpus gate)
 
 ```sh
 ./scripts/validate-examples
 ```
 
-That target rebuilds `build/h2odin`, regenerates every **gate** package below
-(not known-red probes), runs `odinfmt` on `examples/`, and `odin check`s them.
-Equivalent manual loop:
+That target rebuilds `build/h2odin`, regenerates every **gate** package below,
+runs `odinfmt` on `examples/`, and `odin check`s them. Equivalent manual loop:
 
 ```sh
 ./scripts/build
-for ex in fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio; do
+for ex in fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio ggml; do
   ./build/h2odin "examples/$ex"
   odin check "examples/$ex" -no-entry-point -collection:vendored=$(pwd)/vendored
 done
@@ -27,7 +26,9 @@ done
 
 Configs default to idiomatic mode where noted. That means generated
 declarations keep the C ABI while using native Odin spellings where H2Odin
-can prove they are equivalent on the target.
+can prove they are equivalent on the target. Curated packages also exercise
+`pointer = "multi"`, `procs.require_results`, and idiomatic `#by_ptr` — see
+[`docs/vendor-parity-metrics-2026-07-12.md`](../docs/vendor-parity-metrics-2026-07-12.md).
 
 ## Development fixtures
 
@@ -46,18 +47,19 @@ remaining intentional gaps in each example README.
 
 | Example | Official reference | Role | `odin check` |
 |---------|-------------------|------|--------------|
-| [`raylib`](raylib/) | `vendor:raylib` (6.0) | Large C API, PascalCase, math overrides | pass |
-| [`box3d`](box3d/) | `vendor:box3d` | Prefix strip + handles, multi-header umbrella | pass |
-| [`cgltf`](cgltf/) | `vendor:cgltf` | Single-header, pointer-rich scene graph | pass |
+| [`raylib`](raylib/) | `vendor:raylib` (6.0) | Large C API, PascalCase, math overrides, multi/require_results | pass |
+| [`box3d`](box3d/) | `vendor:box3d` | Prefix strip + handles, `#by_ptr` defs | pass |
+| [`cgltf`](cgltf/) | `vendor:cgltf` | Single-header scene graph, `#by_ptr options` | pass |
 | [`curl`](curl/) | `vendor:curl` | Multi-header, `typedef void` opaques, POSIX types | pass |
-| [`miniaudio`](miniaudio/) | `vendor:miniaudio` | ~95k-line single-header stress, callbacks | pass |
-| [`ggml`](ggml/) | [ggml-org/ggml](https://github.com/ggml-org/ggml) | Multi-header tensor API, dual `ggml`/`gguf` prefixes | **fail** (see README; not in validate-examples gate) |
+| [`miniaudio`](miniaudio/) | `vendor:miniaudio` | ~95k-line single-header, multi/`#by_ptr`/require_results | pass |
+| [`ggml`](ggml/) | [ggml-org/ggml](https://github.com/ggml-org/ggml) | Multi-header tensor API, dual `ggml`/`gguf` prefixes | pass |
 
 “Functional” for this corpus means: generation does not panic; every emitted
 type resolves; final names are valid in their Odin scopes; transitive foreign
 declarations follow an explicit policy (spec 0010); and the package passes
-`odin check`. Byte-for-byte parity, hand-written helpers, wrappers, and full
-pointer curation are not part of that gate.
+`odin check`. Byte-for-byte parity, hand-written helpers, and wrappers are not
+part of that gate. Declaration-level multipointer / `#by_ptr` /
+`require_results` counts are recorded separately in the metrics note above.
 
 When a regenerate diverges from the official package in a new way, prefer
 fixing the generator (in a dedicated change) or documenting the gap in that

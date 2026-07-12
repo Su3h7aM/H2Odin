@@ -10,7 +10,11 @@ Pinned headers from commit `af97976` (see `GGML_COMMIT.txt`) under `include/`.
 - Multi-header public API: `ggml.h`, `ggml-alloc.h`, `ggml-backend.h`,
   `ggml-cpu.h`, `gguf.h` (no CUDA/Metal/Vulkan backends)
 - Dense tensor / graph API, opaque contexts, large enums, function pointers
-- Prefix strip + `link_prefix` (`ggml_` / `gguf_` / `GGML_` / `GGUF_`)
+- Dual-prefix naming: strip `ggml_` / `GGML_`; **keep** `gguf_*` Odin names so
+  short names do not collide after strip
+- Kind-aware renames where a C tag and procedure share a spelling
+- Parameter renames where Odin would shadow a package type (`tensor`, `cgraph`)
+- Explicit `[^]T` multipointers on scheduler / allocator array parameters
 
 ## Regenerate
 
@@ -20,38 +24,29 @@ Pinned headers from commit `af97976` (see `GGML_COMMIT.txt`) under `include/`.
 odin check examples/ggml -no-entry-point -collection:vendored=$(pwd)/vendored
 ```
 
+Or the full corpus gate: `./scripts/validate-examples`.
+
 ## Status
 
 | Step | Result |
 |------|--------|
-| Generate | Completes (writes `ggml.odin`) but **exit 1** — 8× `error[symbol_collision]` plus many `pointer_lowering_guess` warnings |
-| `odin check` | **FAIL** (redeclarations + unresolved types) |
+| Generate | OK (exit 0, no error-severity diagnostics) |
+| `odin check` | **OK** |
+| Foreign procs (approx.) | ~612 |
+| `[^]T` sites | 6 |
+| Gate | included in `./scripts/validate-examples` |
 
-**Not part of** `./scripts/validate-examples` until green. Tracked as a
-corpus stress case, not a merge-gate package.
+### Honest dual-prefix strategy
 
-### Generator findings (do not paper over in config alone)
-
-Observed with current H2Odin after `ggml_`/`gguf_` strip:
-
-1. **Package-scope name collisions (spec 0008)** when the same short name comes
-   from both `ggml` and `gguf` APIs, or from a type and a proc:
-   - `type` (enum in both libraries after strip)
-   - `context_` (opaque handle in both)
-   - `init_params` (struct in both)
-   - `backend_dev_type`, `backend_graph_copy` (type vs other decl)
-   - `type_name`, `free` (procs from both namespaces)
-2. **Param shadowing type:** `graph_dump_dot` parameter `cgraph` vs type `cgraph`.
-3. **Incomplete / wrong spellings in output:** e.g. `ggml_backend_buffer`,
-   `ggml_threadpool` left with a C-style name while other symbols strip to
-   `backend_buffer_t` / similar — `odin check` reports “is not a type”.
-4. **Keyword-ish names:** stripped `type` is an awkward package-level enum name
-   in Odin even without a second collision.
-
-These are generator/config-corpus issues; no generator fix is applied in this
-example commit.
+| Concern | Approach in `H2Odin.lua` |
+|---------|--------------------------|
+| `ggml_*` / `gguf_*` short-name collisions after strip | Strip only `ggml_`; `naming.override` returns full `gguf_*` names |
+| Proc vs type same C spelling (`ggml_backend_dev_type`, …) | Proc renames: `backend_dev_get_type`, `backend_graph_copy_create` |
+| Incomplete tag refs (`ggml_backend_buffer`, `ggml_threadpool`) | `naming.overrides` + `types.map` → `backend_buffer_t` / `threadpool_t` |
+| Param shadows type (`tensor: ^tensor -> ^tensor`) | Param rename `tensor` → `tensor_`; `cgraph` → `cgraph_` |
 
 ## Scope
 
 Backend-specific headers (`ggml-cuda.h`, `ggml-metal.h`, …) are intentionally
-out of this package.
+out of this package. No `require_results` / `#by_ptr` curation yet — naming
+correctness is the gate for this stress case.

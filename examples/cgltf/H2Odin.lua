@@ -26,4 +26,19 @@ config.naming = {
 	},
 }
 
+-- vendor:cgltf style: options as #by_ptr, parse results required.
+config.procs.params = {
+	["cgltf_parse.options"] = { by_ptr = true },
+	["cgltf_parse_file.options"] = { by_ptr = true },
+	["cgltf_load_buffers.options"] = { by_ptr = true },
+	["cgltf_load_buffer_base64.options"] = { by_ptr = true },
+}
+config.procs.require_results = {
+	"cgltf_parse",
+	"cgltf_parse_file",
+	"cgltf_load_buffers",
+	"cgltf_load_buffer_base64",
+	"cgltf_validate",
+}
+
 return config

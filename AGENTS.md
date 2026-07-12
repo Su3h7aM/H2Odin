@@ -61,7 +61,7 @@ mise (`.mise/config.toml` points `task_config.includes` at `scripts/`):
 ./scripts/test               # unit tests (src/*_test.odin) + e2e (tests/)
 ./scripts/format             # odinfmt via odinfmt.json
 ./scripts/regen-libclang     # rebuild + rewrite vendored/libclang (self-host package)
-./scripts/validate-examples  # regen all eight examples + odin check (M15 gate)
+./scripts/validate-examples  # regen all nine examples + odin check (corpus gate)
 
 mise tasks                   # list (descriptions from #MISE)
 mise run test                # same as ./scripts/test, with depends/sources
@@ -74,8 +74,8 @@ shape, run the corpus gate:
 ./scripts/validate-examples
 ```
 
-All eight packages (fff, sqlite3, bit_fields, raylib, box3d, cgltf, curl,
-miniaudio) must generate without error-severity diagnostics and pass
+All nine packages (fff, sqlite3, bit_fields, raylib, box3d, cgltf, curl,
+miniaudio, ggml) must generate without error-severity diagnostics and pass
 `odin check`. A regression on any of them is a blocker.
 
 Unit tests must stay runnable without inventing new foreign deps in the pure stages. E2e tests drive `build/h2odin` against `tests/fixtures/`.

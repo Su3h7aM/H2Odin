@@ -37,10 +37,10 @@ Observed current baseline:
 - Unit tests: 82 pass.
 - E2e tests: 57 pass.
 - Checked generated packages for fff, sqlite3, bit_fields, raylib, Box3D,
-  cgltf, curl, and miniaudio pass `odin check`.
-- The separate ggml stress example fails `odin check` with unresolved renamed
-  types, package redeclarations, and parameter/type shadowing; it is not part of
-  `./scripts/validate-examples`.
+  cgltf, curl, and miniaudio pass `odin check` (review-time snapshot).
+- Review-time note: ggml was known-red. **Current worktree:** ggml is green
+  and included in the nine-package `./scripts/validate-examples` gate; see
+  [`vendor-parity-metrics-2026-07-12.md`](vendor-parity-metrics-2026-07-12.md).
 
 ## Current generator boundary
 

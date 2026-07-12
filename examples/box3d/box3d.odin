@@ -1695,7 +1695,8 @@ foreign lib {
 	/// Create a world for rigid body simulation. A world contains bodies, shapes, and constraints. You may create
 	/// up to 128 worlds. Each world is completely independent and may be simulated in parallel.
 	/// @return the world id.
-	CreateWorld :: proc(def: ^WorldDef) -> WorldId ---
+	@(require_results)
+	CreateWorld :: proc(#by_ptr def: WorldDef) -> WorldId ---
 	/// Destroy a world
 	DestroyWorld :: proc(worldId: WorldId) ---
 	/// Get the current number of worlds
@@ -2194,15 +2195,18 @@ foreign lib {
 	/// Create a circle shape and attach it to a body. The shape definition and geometry are fully cloned.
 	/// Contacts are not created until the next time step.
 	/// @return the shape id for accessing the shape
-	CreateSphereShape :: proc(bodyId: BodyId, def: ^ShapeDef, sphere: ^Sphere) -> ShapeId ---
+	@(require_results)
+	CreateSphereShape :: proc(bodyId: BodyId, #by_ptr def: ShapeDef, #by_ptr sphere: Sphere) -> ShapeId ---
 	/// Create a capsule shape and attach it to a body. The shape definition and geometry are fully cloned.
 	/// Contacts are not created until the next time step.
 	/// @return the shape id for accessing the shape
-	CreateCapsuleShape :: proc(bodyId: BodyId, def: ^ShapeDef, capsule: ^Capsule) -> ShapeId ---
+	@(require_results)
+	CreateCapsuleShape :: proc(bodyId: BodyId, #by_ptr def: ShapeDef, #by_ptr capsule: Capsule) -> ShapeId ---
 	/// Create a convex hull shape and attach it to a body. The shape definition is fully cloned. Contacts are not created
 	/// until the next time step.
 	/// @return the shape id for accessing the shape
-	CreateHullShape :: proc(bodyId: BodyId, def: ^ShapeDef, hull: ^HullData) -> ShapeId ---
+	@(require_results)
+	CreateHullShape :: proc(bodyId: BodyId, #by_ptr def: ShapeDef, hull: ^HullData) -> ShapeId ---
 	/// Create a convex hull shape and attach it to a body. The hull is cloned then transformed with scale applied first.
 	/// Use this for non-uniform or mirrored scale or a baked local transform. The baked result is shared through the
 	/// world hull database. The shape definition and geometry are fully cloned. Contacts are not created until the next time step.
@@ -2213,7 +2217,8 @@ foreign lib {
 	/// Mesh collision only creates contacts on static bodies.
 	/// @warning this holds reference to the input mesh data which must remain valid for the lifetime of this shape
 	/// @return the shape id for accessing the shape
-	CreateMeshShape :: proc(bodyId: BodyId, def: ^ShapeDef, mesh: ^MeshData, scale: Vec3) -> ShapeId ---
+	@(require_results)
+	CreateMeshShape :: proc(bodyId: BodyId, #by_ptr def: ShapeDef, mesh: ^MeshData, scale: Vec3) -> ShapeId ---
 	/// Create a height-field shape and attach it to a body. The shape definition is fully cloned but the height field is not.
 	/// Contacts are not created until the next time step.
 	/// Height field is only allowed on static bodies.

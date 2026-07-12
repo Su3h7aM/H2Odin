@@ -666,12 +666,17 @@ cgltf_data :: struct {
 
 @(link_prefix = "cgltf_")
 foreign lib {
-	parse :: proc(options: ^cgltf_options, data: rawptr, size: cgltf_size, out_data: ^^cgltf_data) -> cgltf_result ---
-	parse_file :: proc(options: ^cgltf_options, path: cstring, out_data: ^^cgltf_data) -> cgltf_result ---
-	load_buffers :: proc(options: ^cgltf_options, data: ^cgltf_data, gltf_path: cstring) -> cgltf_result ---
-	load_buffer_base64 :: proc(options: ^cgltf_options, size: cgltf_size, base64: cstring, out_data: ^rawptr) -> cgltf_result ---
+	@(require_results)
+	parse :: proc(#by_ptr options: cgltf_options, data: rawptr, size: cgltf_size, out_data: ^^cgltf_data) -> cgltf_result ---
+	@(require_results)
+	parse_file :: proc(#by_ptr options: cgltf_options, path: cstring, out_data: ^^cgltf_data) -> cgltf_result ---
+	@(require_results)
+	load_buffers :: proc(#by_ptr options: cgltf_options, data: ^cgltf_data, gltf_path: cstring) -> cgltf_result ---
+	@(require_results)
+	load_buffer_base64 :: proc(#by_ptr options: cgltf_options, size: cgltf_size, base64: cstring, out_data: ^rawptr) -> cgltf_result ---
 	decode_string :: proc(string: ^u8) -> cgltf_size ---
 	decode_uri :: proc(uri: ^u8) -> cgltf_size ---
+	@(require_results)
 	validate :: proc(data: ^cgltf_data) -> cgltf_result ---
 	free :: proc(data: ^cgltf_data) ---
 	node_transform_local :: proc(node: ^cgltf_node, out_matrix: ^cgltf_float) ---

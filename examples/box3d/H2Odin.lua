@@ -52,4 +52,27 @@ config.types.overrides = {
 -- Math headers expose many static inlines (skipped: no external symbol).
 -- Object-like B3_* macros remain as constants.
 
+-- Faithful-surface curation matching vendor:box3d's #by_ptr call-borrowed
+-- shape/world defs. Idiomatic-only for by_ptr. Keys are C names from the
+-- configured input surface (box3d.h umbrella). collision.h helpers such as
+-- b3CreateMesh are transitive only and are not "ours".
+config.procs.params = {
+	["b3CreateWorld.def"] = { by_ptr = true },
+	["b3CreateSphereShape.def"] = { by_ptr = true },
+	["b3CreateSphereShape.sphere"] = { by_ptr = true },
+	["b3CreateCapsuleShape.def"] = { by_ptr = true },
+	["b3CreateCapsuleShape.capsule"] = { by_ptr = true },
+	["b3CreateHullShape.def"] = { by_ptr = true },
+	["b3CreateMeshShape.def"] = { by_ptr = true },
+}
+-- Create* factories return handle IDs that callers must keep; b3DefaultWorldDef
+-- is a static inline and is not emitted as a foreign symbol.
+config.procs.require_results = {
+	"b3CreateWorld",
+	"b3CreateSphereShape",
+	"b3CreateCapsuleShape",
+	"b3CreateHullShape",
+	"b3CreateMeshShape",
+}
+
 return config

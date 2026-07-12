@@ -33,4 +33,25 @@ config.naming = {
 	end,
 }
 
+-- Config structs are call-borrowed into init (vendor:miniaudio uses #by_ptr
+-- on several of these). Result codes are required.
+config.procs.params = {
+	["ma_device_init.pConfig"] = { by_ptr = true },
+	["ma_device_init_ex.pConfig"] = { by_ptr = true },
+	["ma_context_init.pConfig"] = { by_ptr = true },
+	["ma_decoder_init.pConfig"] = { by_ptr = true },
+	["ma_encoder_init.pConfig"] = { by_ptr = true },
+}
+config.procs.require_results = {
+	"ma_device_init",
+	"ma_device_init_ex",
+	"ma_device_start",
+	"ma_device_stop",
+	"ma_context_init",
+	"ma_decoder_init",
+	"ma_decoder_read_pcm_frames",
+	"ma_encoder_init",
+	"ma_engine_init",
+}
+
 return config

@@ -405,7 +405,7 @@ init_params :: struct {
 // n-dimensional tensor
 tensor :: struct {
 	type:      type,
-	buffer:    ggml_backend_buffer,
+	buffer:    backend_buffer_t,
 	// number of elements
 	ne:        [4]i64,
 	// stride in bytes:
@@ -742,7 +742,7 @@ cplan :: struct {
 	// work buffer, to be allocated by caller before calling to `ggml_graph_compute()`
 	work_data:           ^u8,
 	n_threads:           i32,
-	threadpool:          ggml_threadpool,
+	threadpool:          threadpool_t,
 	// abort ggml_graph_compute when true
 	abort_callback:      abort_callback,
 	abort_callback_data: rawptr,
@@ -771,12 +771,12 @@ type_traits_cpu :: struct {
 	nrows:        i64,
 }
 
-MAGIC :: "GGUF"
-VERSION :: 3
-KEY_GENERAL_ALIGNMENT :: "general.alignment"
-DEFAULT_ALIGNMENT :: 32
+GGUF_MAGIC :: "GGUF"
+GGUF_VERSION :: 3
+GGUF_KEY_GENERAL_ALIGNMENT :: "general.alignment"
+GGUF_DEFAULT_ALIGNMENT :: 32
 // types that can be stored as GGUF KV data
-type :: enum u32 {
+gguf_type :: enum u32 {
 	TYPE_UINT8,
 	TYPE_INT8,
 	TYPE_UINT16,
@@ -794,16 +794,16 @@ type :: enum u32 {
 	TYPE_COUNT,
 }
 
-context_ :: distinct rawptr
+gguf_context :: distinct rawptr
 
-init_params :: struct {
+gguf_init_params :: struct {
 	no_alloc: bool,
 	// if not NULL, create a ggml_context and allocate the tensor data in it
 	ctx:      ^context_,
 }
 
 // callback to simulate or wrap a FILE pointer - read up to `len` bytes at `offset` into `output` and return the number of bytes read
-reader_callback_t :: proc "c" (_: rawptr, _: rawptr, _: u64, _: uint) -> uint
+gguf_reader_callback_t :: proc "c" (_: rawptr, _: rawptr, _: u64, _: uint) -> uint
 
 _IO_FILE :: distinct rawptr
 
@@ -837,10 +837,10 @@ foreign lib {
 	fopen :: proc(fname: cstring, mode: cstring) -> _IO_FILE ---
 	print_object :: proc(obj: object) ---
 	print_objects :: proc(ctx: context_) ---
-	nelements :: proc(tensor: ^tensor) -> i64 ---
-	nrows :: proc(tensor: ^tensor) -> i64 ---
-	nbytes :: proc(tensor: ^tensor) -> uint ---
-	nbytes_pad :: proc(tensor: ^tensor) -> uint ---
+	nelements :: proc(tensor_: ^tensor) -> i64 ---
+	nrows :: proc(tensor_: ^tensor) -> i64 ---
+	nbytes :: proc(tensor_: ^tensor) -> uint ---
+	nbytes_pad :: proc(tensor_: ^tensor) -> uint ---
 	blck_size :: proc(type: type) -> i64 ---
 	type_size :: proc(type: type) -> uint ---
 	row_size :: proc(type: type, ne: i64) -> uint ---
@@ -852,30 +852,30 @@ foreign lib {
 	unary_op_name :: proc(op: unary_op) -> cstring ---
 	glu_op_name :: proc(op: glu_op) -> cstring ---
 	op_desc :: proc(t: ^tensor) -> cstring ---
-	element_size :: proc(tensor: ^tensor) -> uint ---
+	element_size :: proc(tensor_: ^tensor) -> uint ---
 	is_quantized :: proc(type: type) -> bool ---
 	// TODO: temporary until model loading of ggml examples is refactored
 	ftype_to_ggml_type :: proc(ftype: ftype) -> type ---
-	is_transposed :: proc(tensor: ^tensor) -> bool ---
-	is_permuted :: proc(tensor: ^tensor) -> bool ---
-	is_empty :: proc(tensor: ^tensor) -> bool ---
-	is_view :: proc(tensor: ^tensor) -> bool ---
-	is_scalar :: proc(tensor: ^tensor) -> bool ---
-	is_vector :: proc(tensor: ^tensor) -> bool ---
-	is_matrix :: proc(tensor: ^tensor) -> bool ---
-	is_3d :: proc(tensor: ^tensor) -> bool ---
-	n_dims :: proc(tensor: ^tensor) -> i32 ---
+	is_transposed :: proc(tensor_: ^tensor) -> bool ---
+	is_permuted :: proc(tensor_: ^tensor) -> bool ---
+	is_empty :: proc(tensor_: ^tensor) -> bool ---
+	is_view :: proc(tensor_: ^tensor) -> bool ---
+	is_scalar :: proc(tensor_: ^tensor) -> bool ---
+	is_vector :: proc(tensor_: ^tensor) -> bool ---
+	is_matrix :: proc(tensor_: ^tensor) -> bool ---
+	is_3d :: proc(tensor_: ^tensor) -> bool ---
+	n_dims :: proc(tensor_: ^tensor) -> i32 ---
 	// returns whether the tensor elements can be iterated over with a flattened index (no gaps, no permutation)
-	is_contiguous :: proc(tensor: ^tensor) -> bool ---
-	is_contiguous_0 :: proc(tensor: ^tensor) -> bool ---
-	is_contiguous_1 :: proc(tensor: ^tensor) -> bool ---
-	is_contiguous_2 :: proc(tensor: ^tensor) -> bool ---
+	is_contiguous :: proc(tensor_: ^tensor) -> bool ---
+	is_contiguous_0 :: proc(tensor_: ^tensor) -> bool ---
+	is_contiguous_1 :: proc(tensor_: ^tensor) -> bool ---
+	is_contiguous_2 :: proc(tensor_: ^tensor) -> bool ---
 	// returns whether the tensor elements are allocated as one contiguous block of memory (no gaps, but permutation ok)
-	is_contiguously_allocated :: proc(tensor: ^tensor) -> bool ---
+	is_contiguously_allocated :: proc(tensor_: ^tensor) -> bool ---
 	// true for tensor that is stored in memory as CxWxHxN and has been permuted to WxHxCxN
-	is_contiguous_channels :: proc(tensor: ^tensor) -> bool ---
+	is_contiguous_channels :: proc(tensor_: ^tensor) -> bool ---
 	// true if the elements in dimension 0 are contiguous, or there is just 1 block of elements
-	is_contiguous_rows :: proc(tensor: ^tensor) -> bool ---
+	is_contiguous_rows :: proc(tensor_: ^tensor) -> bool ---
 	are_same_shape :: proc(t0: ^tensor, t1: ^tensor) -> bool ---
 	are_same_stride :: proc(t0: ^tensor, t1: ^tensor) -> bool ---
 	can_repeat :: proc(t0: ^tensor, t1: ^tensor) -> bool ---
@@ -902,22 +902,22 @@ foreign lib {
 	view_tensor :: proc(ctx: context_, src: ^tensor) -> ^tensor ---
 	// Context tensor enumeration and lookup
 	get_first_tensor :: proc(ctx: context_) -> ^tensor ---
-	get_next_tensor :: proc(ctx: context_, tensor: ^tensor) -> ^tensor ---
+	get_next_tensor :: proc(ctx: context_, tensor_: ^tensor) -> ^tensor ---
 	get_tensor :: proc(ctx: context_, name: cstring) -> ^tensor ---
 	// Converts a flat index into coordinates
-	unravel_index :: proc(tensor: ^tensor, i: i64, i0: ^i64, i1: ^i64, i2: ^i64, i3: ^i64) ---
-	get_unary_op :: proc(tensor: ^tensor) -> unary_op ---
-	get_glu_op :: proc(tensor: ^tensor) -> glu_op ---
-	get_data :: proc(tensor: ^tensor) -> rawptr ---
-	get_data_f32 :: proc(tensor: ^tensor) -> ^f32 ---
-	get_name :: proc(tensor: ^tensor) -> cstring ---
-	set_name :: proc(tensor: ^tensor, name: cstring) -> ^tensor ---
-	format_name :: proc(tensor: ^tensor, fmt: cstring, #c_vararg _: ..any) -> ^tensor ---
+	unravel_index :: proc(tensor_: ^tensor, i: i64, i0: ^i64, i1: ^i64, i2: ^i64, i3: ^i64) ---
+	get_unary_op :: proc(tensor_: ^tensor) -> unary_op ---
+	get_glu_op :: proc(tensor_: ^tensor) -> glu_op ---
+	get_data :: proc(tensor_: ^tensor) -> rawptr ---
+	get_data_f32 :: proc(tensor_: ^tensor) -> ^f32 ---
+	get_name :: proc(tensor_: ^tensor) -> cstring ---
+	set_name :: proc(tensor_: ^tensor, name: cstring) -> ^tensor ---
+	format_name :: proc(tensor_: ^tensor, fmt: cstring, #c_vararg _: ..any) -> ^tensor ---
 	// Tensor flags
-	set_input :: proc(tensor: ^tensor) ---
-	set_output :: proc(tensor: ^tensor) ---
-	set_param :: proc(tensor: ^tensor) ---
-	set_loss :: proc(tensor: ^tensor) ---
+	set_input :: proc(tensor_: ^tensor) ---
+	set_output :: proc(tensor_: ^tensor) ---
+	set_param :: proc(tensor_: ^tensor) ---
+	set_loss :: proc(tensor_: ^tensor) ---
 	//
 	// operations on tensors with backpropagation
 	//
@@ -1249,20 +1249,20 @@ foreign lib {
 	//  other values of n_dims are untested and is undefined behavior
 	//  note: unlike MROPE, the theta for each dim is computed differently for each section
 	//        in other words, idx used for theta: [0123] for y section, then [0123] for x section
-	rope_multi :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, sections: ^i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
+	rope_multi :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, sections: [^]i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
 	// in-place, returns view(a)
 	rope_ext_inplace :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
-	rope_multi_inplace :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, sections: ^i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
+	rope_multi_inplace :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, sections: [^]i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
 	@(deprecated = "use ggml_rope_ext instead")
 	rope_custom :: proc(ctx: context_, a: ^tensor, b: ^tensor, n_dims: i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
 	@(deprecated = "use ggml_rope_ext_inplace instead")
 	rope_custom_inplace :: proc(ctx: context_, a: ^tensor, b: ^tensor, n_dims: i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
 	// compute correction dims for YaRN RoPE scaling
-	rope_yarn_corr_dims :: proc(n_dims: i32, n_ctx_orig: i32, freq_base: f32, beta_fast: f32, beta_slow: f32, dims: ^f32) ---
+	rope_yarn_corr_dims :: proc(n_dims: i32, n_ctx_orig: i32, freq_base: f32, beta_fast: f32, beta_slow: f32, dims: [^]f32) ---
 	// rotary position embedding backward, i.e compute dx from dy
 	// a - dy
 	rope_ext_back :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
-	rope_multi_back :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, sections: ^i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
+	rope_multi_back :: proc(ctx: context_, a: ^tensor, b: ^tensor, c: ^tensor, n_dims: i32, sections: [^]i32, mode: i32, n_ctx_orig: i32, freq_base: f32, freq_scale: f32, ext_factor: f32, attn_factor: f32, beta_fast: f32, beta_slow: f32) -> ^tensor ---
 	// clamp
 	// in-place, returns view(a)
 	clamp :: proc(ctx: context_, a: ^tensor, min: f32, max: f32) -> ^tensor ---
@@ -1473,35 +1473,35 @@ foreign lib {
 	//
 	//   struct ggml_tensor * out = ggml_build_forward_select(cgraph, curs, 3, idx);
 	//
-	build_forward_select :: proc(cgraph: cgraph, tensors: ^^tensor, n_tensors: i32, idx: i32) -> ^tensor ---
-	build_forward_expand :: proc(cgraph: cgraph, tensor: ^tensor) ---
-	build_backward_expand :: proc(ctx: context_, cgraph: cgraph, grad_accs: ^^tensor) ---
+	build_forward_select :: proc(cgraph_: cgraph, tensors: ^^tensor, n_tensors: i32, idx: i32) -> ^tensor ---
+	build_forward_expand :: proc(cgraph_: cgraph, tensor_: ^tensor) ---
+	build_backward_expand :: proc(ctx: context_, cgraph_: cgraph, grad_accs: ^^tensor) ---
 	// graph allocation in a context
 	new_graph :: proc(ctx: context_) -> cgraph ---
 	new_graph_custom :: proc(ctx: context_, size: uint, grads: bool) -> cgraph ---
-	graph_dup :: proc(ctx: context_, cgraph: cgraph, force_grads: bool) -> cgraph ---
+	graph_dup :: proc(ctx: context_, cgraph_: cgraph, force_grads: bool) -> cgraph ---
 	graph_cpy :: proc(src: cgraph, dst: cgraph) ---
-	graph_reset :: proc(cgraph: cgraph) ---
-	graph_clear :: proc(cgraph: cgraph) ---
-	graph_size :: proc(cgraph: cgraph) -> i32 ---
-	graph_node :: proc(cgraph: cgraph, i: i32) -> ^tensor ---
-	graph_nodes :: proc(cgraph: cgraph) -> ^^tensor ---
-	graph_n_nodes :: proc(cgraph: cgraph) -> i32 ---
-	graph_add_node :: proc(cgraph: cgraph, tensor: ^tensor) ---
+	graph_reset :: proc(cgraph_: cgraph) ---
+	graph_clear :: proc(cgraph_: cgraph) ---
+	graph_size :: proc(cgraph_: cgraph) -> i32 ---
+	graph_node :: proc(cgraph_: cgraph, i: i32) -> ^tensor ---
+	graph_nodes :: proc(cgraph_: cgraph) -> ^^tensor ---
+	graph_n_nodes :: proc(cgraph_: cgraph) -> i32 ---
+	graph_add_node :: proc(cgraph_: cgraph, tensor_: ^tensor) ---
 	graph_overhead :: proc() -> uint ---
 	graph_overhead_custom :: proc(size: uint, grads: bool) -> uint ---
-	graph_get_tensor :: proc(cgraph: cgraph, name: cstring) -> ^tensor ---
-	graph_get_grad :: proc(cgraph: cgraph, node: ^tensor) -> ^tensor ---
-	graph_get_grad_acc :: proc(cgraph: cgraph, node: ^tensor) -> ^tensor ---
+	graph_get_tensor :: proc(cgraph_: cgraph, name: cstring) -> ^tensor ---
+	graph_get_grad :: proc(cgraph_: cgraph, node: ^tensor) -> ^tensor ---
+	graph_get_grad_acc :: proc(cgraph_: cgraph, node: ^tensor) -> ^tensor ---
 	// print info and performance information for the graph
-	graph_print :: proc(cgraph: cgraph) ---
+	graph_print :: proc(cgraph_: cgraph) ---
 	// dump the graph into a file using the dot format
-	graph_dump_dot :: proc(gb: cgraph, cgraph: cgraph, filename: cstring) ---
+	graph_dump_dot :: proc(gb: cgraph, cgraph_: cgraph, filename: cstring) ---
 	// Set callback for all future logging events.
 	// If this is not called, or NULL is supplied, everything is output on stderr.
 	log_get :: proc(log_callback: ^log_callback, user_data: ^rawptr) ---
 	log_set :: proc(log_callback: log_callback, user_data: rawptr) ---
-	set_zero :: proc(tensor: ^tensor) -> ^tensor ---
+	set_zero :: proc(tensor_: ^tensor) -> ^tensor ---
 	// - ggml_quantize_init can be called multiple times with the same type
 	//   it will only initialize the quantization tables for the first call or after ggml_quantize_free
 	//   automatically called by ggml_quantize_chunk for convenience
@@ -1522,9 +1522,9 @@ foreign lib {
 	threadpool_params_init :: proc(p: ^threadpool_params, n_threads: i32) ---
 	threadpool_params_match :: proc(p0: ^threadpool_params, p1: ^threadpool_params) -> bool ---
 	tallocr_new :: proc(buffer: backend_buffer_t) -> tallocr ---
-	tallocr_alloc :: proc(talloc: ^tallocr, tensor: ^tensor) -> status ---
+	tallocr_alloc :: proc(talloc: ^tallocr, tensor_: ^tensor) -> status ---
 	gallocr_new :: proc(buft: backend_buffer_type_t) -> gallocr_t ---
-	gallocr_new_n :: proc(bufts: ^backend_buffer_type_t, n_bufs: i32) -> gallocr_t ---
+	gallocr_new_n :: proc(bufts: [^]backend_buffer_type_t, n_bufs: i32) -> gallocr_t ---
 	gallocr_free :: proc(galloc: gallocr_t) ---
 	// pre-allocate buffers from a measure graph - does not allocate or modify the graph
 	// call with a worst-case graph to avoid buffer reallocations
@@ -1543,8 +1543,8 @@ foreign lib {
 	// ggml_backend_alloc_ctx_tensors_from_buft_size returns the size of the buffer that would be allocated by ggml_backend_alloc_ctx_tensors_from_buft
 	// ggml_backend_alloc_ctx_tensors_from_buft returns NULL on failure or if all tensors in ctx are already allocated or zero-sized
 	backend_alloc_ctx_tensors_from_buft_size :: proc(ctx: context_, buft: backend_buffer_type_t) -> uint ---
-	backend_alloc_ctx_tensors_from_buft :: proc(ctx: context_, buft: backend_buffer_type_t) -> ggml_backend_buffer ---
-	backend_alloc_ctx_tensors :: proc(ctx: context_, backend: backend_t) -> ggml_backend_buffer ---
+	backend_alloc_ctx_tensors_from_buft :: proc(ctx: context_, buft: backend_buffer_type_t) -> backend_buffer_t ---
+	backend_alloc_ctx_tensors :: proc(ctx: context_, backend: backend_t) -> backend_buffer_t ---
 	//
 	// Backend buffer type
 	//
@@ -1552,17 +1552,17 @@ foreign lib {
 	backend_buft_alloc_buffer :: proc(buft: backend_buffer_type_t, size: uint) -> backend_buffer_t ---
 	backend_buft_get_alignment :: proc(buft: backend_buffer_type_t) -> uint ---
 	backend_buft_get_max_size :: proc(buft: backend_buffer_type_t) -> uint ---
-	backend_buft_get_alloc_size :: proc(buft: backend_buffer_type_t, tensor: ^tensor) -> uint ---
+	backend_buft_get_alloc_size :: proc(buft: backend_buffer_type_t, tensor_: ^tensor) -> uint ---
 	backend_buft_is_host :: proc(buft: backend_buffer_type_t) -> bool ---
 	backend_buft_get_device :: proc(buft: backend_buffer_type_t) -> backend_dev_t ---
 	backend_buffer_name :: proc(buffer: backend_buffer_t) -> cstring ---
 	backend_buffer_free :: proc(buffer: backend_buffer_t) ---
 	backend_buffer_get_base :: proc(buffer: backend_buffer_t) -> rawptr ---
 	backend_buffer_get_size :: proc(buffer: backend_buffer_t) -> uint ---
-	backend_buffer_init_tensor :: proc(buffer: backend_buffer_t, tensor: ^tensor) -> status ---
+	backend_buffer_init_tensor :: proc(buffer: backend_buffer_t, tensor_: ^tensor) -> status ---
 	backend_buffer_get_alignment :: proc(buffer: backend_buffer_t) -> uint ---
 	backend_buffer_get_max_size :: proc(buffer: backend_buffer_t) -> uint ---
-	backend_buffer_get_alloc_size :: proc(buffer: backend_buffer_t, tensor: ^tensor) -> uint ---
+	backend_buffer_get_alloc_size :: proc(buffer: backend_buffer_t, tensor_: ^tensor) -> uint ---
 	backend_buffer_clear :: proc(buffer: backend_buffer_t, value: u8) ---
 	backend_buffer_is_host :: proc(buffer: backend_buffer_t) -> bool ---
 	backend_buffer_set_usage :: proc(buffer: backend_buffer_t, usage: backend_buffer_usage) ---
@@ -1581,22 +1581,22 @@ foreign lib {
 	backend_alloc_buffer :: proc(backend: backend_t, size: uint) -> backend_buffer_t ---
 	backend_get_alignment :: proc(backend: backend_t) -> uint ---
 	backend_get_max_size :: proc(backend: backend_t) -> uint ---
-	backend_tensor_set_async :: proc(backend: backend_t, tensor: ^tensor, data: rawptr, offset: uint, size: uint) ---
-	backend_tensor_get_async :: proc(backend: backend_t, tensor: ^tensor, data: rawptr, offset: uint, size: uint) ---
-	backend_tensor_set_2d_async :: proc(backend: backend_t, tensor: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
-	backend_tensor_get_2d_async :: proc(backend: backend_t, tensor: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
+	backend_tensor_set_async :: proc(backend: backend_t, tensor_: ^tensor, data: rawptr, offset: uint, size: uint) ---
+	backend_tensor_get_async :: proc(backend: backend_t, tensor_: ^tensor, data: rawptr, offset: uint, size: uint) ---
+	backend_tensor_set_2d_async :: proc(backend: backend_t, tensor_: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
+	backend_tensor_get_2d_async :: proc(backend: backend_t, tensor_: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
 	// "offset" refers to the offset in tensor->data for setting/getting data
-	backend_tensor_set :: proc(tensor: ^tensor, data: rawptr, offset: uint, size: uint) ---
-	backend_tensor_get :: proc(tensor: ^tensor, data: rawptr, offset: uint, size: uint) ---
-	backend_tensor_set_2d :: proc(tensor: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
-	backend_tensor_get_2d :: proc(tensor: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
-	backend_tensor_memset :: proc(tensor: ^tensor, value: u8, offset: uint, size: uint) ---
+	backend_tensor_set :: proc(tensor_: ^tensor, data: rawptr, offset: uint, size: uint) ---
+	backend_tensor_get :: proc(tensor_: ^tensor, data: rawptr, offset: uint, size: uint) ---
+	backend_tensor_set_2d :: proc(tensor_: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
+	backend_tensor_get_2d :: proc(tensor_: ^tensor, data: rawptr, offset: uint, size: uint, n_copies: uint, stride_tensor: uint, stride_data: uint) ---
+	backend_tensor_memset :: proc(tensor_: ^tensor, value: u8, offset: uint, size: uint) ---
 	backend_synchronize :: proc(backend: backend_t) ---
-	backend_graph_plan_create :: proc(backend: backend_t, cgraph: cgraph) -> backend_graph_plan_t ---
+	backend_graph_plan_create :: proc(backend: backend_t, cgraph_: cgraph) -> backend_graph_plan_t ---
 	backend_graph_plan_free :: proc(backend: backend_t, plan: backend_graph_plan_t) ---
 	backend_graph_plan_compute :: proc(backend: backend_t, plan: backend_graph_plan_t) -> status ---
-	backend_graph_compute :: proc(backend: backend_t, cgraph: cgraph) -> status ---
-	backend_graph_compute_async :: proc(backend: backend_t, cgraph: cgraph) -> status ---
+	backend_graph_compute :: proc(backend: backend_t, cgraph_: cgraph) -> status ---
+	backend_graph_compute_async :: proc(backend: backend_t, cgraph_: cgraph) -> status ---
 	// NOTE: will be removed, use device version instead
 	backend_supports_op :: proc(backend: backend_t, op: ^tensor) -> bool ---
 	backend_supports_buft :: proc(backend: backend_t, buft: backend_buffer_type_t) -> bool ---
@@ -1618,7 +1618,8 @@ foreign lib {
 	backend_dev_name :: proc(device: backend_dev_t) -> cstring ---
 	backend_dev_description :: proc(device: backend_dev_t) -> cstring ---
 	backend_dev_memory :: proc(device: backend_dev_t, free: ^uint, total: ^uint) ---
-	backend_dev_type :: proc(device: backend_dev_t) -> backend_dev_type ---
+	@(link_name = "ggml_backend_dev_type")
+	backend_dev_get_type :: proc(device: backend_dev_t) -> backend_dev_type ---
 	backend_dev_get_props :: proc(device: backend_dev_t, props: ^backend_dev_props) ---
 	backend_dev_backend_reg :: proc(device: backend_dev_t) -> backend_reg_t ---
 	backend_dev_init :: proc(device: backend_dev_t, params: cstring) -> backend_t ---
@@ -1664,7 +1665,7 @@ foreign lib {
 	backend_load_all :: proc() ---
 	backend_load_all_from_path :: proc(dir_path: cstring) ---
 	// Initialize a backend scheduler, backends with low index are given priority over backends with high index
-	backend_sched_new :: proc(backends: ^backend_t, bufts: ^backend_buffer_type_t, n_backends: i32, graph_size: uint, parallel: bool, op_offload: bool) -> backend_sched_t ---
+	backend_sched_new :: proc(backends: [^]backend_t, bufts: [^]backend_buffer_type_t, n_backends: i32, graph_size: uint, parallel: bool, op_offload: bool) -> backend_sched_t ---
 	backend_sched_free :: proc(sched: backend_sched_t) ---
 	// Initialize backend buffers from a measure graph
 	backend_sched_reserve_size :: proc(sched: backend_sched_t, measure_graph: cgraph, sizes: ^uint) ---
@@ -1697,13 +1698,14 @@ foreign lib {
 	//       express this as a backend registry functionality instead
 	backend_meta_device :: proc(devs: ^backend_dev_t, n_devs: uint, get_split_state: backend_meta_get_split_state_t, get_split_state_ud: rawptr) -> backend_dev_t ---
 	// Copy a graph to a different backend
-	backend_graph_copy :: proc(backend: backend_t, graph: cgraph) -> backend_graph_copy ---
+	@(link_name = "ggml_backend_graph_copy")
+	backend_graph_copy_create :: proc(backend: backend_t, graph: cgraph) -> backend_graph_copy ---
 	backend_graph_copy_free :: proc(copy: backend_graph_copy) ---
 	// Compare the output of two backends
 	backend_compare_graph_backend :: proc(backend1: backend_t, backend2: backend_t, graph: cgraph, callback: backend_eval_callback, user_data: rawptr, test_nodes: ^^tensor, num_test_nodes: uint) -> bool ---
 	// Tensor initialization
-	backend_tensor_alloc :: proc(buffer: backend_buffer_t, tensor: ^tensor, addr: rawptr) -> status ---
-	backend_view_init :: proc(tensor: ^tensor) -> status ---
+	backend_tensor_alloc :: proc(buffer: backend_buffer_t, tensor_: ^tensor, addr: rawptr) -> status ---
+	backend_view_init :: proc(tensor_: ^tensor) -> status ---
 	// CPU buffer types are always available
 	backend_cpu_buffer_from_ptr :: proc(ptr: rawptr, size: uint) -> backend_buffer_t ---
 	backend_cpu_buffer_type :: proc() -> backend_buffer_type_t ---
@@ -1711,28 +1713,28 @@ foreign lib {
 	is_numa :: proc() -> bool ---
 	new_i32 :: proc(ctx: context_, value: i32) -> ^tensor ---
 	new_f32 :: proc(ctx: context_, value: f32) -> ^tensor ---
-	set_i32 :: proc(tensor: ^tensor, value: i32) -> ^tensor ---
-	set_f32 :: proc(tensor: ^tensor, value: f32) -> ^tensor ---
-	get_i32_1d :: proc(tensor: ^tensor, i: i32) -> i32 ---
-	set_i32_1d :: proc(tensor: ^tensor, i: i32, value: i32) ---
-	get_i32_nd :: proc(tensor: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32) -> i32 ---
-	set_i32_nd :: proc(tensor: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32, value: i32) ---
-	get_f32_1d :: proc(tensor: ^tensor, i: i32) -> f32 ---
-	set_f32_1d :: proc(tensor: ^tensor, i: i32, value: f32) ---
-	get_f32_nd :: proc(tensor: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32) -> f32 ---
-	set_f32_nd :: proc(tensor: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32, value: f32) ---
-	threadpool_new :: proc(params: ^threadpool_params) -> ggml_threadpool ---
-	threadpool_free :: proc(threadpool: ggml_threadpool) ---
-	threadpool_get_n_threads :: proc(threadpool: ggml_threadpool) -> i32 ---
-	threadpool_pause :: proc(threadpool: ggml_threadpool) ---
-	threadpool_resume :: proc(threadpool: ggml_threadpool) ---
+	set_i32 :: proc(tensor_: ^tensor, value: i32) -> ^tensor ---
+	set_f32 :: proc(tensor_: ^tensor, value: f32) -> ^tensor ---
+	get_i32_1d :: proc(tensor_: ^tensor, i: i32) -> i32 ---
+	set_i32_1d :: proc(tensor_: ^tensor, i: i32, value: i32) ---
+	get_i32_nd :: proc(tensor_: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32) -> i32 ---
+	set_i32_nd :: proc(tensor_: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32, value: i32) ---
+	get_f32_1d :: proc(tensor_: ^tensor, i: i32) -> f32 ---
+	set_f32_1d :: proc(tensor_: ^tensor, i: i32, value: f32) ---
+	get_f32_nd :: proc(tensor_: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32) -> f32 ---
+	set_f32_nd :: proc(tensor_: ^tensor, i0: i32, i1: i32, i2: i32, i3: i32, value: f32) ---
+	threadpool_new :: proc(params: ^threadpool_params) -> threadpool_t ---
+	threadpool_free :: proc(threadpool: threadpool_t) ---
+	threadpool_get_n_threads :: proc(threadpool: threadpool_t) -> i32 ---
+	threadpool_pause :: proc(threadpool: threadpool_t) ---
+	threadpool_resume :: proc(threadpool: threadpool_t) ---
 	// ggml_graph_plan() has to be called before ggml_graph_compute()
 	// when plan.work_size > 0, caller must allocate memory for plan.work_data
-	graph_plan :: proc(cgraph: cgraph, n_threads: i32, threadpool: ggml_threadpool) -> cplan ---
-	graph_compute :: proc(cgraph: cgraph, cplan: ^cplan) -> status ---
+	graph_plan :: proc(cgraph_: cgraph, n_threads: i32, threadpool: threadpool_t) -> cplan ---
+	graph_compute :: proc(cgraph_: cgraph, cplan: ^cplan) -> status ---
 	// same as ggml_graph_compute() but the work data is allocated as a part of the context
 	// note: the drawback of this API is that you must have ensured that the context has enough memory for the work data
-	graph_compute_with_ctx :: proc(ctx: context_, cgraph: cgraph, n_threads: i32) -> status ---
+	graph_compute_with_ctx :: proc(ctx: context_, cgraph_: cgraph, n_threads: i32) -> status ---
 	// x86
 	cpu_has_sse3 :: proc() -> i32 ---
 	cpu_has_ssse3 :: proc() -> i32 ---
@@ -1781,141 +1783,81 @@ foreign lib {
 	cpu_fp16_to_fp32 :: proc(_: ^fp16_t, _: ^f32, _: i64) ---
 	cpu_fp32_to_bf16 :: proc(_: ^f32, _: ^bf16_t, _: i64) ---
 	cpu_bf16_to_fp32 :: proc(_: ^bf16_t, _: ^f32, _: i64) ---
-	@(link_name = "gguf_init_empty")
-	init_empty :: proc() -> context_ ---
-	@(link_name = "gguf_init_from_file_ptr")
-	init_from_file_ptr :: proc(file: _IO_FILE, params: init_params) -> context_ ---
-	@(link_name = "gguf_init_from_file")
-	init_from_file :: proc(fname: cstring, params: init_params) -> context_ ---
-	@(link_name = "gguf_init_from_buffer")
-	init_from_buffer :: proc(data: rawptr, size: uint, params: init_params) -> context_ ---
+	gguf_init_empty :: proc() -> gguf_context ---
+	gguf_init_from_file_ptr :: proc(file: _IO_FILE, params: gguf_init_params) -> gguf_context ---
+	gguf_init_from_file :: proc(fname: cstring, params: gguf_init_params) -> gguf_context ---
+	gguf_init_from_buffer :: proc(data: rawptr, size: uint, params: gguf_init_params) -> gguf_context ---
 	// max_chunk_read is the maximum number of bytes that the GGUF code will read at once from the callback, a value of 0 means no limit
-	@(link_name = "gguf_init_from_callback")
-	init_from_callback :: proc(callback: reader_callback_t, userdata: rawptr, max_chunk_read: uint, max_expected_size: u64, params: init_params) -> context_ ---
-	@(link_name = "gguf_free")
-	free :: proc(ctx: context_) ---
-	@(link_name = "gguf_type_name")
-	type_name :: proc(type: type) -> cstring ---
-	@(link_name = "gguf_get_version")
-	get_version :: proc(ctx: context_) -> u32 ---
-	@(link_name = "gguf_get_alignment")
-	get_alignment :: proc(ctx: context_) -> uint ---
-	@(link_name = "gguf_get_data_offset")
-	get_data_offset :: proc(ctx: context_) -> uint ---
-	@(link_name = "gguf_get_n_kv")
-	get_n_kv :: proc(ctx: context_) -> i64 ---
-	@(link_name = "gguf_find_key")
-	find_key :: proc(ctx: context_, key: cstring) -> i64 ---
-	@(link_name = "gguf_get_key")
-	get_key :: proc(ctx: context_, key_id: i64) -> cstring ---
-	@(link_name = "gguf_get_kv_type")
-	get_kv_type :: proc(ctx: context_, key_id: i64) -> type ---
-	@(link_name = "gguf_get_arr_type")
-	get_arr_type :: proc(ctx: context_, key_id: i64) -> type ---
+	gguf_init_from_callback :: proc(callback: gguf_reader_callback_t, userdata: rawptr, max_chunk_read: uint, max_expected_size: u64, params: gguf_init_params) -> gguf_context ---
+	gguf_free :: proc(ctx: gguf_context) ---
+	gguf_type_name :: proc(type: gguf_type) -> cstring ---
+	gguf_get_version :: proc(ctx: gguf_context) -> u32 ---
+	gguf_get_alignment :: proc(ctx: gguf_context) -> uint ---
+	gguf_get_data_offset :: proc(ctx: gguf_context) -> uint ---
+	gguf_get_n_kv :: proc(ctx: gguf_context) -> i64 ---
+	gguf_find_key :: proc(ctx: gguf_context, key: cstring) -> i64 ---
+	gguf_get_key :: proc(ctx: gguf_context, key_id: i64) -> cstring ---
+	gguf_get_kv_type :: proc(ctx: gguf_context, key_id: i64) -> gguf_type ---
+	gguf_get_arr_type :: proc(ctx: gguf_context, key_id: i64) -> gguf_type ---
 	// will abort if the wrong type is used for the key
-	@(link_name = "gguf_get_val_u8")
-	get_val_u8 :: proc(ctx: context_, key_id: i64) -> u8 ---
-	@(link_name = "gguf_get_val_i8")
-	get_val_i8 :: proc(ctx: context_, key_id: i64) -> i8 ---
-	@(link_name = "gguf_get_val_u16")
-	get_val_u16 :: proc(ctx: context_, key_id: i64) -> u16 ---
-	@(link_name = "gguf_get_val_i16")
-	get_val_i16 :: proc(ctx: context_, key_id: i64) -> i16 ---
-	@(link_name = "gguf_get_val_u32")
-	get_val_u32 :: proc(ctx: context_, key_id: i64) -> u32 ---
-	@(link_name = "gguf_get_val_i32")
-	get_val_i32 :: proc(ctx: context_, key_id: i64) -> i32 ---
-	@(link_name = "gguf_get_val_f32")
-	get_val_f32 :: proc(ctx: context_, key_id: i64) -> f32 ---
-	@(link_name = "gguf_get_val_u64")
-	get_val_u64 :: proc(ctx: context_, key_id: i64) -> u64 ---
-	@(link_name = "gguf_get_val_i64")
-	get_val_i64 :: proc(ctx: context_, key_id: i64) -> i64 ---
-	@(link_name = "gguf_get_val_f64")
-	get_val_f64 :: proc(ctx: context_, key_id: i64) -> f64 ---
-	@(link_name = "gguf_get_val_bool")
-	get_val_bool :: proc(ctx: context_, key_id: i64) -> bool ---
-	@(link_name = "gguf_get_val_str")
-	get_val_str :: proc(ctx: context_, key_id: i64) -> cstring ---
-	@(link_name = "gguf_get_val_data")
-	get_val_data :: proc(ctx: context_, key_id: i64) -> rawptr ---
-	@(link_name = "gguf_get_arr_n")
-	get_arr_n :: proc(ctx: context_, key_id: i64) -> uint ---
+	gguf_get_val_u8 :: proc(ctx: gguf_context, key_id: i64) -> u8 ---
+	gguf_get_val_i8 :: proc(ctx: gguf_context, key_id: i64) -> i8 ---
+	gguf_get_val_u16 :: proc(ctx: gguf_context, key_id: i64) -> u16 ---
+	gguf_get_val_i16 :: proc(ctx: gguf_context, key_id: i64) -> i16 ---
+	gguf_get_val_u32 :: proc(ctx: gguf_context, key_id: i64) -> u32 ---
+	gguf_get_val_i32 :: proc(ctx: gguf_context, key_id: i64) -> i32 ---
+	gguf_get_val_f32 :: proc(ctx: gguf_context, key_id: i64) -> f32 ---
+	gguf_get_val_u64 :: proc(ctx: gguf_context, key_id: i64) -> u64 ---
+	gguf_get_val_i64 :: proc(ctx: gguf_context, key_id: i64) -> i64 ---
+	gguf_get_val_f64 :: proc(ctx: gguf_context, key_id: i64) -> f64 ---
+	gguf_get_val_bool :: proc(ctx: gguf_context, key_id: i64) -> bool ---
+	gguf_get_val_str :: proc(ctx: gguf_context, key_id: i64) -> cstring ---
+	gguf_get_val_data :: proc(ctx: gguf_context, key_id: i64) -> rawptr ---
+	gguf_get_arr_n :: proc(ctx: gguf_context, key_id: i64) -> uint ---
 	// get raw pointer to the first element of the array with the given key_id
 	// for bool arrays, note that they are always stored as int8 on all platforms (usually this makes no difference)
-	@(link_name = "gguf_get_arr_data")
-	get_arr_data :: proc(ctx: context_, key_id: i64) -> rawptr ---
+	gguf_get_arr_data :: proc(ctx: gguf_context, key_id: i64) -> rawptr ---
 	// get ith C string from array with given key_id
-	@(link_name = "gguf_get_arr_str")
-	get_arr_str :: proc(ctx: context_, key_id: i64, i: uint) -> cstring ---
-	@(link_name = "gguf_get_n_tensors")
-	get_n_tensors :: proc(ctx: context_) -> i64 ---
-	@(link_name = "gguf_find_tensor")
-	find_tensor :: proc(ctx: context_, name: cstring) -> i64 ---
-	@(link_name = "gguf_get_tensor_offset")
-	get_tensor_offset :: proc(ctx: context_, tensor_id: i64) -> uint ---
-	@(link_name = "gguf_get_tensor_name")
-	get_tensor_name :: proc(ctx: context_, tensor_id: i64) -> cstring ---
-	@(link_name = "gguf_get_tensor_type")
-	get_tensor_type :: proc(ctx: context_, tensor_id: i64) -> type ---
-	@(link_name = "gguf_get_tensor_size")
-	get_tensor_size :: proc(ctx: context_, tensor_id: i64) -> uint ---
+	gguf_get_arr_str :: proc(ctx: gguf_context, key_id: i64, i: uint) -> cstring ---
+	gguf_get_n_tensors :: proc(ctx: gguf_context) -> i64 ---
+	gguf_find_tensor :: proc(ctx: gguf_context, name: cstring) -> i64 ---
+	gguf_get_tensor_offset :: proc(ctx: gguf_context, tensor_id: i64) -> uint ---
+	gguf_get_tensor_name :: proc(ctx: gguf_context, tensor_id: i64) -> cstring ---
+	gguf_get_tensor_type :: proc(ctx: gguf_context, tensor_id: i64) -> type ---
+	gguf_get_tensor_size :: proc(ctx: gguf_context, tensor_id: i64) -> uint ---
 	// removes key if it exists, returns id that the key had prior to removal (-1 if it didn't exist)
-	@(link_name = "gguf_remove_key")
-	remove_key :: proc(ctx: context_, key: cstring) -> i64 ---
+	gguf_remove_key :: proc(ctx: gguf_context, key: cstring) -> i64 ---
 	// overrides an existing KV pair or adds a new one, the new KV pair is always at the back
-	@(link_name = "gguf_set_val_u8")
-	set_val_u8 :: proc(ctx: context_, key: cstring, val: u8) ---
-	@(link_name = "gguf_set_val_i8")
-	set_val_i8 :: proc(ctx: context_, key: cstring, val: i8) ---
-	@(link_name = "gguf_set_val_u16")
-	set_val_u16 :: proc(ctx: context_, key: cstring, val: u16) ---
-	@(link_name = "gguf_set_val_i16")
-	set_val_i16 :: proc(ctx: context_, key: cstring, val: i16) ---
-	@(link_name = "gguf_set_val_u32")
-	set_val_u32 :: proc(ctx: context_, key: cstring, val: u32) ---
-	@(link_name = "gguf_set_val_i32")
-	set_val_i32 :: proc(ctx: context_, key: cstring, val: i32) ---
-	@(link_name = "gguf_set_val_f32")
-	set_val_f32 :: proc(ctx: context_, key: cstring, val: f32) ---
-	@(link_name = "gguf_set_val_u64")
-	set_val_u64 :: proc(ctx: context_, key: cstring, val: u64) ---
-	@(link_name = "gguf_set_val_i64")
-	set_val_i64 :: proc(ctx: context_, key: cstring, val: i64) ---
-	@(link_name = "gguf_set_val_f64")
-	set_val_f64 :: proc(ctx: context_, key: cstring, val: f64) ---
-	@(link_name = "gguf_set_val_bool")
-	set_val_bool :: proc(ctx: context_, key: cstring, val: bool) ---
-	@(link_name = "gguf_set_val_str")
-	set_val_str :: proc(ctx: context_, key: cstring, val: cstring) ---
+	gguf_set_val_u8 :: proc(ctx: gguf_context, key: cstring, val: u8) ---
+	gguf_set_val_i8 :: proc(ctx: gguf_context, key: cstring, val: i8) ---
+	gguf_set_val_u16 :: proc(ctx: gguf_context, key: cstring, val: u16) ---
+	gguf_set_val_i16 :: proc(ctx: gguf_context, key: cstring, val: i16) ---
+	gguf_set_val_u32 :: proc(ctx: gguf_context, key: cstring, val: u32) ---
+	gguf_set_val_i32 :: proc(ctx: gguf_context, key: cstring, val: i32) ---
+	gguf_set_val_f32 :: proc(ctx: gguf_context, key: cstring, val: f32) ---
+	gguf_set_val_u64 :: proc(ctx: gguf_context, key: cstring, val: u64) ---
+	gguf_set_val_i64 :: proc(ctx: gguf_context, key: cstring, val: i64) ---
+	gguf_set_val_f64 :: proc(ctx: gguf_context, key: cstring, val: f64) ---
+	gguf_set_val_bool :: proc(ctx: gguf_context, key: cstring, val: bool) ---
+	gguf_set_val_str :: proc(ctx: gguf_context, key: cstring, val: cstring) ---
 	// creates a new array with n elements of the given type and copies the corresponding number of bytes from data
-	@(link_name = "gguf_set_arr_data")
-	set_arr_data :: proc(ctx: context_, key: cstring, type: type, data: rawptr, n: uint) ---
+	gguf_set_arr_data :: proc(ctx: gguf_context, key: cstring, type: gguf_type, data: rawptr, n: uint) ---
 	// creates a new array with n strings and copies the corresponding strings from data
-	@(link_name = "gguf_set_arr_str")
-	set_arr_str :: proc(ctx: context_, key: cstring, data: ^cstring, n: uint) ---
+	gguf_set_arr_str :: proc(ctx: gguf_context, key: cstring, data: ^cstring, n: uint) ---
 	// set or add KV pairs from another context
-	@(link_name = "gguf_set_kv")
-	set_kv :: proc(ctx: context_, src: context_) ---
+	gguf_set_kv :: proc(ctx: gguf_context, src: gguf_context) ---
 	// add tensor to GGUF context, tensor name must be unique
-	@(link_name = "gguf_add_tensor")
-	add_tensor :: proc(ctx: context_, tensor: ^tensor) ---
+	gguf_add_tensor :: proc(ctx: gguf_context, tensor_: ^tensor) ---
 	// after changing a tensor's type, the offsets of all tensors with higher indices are immediately recalculated
 	//   in such a way that the tensor data remains as one contiguous block (except for padding)
-	@(link_name = "gguf_set_tensor_type")
-	set_tensor_type :: proc(ctx: context_, name: cstring, type: type) ---
+	gguf_set_tensor_type :: proc(ctx: gguf_context, name: cstring, type: type) ---
 	// assumes that at least gguf_get_tensor_size bytes can be read from data
-	@(link_name = "gguf_set_tensor_data")
-	set_tensor_data :: proc(ctx: context_, name: cstring, data: rawptr) ---
+	gguf_set_tensor_data :: proc(ctx: gguf_context, name: cstring, data: rawptr) ---
 	// write the entire context to a binary file
-	@(link_name = "gguf_write_to_file_ptr")
-	write_to_file_ptr :: proc(ctx: context_, file: _IO_FILE, only_meta: bool) -> bool ---
-	@(link_name = "gguf_write_to_file")
-	write_to_file :: proc(ctx: context_, fname: cstring, only_meta: bool) -> bool ---
+	gguf_write_to_file_ptr :: proc(ctx: gguf_context, file: _IO_FILE, only_meta: bool) -> bool ---
+	gguf_write_to_file :: proc(ctx: gguf_context, fname: cstring, only_meta: bool) -> bool ---
 	// get the size in bytes of the meta data (header, kv pairs, tensor info) including padding
-	@(link_name = "gguf_get_meta_size")
-	get_meta_size :: proc(ctx: context_) -> uint ---
+	gguf_get_meta_size :: proc(ctx: gguf_context) -> uint ---
 	// writes the meta data to pointer "data"
-	@(link_name = "gguf_get_meta_data")
-	get_meta_data :: proc(ctx: context_, data: rawptr) ---
+	gguf_get_meta_data :: proc(ctx: gguf_context, data: rawptr) ---
 }

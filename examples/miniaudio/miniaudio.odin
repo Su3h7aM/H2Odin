@@ -4598,7 +4598,8 @@ foreign lib {
 	ma_context_config_init()
 	ma_context_uninit()
 	*/
-	context_init :: proc(backends: ^backend, backendCount: uint32, pConfig: ^context_config, pContext: ^context_) -> result ---
+	@(require_results)
+	context_init :: proc(backends: [^]backend, backendCount: uint32, #by_ptr pConfig: context_config, pContext: ^context_) -> result ---
 	/*
 	Uninitializes a context.
 	
@@ -5218,7 +5219,8 @@ foreign lib {
 	ma_context_get_devices()
 	ma_context_enumerate_devices()
 	*/
-	device_init :: proc(pContext: ^context_, pConfig: ^device_config, pDevice: ^device) -> result ---
+	@(require_results)
+	device_init :: proc(pContext: ^context_, #by_ptr pConfig: device_config, pDevice: ^device) -> result ---
 	/*
 	Initializes a device without a context, with extra parameters for controlling the configuration of the internal self-managed context.
 	
@@ -5275,7 +5277,8 @@ foreign lib {
 	ma_device_config_init()
 	ma_context_init()
 	*/
-	device_init_ex :: proc(backends: ^backend, backendCount: uint32, pContextConfig: ^context_config, pConfig: ^device_config, pDevice: ^device) -> result ---
+	@(require_results)
+	device_init_ex :: proc(backends: [^]backend, backendCount: uint32, pContextConfig: ^context_config, #by_ptr pConfig: device_config, pDevice: ^device) -> result ---
 	/*
 	Uninitializes a device.
 	
@@ -5443,6 +5446,7 @@ foreign lib {
 	--------
 	ma_device_stop()
 	*/
+	@(require_results)
 	device_start :: proc(pDevice: ^device) -> result ---
 	/*
 	Stops the device. For playback devices this stops playback. For capture devices it stops recording.
@@ -5488,6 +5492,7 @@ foreign lib {
 	--------
 	ma_device_start()
 	*/
+	@(require_results)
 	device_stop :: proc(pDevice: ^device) -> result ---
 	/*
 	Determines whether or not the device is started.
@@ -6079,7 +6084,8 @@ foreign lib {
 	decoding_backend_config_init :: proc(preferredFormat: format, seekPointCount: uint32) -> decoding_backend_config ---
 	decoder_config_init :: proc(outputFormat: format, outputChannels: uint32, outputSampleRate: uint32) -> decoder_config ---
 	decoder_config_init_default :: proc() -> decoder_config ---
-	decoder_init :: proc(onRead: decoder_read_proc, onSeek: decoder_seek_proc, pUserData: rawptr, pConfig: ^decoder_config, pDecoder: ^decoder) -> result ---
+	@(require_results)
+	decoder_init :: proc(onRead: decoder_read_proc, onSeek: decoder_seek_proc, pUserData: rawptr, #by_ptr pConfig: decoder_config, pDecoder: ^decoder) -> result ---
 	decoder_init_memory :: proc(pData: rawptr, dataSize: uint, pConfig: ^decoder_config, pDecoder: ^decoder) -> result ---
 	decoder_init_vfs :: proc(pVFS: ^vfs, pFilePath: cstring, pConfig: ^decoder_config, pDecoder: ^decoder) -> result ---
 	decoder_init_vfs_w :: proc(pVFS: ^vfs, pFilePath: ^i32, pConfig: ^decoder_config, pDecoder: ^decoder) -> result ---
@@ -6094,6 +6100,7 @@ foreign lib {
 	
 	This is not thread safe without your own synchronization.
 	*/
+	@(require_results)
 	decoder_read_pcm_frames :: proc(pDecoder: ^decoder, pFramesOut: rawptr, frameCount: uint64, pFramesRead: ^uint64) -> result ---
 	/*
 	Seeks to a PCM frame based on its absolute index.
@@ -6142,7 +6149,8 @@ foreign lib {
 	decode_file :: proc(pFilePath: cstring, pConfig: ^decoder_config, pFrameCountOut: ^uint64, ppPCMFramesOut: ^rawptr) -> result ---
 	decode_memory :: proc(pData: rawptr, dataSize: uint, pConfig: ^decoder_config, pFrameCountOut: ^uint64, ppPCMFramesOut: ^rawptr) -> result ---
 	encoder_config_init :: proc(encodingFormat: encoding_format, format: format, channels: uint32, sampleRate: uint32) -> encoder_config ---
-	encoder_init :: proc(onWrite: encoder_write_proc, onSeek: encoder_seek_proc, pUserData: rawptr, pConfig: ^encoder_config, pEncoder: ^encoder) -> result ---
+	@(require_results)
+	encoder_init :: proc(onWrite: encoder_write_proc, onSeek: encoder_seek_proc, pUserData: rawptr, #by_ptr pConfig: encoder_config, pEncoder: ^encoder) -> result ---
 	encoder_init_vfs :: proc(pVFS: ^vfs, pFilePath: cstring, pConfig: ^encoder_config, pEncoder: ^encoder) -> result ---
 	encoder_init_vfs_w :: proc(pVFS: ^vfs, pFilePath: ^i32, pConfig: ^encoder_config, pEncoder: ^encoder) -> result ---
 	encoder_init_file :: proc(pFilePath: cstring, pConfig: ^encoder_config, pEncoder: ^encoder) -> result ---
@@ -6335,6 +6343,7 @@ foreign lib {
 	sound_group_config_init :: proc() -> sound_group_config ---
 	sound_group_config_init_2 :: proc(pEngine: ^engine) -> sound_group_config ---
 	engine_config_init :: proc() -> engine_config ---
+	@(require_results)
 	engine_init :: proc(pConfig: ^engine_config, pEngine: ^engine) -> result ---
 	engine_uninit :: proc(pEngine: ^engine) ---
 	engine_read_pcm_frames :: proc(pEngine: ^engine, pFramesOut: rawptr, frameCount: uint64, pFramesRead: ^uint64) -> result ---

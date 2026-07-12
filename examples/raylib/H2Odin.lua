@@ -35,8 +35,26 @@ config.types.overrides = {
 	Color = "distinct [4]u8",
 }
 
--- Many raylib out-params are write destinations; default ^T is correct.
--- const char* is already proven to cstring by Analysis. Further multipointer
--- polish belongs in config.procs / config.structs as the benchmark matures.
+-- Faithful-surface curation (spec 0011): array-shaped parameters and
+-- result-bearing loaders. Defaults stay ^T; these are explicit contracts.
+config.procs.params = {
+	["SetWindowIcons.images"] = { pointer = "multi" },
+	["GenImageFontAtlas.glyphs"] = { pointer = "multi" },
+	["UnloadModelAnimations.animations"] = { pointer = "multi" },
+}
+config.procs.require_results = {
+	"LoadModelAnimations",
+	"LoadFileData",
+	"LoadFileText",
+	"LoadImage",
+	"LoadTexture",
+	"LoadModel",
+	"LoadFont",
+	"LoadShader",
+	"LoadMaterialDefault",
+	"LoadWave",
+	"LoadSound",
+	"LoadMusicStream",
+}
 
 return config
