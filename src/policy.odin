@@ -296,12 +296,159 @@ policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
 	policy_set_diag_defaults(&policy)
 
 	if !policy_validate_keys(&policy) || !policy_read_config(&policy) {
+		// Partial declarative fields may already be allocated on the caller's
+		// allocator (tests use the tracking allocator; main uses the generation
+		// arena). Free them before closing Lua so failed loads do not leak.
+		policy_free_owned(&policy)
 		policy_destroy(&policy)
 		return {}, false
 	}
 	// Clone only after a successful load so failed validation does not leak.
 	policy.config_dir = strings.clone(config_dir)
 	return policy, true
+}
+
+// Free every owned string/map/slice on the policy except the Lua state.
+// Callers that used a generation arena may skip this (arena destroy covers it);
+// tests and policy_load's failure path must call it.
+policy_free_owned :: proc(policy: ^Policy) {
+	if policy.config_dir != "" {
+		delete(policy.config_dir)
+		policy.config_dir = ""
+	}
+	if policy.package_name != "" {
+		delete(policy.package_name)
+		policy.package_name = ""
+	}
+	if policy.foreign_lib != "" {
+		delete(policy.foreign_lib)
+		policy.foreign_lib = ""
+	}
+	free_foreign_targets(policy.foreign_targets)
+	policy.foreign_targets = nil
+	if policy.foreign_link_prefix != "" {
+		delete(policy.foreign_link_prefix)
+		policy.foreign_link_prefix = ""
+	}
+	if policy.output_folder != "" {
+		delete(policy.output_folder)
+		policy.output_folder = ""
+	}
+	if policy.resource_dir != "" {
+		delete(policy.resource_dir)
+		policy.resource_dir = ""
+	}
+	if policy.clang_executable != "" {
+		delete(policy.clang_executable)
+		policy.clang_executable = ""
+	}
+	policy_free_string_slice(&policy.inputs)
+	policy_free_string_slice(&policy.include_paths)
+	policy_free_string_slice(&policy.require_results)
+	policy_free_string_map(&policy.defines)
+	policy_free_string_slice(&policy.strip_prefix_proc)
+	policy_free_string_slice(&policy.strip_prefix_type)
+	policy_free_string_slice(&policy.strip_prefix_const)
+	policy_free_string_slice(&policy.strip_prefix_enum)
+	policy_free_string_slice(&policy.strip_suffix_proc)
+	policy_free_string_slice(&policy.strip_suffix_type)
+	policy_free_string_slice(&policy.strip_suffix_const)
+	policy_free_string_slice(&policy.strip_suffix_enum)
+	policy_free_string_slice(&policy.remove_names)
+	policy_free_string_slice(&policy.remove_patterns)
+	policy_free_string_map(&policy.known_tokens)
+	policy_free_string_map(&policy.naming_overrides)
+	policy_free_string_map(&policy.type_map)
+	policy_free_string_map(&policy.type_overrides)
+	policy_free_string_slice(&policy.types_distinct)
+	policy_free_string_bool_map(&policy.types_opaque)
+	for g in policy.macro_groups {
+		delete(g.id)
+		delete(g.name)
+		delete(g.base_type)
+		delete(g.prefix)
+		delete(g.member_strip_prefix)
+		for s in g.exclude_prefixes {
+			delete(s)
+		}
+		delete(g.exclude_prefixes)
+	}
+	delete(policy.macro_groups)
+	policy.macro_groups = nil
+	for r in policy.enum_anonymous {
+		delete(r.name)
+		delete(r.first_member)
+	}
+	delete(policy.enum_anonymous)
+	policy.enum_anonymous = nil
+	for r in policy.enum_bit_sets {
+		delete(r.enum_name)
+		delete(r.name)
+		delete(r.mode)
+	}
+	delete(policy.enum_bit_sets)
+	policy.enum_bit_sets = nil
+	policy_free_member_action_map(&policy.struct_fields)
+	policy_free_int_map(&policy.struct_align)
+	policy_free_member_action_map(&policy.proc_params)
+	policy_free_member_action_map(&policy.proc_results)
+}
+
+policy_free_string_slice :: proc(list: ^[]string) {
+	for s in list^ {
+		delete(s)
+	}
+	delete(list^)
+	list^ = nil
+}
+
+policy_free_string_map :: proc(m: ^map[string]string) {
+	if m^ == nil {
+		return
+	}
+	for key, value in m^ {
+		delete(key)
+		delete(value)
+	}
+	delete(m^)
+	m^ = nil
+}
+
+policy_free_string_bool_map :: proc(m: ^map[string]bool) {
+	if m^ == nil {
+		return
+	}
+	for key in m^ {
+		delete(key)
+	}
+	delete(m^)
+	m^ = nil
+}
+
+policy_free_member_action_map :: proc(m: ^map[string]Member_Action) {
+	if m^ == nil {
+		return
+	}
+	for key, action in m^ {
+		delete(key)
+		delete(action.type)
+		delete(action.tag)
+		delete(action.default)
+		delete(action.pointer)
+	}
+	delete(m^)
+	m^ = nil
+}
+
+policy_free_int_map :: proc(m: ^map[string]int) {
+	if m^ == nil {
+		return
+	}
+	for key in m^ {
+		delete(key)
+	}
+	delete(m^)
+	m^ = nil
 }
 
 // Categories whose default posture is error rather than warn.

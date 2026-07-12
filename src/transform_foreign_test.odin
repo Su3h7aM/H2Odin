@@ -39,6 +39,7 @@ test_note_import_for_spelling_tracks_win32 :: proc(t: ^testing.T) {
 	testing.expect(t, !imports.posix)
 
 	b: strings.Builder
+	defer strings.builder_destroy(&b)
 	emit_write_prelude(&b, Emit_Options{package_name = "pkg"}, imports, false)
 	text := strings.to_string(b)
 	testing.expect(t, strings.contains(text, `import win32 "core:sys/windows"`))

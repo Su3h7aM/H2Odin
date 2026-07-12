@@ -416,7 +416,9 @@ write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> boo
 
 	// Stage under output_folder so renames stay on one filesystem. Leftover
 	// stage from a crashed run is discarded before we begin.
-	stage_dir, stage_jerr := filepath.join({output_folder, STAGE_DIR_NAME})
+	// Ephemeral join paths use temp_allocator (not the generation arena) so
+	// unit tests without an arena stay leak-clean.
+	stage_dir, stage_jerr := filepath.join({output_folder, STAGE_DIR_NAME}, context.temp_allocator)
 	if stage_jerr != nil {
 		fmt.eprintfln("h2odin: cannot join stage path under %q: %v", output_folder, stage_jerr)
 		return false
@@ -444,7 +446,7 @@ write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> boo
 				text = strings.concatenate({text, footer})
 			}
 		}
-		stage_path, jerr := filepath.join({stage_dir, file.filename})
+		stage_path, jerr := filepath.join({stage_dir, file.filename}, context.temp_allocator)
 		if jerr != nil {
 			fmt.eprintfln("h2odin: cannot join stage file path: %v", jerr)
 			return false
@@ -457,7 +459,7 @@ write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> boo
 	}
 
 	manifest_text := format_generated_manifest(new_names)
-	stage_manifest, mjerr := filepath.join({stage_dir, GENERATED_MANIFEST_NAME})
+	stage_manifest, mjerr := filepath.join({stage_dir, GENERATED_MANIFEST_NAME}, context.temp_allocator)
 	if mjerr != nil {
 		fmt.eprintfln("h2odin: cannot join stage manifest path: %v", mjerr)
 		return false
@@ -472,8 +474,8 @@ write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> boo
 
 	// Publish: rename each staged file into place (replace existing).
 	for name in new_names {
-		src, sj := filepath.join({stage_dir, name})
-		dst, dj := filepath.join({output_folder, name})
+		src, sj := filepath.join({stage_dir, name}, context.temp_allocator)
+		dst, dj := filepath.join({output_folder, name}, context.temp_allocator)
 		if sj != nil || dj != nil {
 			fmt.eprintln("h2odin: cannot join publish paths")
 			return false
@@ -483,7 +485,7 @@ write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> boo
 		}
 	}
 	// Manifest last so a failed mid-publish does not claim a new generation.
-	dst_manifest, dmj := filepath.join({output_folder, GENERATED_MANIFEST_NAME})
+	dst_manifest, dmj := filepath.join({output_folder, GENERATED_MANIFEST_NAME}, context.temp_allocator)
 	if dmj != nil {
 		fmt.eprintfln("h2odin: cannot join manifest path: %v", dmj)
 		return false
@@ -531,7 +533,7 @@ format_generated_manifest :: proc(filenames: []string, allocator := context.temp
 // Read prior generator-owned basenames. Missing or unreadable → empty (no
 // stale cleanup). Comment lines and blanks are ignored.
 read_generated_manifest :: proc(output_folder: string, allocator := context.allocator) -> []string {
-	path, jerr := filepath.join({output_folder, GENERATED_MANIFEST_NAME})
+	path, jerr := filepath.join({output_folder, GENERATED_MANIFEST_NAME}, context.temp_allocator)
 	if jerr != nil {
 		return nil
 	}
@@ -567,7 +569,7 @@ remove_stale_generated_files :: proc(output_folder: string, old_names, new_names
 		if keep[n] {
 			continue
 		}
-		path, jerr := filepath.join({output_folder, n})
+		path, jerr := filepath.join({output_folder, n}, context.temp_allocator)
 		if jerr != nil {
 			continue
 		}

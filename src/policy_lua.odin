@@ -59,6 +59,10 @@ policy_read_string_list_at_top :: proc(L: ^lua.State, table_name: string, field_
 		if elem_type != c.int(lua.Type.STRING) {
 			user_errorf("h2odin: config: %s.%s[%d] must be a string", table_name, field_key, i + 1)
 			lua.pop(L, 1)
+			for j in 0 ..< i {
+				delete(out[j])
+			}
+			delete(out)
 			return nil, false
 		}
 		out[i] = strings.clone(string(lua.tostring(L, -1)))

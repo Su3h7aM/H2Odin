@@ -24,6 +24,7 @@ test_sort_foreign_targets_deterministic_order :: proc(t: ^testing.T) {
 		{key = .Windows, paths = {"lib/foo.lib"}},
 	}
 	sorted := sort_foreign_targets(raw)
+	defer delete(sorted)
 	testing.expect_value(t, len(sorted), 3)
 	testing.expect_value(t, sorted[0].key, Foreign_Target_Key.Windows)
 	testing.expect_value(t, sorted[1].key, Foreign_Target_Key.Linux_Amd64)
@@ -44,6 +45,7 @@ test_normalize_system_lib_path :: proc(t: ^testing.T) {
 @(test)
 test_emit_write_foreign_import_shorthand :: proc(t: ^testing.T) {
 	b: strings.Builder
+	defer strings.builder_destroy(&b)
 	emit_write_foreign_import(&b, Emit_Options{foreign_lib = "curl"})
 	text := strings.to_string(b)
 	testing.expect(t, strings.contains(text, `foreign import lib "system:curl"`))
@@ -59,7 +61,9 @@ test_emit_write_foreign_import_targets_when_chain :: proc(t: ^testing.T) {
 			{key = .Fallback, paths = {"system:foo"}},
 		},
 	)
+	defer delete(targets)
 	b: strings.Builder
+	defer strings.builder_destroy(&b)
 	emit_write_foreign_import(&b, Emit_Options{foreign_targets = targets})
 	text := strings.to_string(b)
 
@@ -78,6 +82,7 @@ test_emit_write_foreign_import_targets_when_chain :: proc(t: ^testing.T) {
 test_emit_write_foreign_import_sole_fallback :: proc(t: ^testing.T) {
 	targets := []Foreign_Target{{key = .Fallback, paths = {"system:box3d"}}}
 	b: strings.Builder
+	defer strings.builder_destroy(&b)
 	emit_write_foreign_import(&b, Emit_Options{foreign_targets = targets})
 	text := strings.to_string(b)
 	testing.expect(t, strings.contains(text, `foreign import lib "system:box3d"`))

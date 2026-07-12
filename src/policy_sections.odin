@@ -2,7 +2,6 @@ package h2odin
 
 import "core:c"
 import "core:fmt"
-import "core:strings"
 
 import lua "vendor:lua/5.4"
 
@@ -167,8 +166,25 @@ policy_read_foreign :: proc(policy: ^Policy) -> bool {
 	return true
 }
 
+// Free a partially built foreign.targets list (owned path strings + slice).
+free_foreign_targets :: proc(targets: []Foreign_Target) {
+	for t in targets {
+		for p in t.paths {
+			delete(p)
+		}
+		delete(t.paths)
+	}
+	delete(targets)
+}
+
+free_foreign_targets_dyn :: proc(raw: ^[dynamic]Foreign_Target) {
+	free_foreign_targets(raw[:])
+	raw^ = nil
+}
+
 // Read foreign.targets from the foreign table at stack top. Returns nil when
 // the field is absent. Paths are validated; keys must be from the closed set.
+// On success, path strings and the returned slice are owned by the caller.
 policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target, ok: bool) {
 	field_type := lua.getfield(L, -1, "targets")
 	if field_type == c.int(lua.Type.NIL) {
@@ -191,6 +207,7 @@ policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target
 		if lua.type(L, -2) != .STRING {
 			user_error("h2odin: config: foreign.targets keys must be strings (closed set of target names)")
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
 		key_name := string(lua.tostring(L, -2))
@@ -201,11 +218,13 @@ policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target
 				key_name,
 			)
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
 		if seen[key] {
 			user_errorf("h2odin: config: foreign.targets[%q] specified more than once", key_name)
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
 		seen[key] = true
@@ -213,10 +232,12 @@ policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target
 		if lua.type(L, -1) != .TABLE {
 			user_errorf("h2odin: config: foreign.targets[%q] must be a table with libraries / system lists", key_name)
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
 		if !policy_reject_unknown_subkeys(L, fmt.tprintf("foreign.targets.%s", key_name), []cstring{"libraries", "system"}) {
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
 
@@ -224,8 +245,10 @@ policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target
 		libs, libs_ok := policy_string_list_field(L, fmt.tprintf("foreign.targets.%s", key_name), "libraries")
 		if !libs_ok {
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
+		// Transfer ownership of list strings into paths (no second clone).
 		for lib in libs {
 			if !is_safe_foreign_path(lib) {
 				user_errorf(
@@ -233,29 +256,58 @@ policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target
 					key_name,
 					lib,
 				)
+				for p in paths {
+					delete(p)
+				}
+				delete(paths)
+				for s in libs {
+					delete(s)
+				}
+				delete(libs)
 				lua.pop(L, 2)
+				free_foreign_targets_dyn(&raw)
 				return nil, false
 			}
-			append(&paths, strings.clone(lib))
+			append(&paths, lib)
 		}
+		delete(libs) // free slice header only; strings moved into paths
 
 		sys_list, sys_ok := policy_string_list_field(L, fmt.tprintf("foreign.targets.%s", key_name), "system")
 		if !sys_ok {
+			for p in paths {
+				delete(p)
+			}
+			delete(paths)
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
 		for sys in sys_list {
 			if !is_safe_foreign_path(sys) {
 				user_errorf("h2odin: config: foreign.targets[%q].system entry %q is empty or contains a quote, backslash, or control character", key_name, sys)
+				for p in paths {
+					delete(p)
+				}
+				delete(paths)
+				for s in sys_list {
+					delete(s)
+				}
+				delete(sys_list)
 				lua.pop(L, 2)
+				free_foreign_targets_dyn(&raw)
 				return nil, false
 			}
+			// normalize allocates; free the raw list string.
 			append(&paths, normalize_system_lib_path(sys))
+			delete(sys)
 		}
+		delete(sys_list)
 
 		if len(paths) == 0 {
 			user_errorf("h2odin: config: foreign.targets[%q] needs at least one libraries or system entry", key_name)
+			delete(paths)
 			lua.pop(L, 2)
+			free_foreign_targets_dyn(&raw)
 			return nil, false
 		}
 
@@ -268,7 +320,10 @@ policy_read_foreign_targets :: proc(L: ^lua.State) -> (targets: []Foreign_Target
 		return nil, false
 	}
 
-	return sort_foreign_targets(raw[:]), true
+	// sort allocates a new ordered slice; free the unsorted dynamic header.
+	sorted := sort_foreign_targets(raw[:])
+	delete(raw)
+	return sorted, true
 }
 
 policy_read_naming :: proc(policy: ^Policy) -> bool {
