@@ -3,56 +3,59 @@ package h2odin
 import "core:strings"
 
 apply_renames :: proc(ir: ^IR, policy: ^Policy) {
-	for ref in ir.order {
-		switch ref.kind {
+	for declaration in ir.order {
+		switch declaration.kind {
 		case .Invalid:
 		case .Func:
-			decl := &ir.funcs[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Func, "", decl.deprecated); decided {
-				decl.link_name = link_name_for(policy, decl.name, new_name)
-				decl.name = new_name
+			function := &ir.funcs[declaration.index]
+			function_c_name := function.name
+			if new_name, decided := rename_of(ir, policy, function_c_name, .Func, "", function.deprecated); decided {
+				function.link_name = link_name_for(policy, function_c_name, new_name)
+				function.name = new_name
 			}
-			rename_params(ir, policy, decl.name, decl.params)
+			rename_params(ir, policy, function_c_name, function.params)
 		case .Var:
-			decl := &ir.vars[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Var, "", decl.deprecated); decided {
-				decl.link_name = link_name_for(policy, decl.name, new_name)
-				decl.name = new_name
+			variable := &ir.vars[declaration.index]
+			if new_name, decided := rename_of(ir, policy, variable.name, .Var, "", variable.deprecated); decided {
+				variable.link_name = link_name_for(policy, variable.name, new_name)
+				variable.name = new_name
 			}
 		case .Record:
-			decl := &ir.records[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", decl.deprecated); decided {
-				decl.name = new_name
+			record := &ir.records[declaration.index]
+			record_c_name := record.name
+			if new_name, decided := rename_of(ir, policy, record_c_name, .Type, "", record.deprecated); decided {
+				record.name = new_name
 			}
-			for &field in decl.fields {
-				if new_name, decided := rename_of(ir, policy, field.name, .Field, decl.name, false); decided {
+			for &field in record.fields {
+				if new_name, decided := rename_of(ir, policy, field.name, .Field, record_c_name); decided {
 					field.name = new_name
 				}
 			}
 		case .Enum:
-			decl := &ir.enums[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", decl.deprecated); decided {
-				decl.name = new_name
+			enum_declaration := &ir.enums[declaration.index]
+			enum_c_name := enum_declaration.name
+			if new_name, decided := rename_of(ir, policy, enum_c_name, .Type, "", enum_declaration.deprecated); decided {
+				enum_declaration.name = new_name
 			}
-			for &member in decl.members {
-				if new_name, decided := rename_of(ir, policy, member.name, .Enum_Member, decl.name, false); decided {
+			for &member in enum_declaration.members {
+				if new_name, decided := rename_of(ir, policy, member.name, .Enum_Member, enum_c_name); decided {
 					member.name = new_name
 				}
 			}
 		case .Typedef:
-			decl := &ir.typedefs[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", decl.deprecated); decided {
-				decl.name = new_name
+			typedef := &ir.typedefs[declaration.index]
+			if new_name, decided := rename_of(ir, policy, typedef.name, .Type, "", typedef.deprecated); decided {
+				typedef.name = new_name
 			}
 		case .Macro:
-			decl := &ir.macros[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Const, "", decl.deprecated); decided {
-				decl.name = new_name
+			macro := &ir.macros[declaration.index]
+			if new_name, decided := rename_of(ir, policy, macro.name, .Const, "", macro.deprecated); decided {
+				macro.name = new_name
 			}
 		case .Bit_Set:
-			decl := &ir.bit_sets[ref.index]
-			if new_name, decided := rename_of(ir, policy, decl.name, .Type, "", false); decided {
-				decl.name = new_name
+			bit_set_declaration := &ir.bit_sets[declaration.index]
+			if new_name, decided := rename_of(ir, policy, bit_set_declaration.name, .Type, ""); decided {
+				bit_set_declaration.name = new_name
 			}
 		case .Wrapper:
 		// Wrappers are materialized after renames with final public names.
@@ -60,9 +63,9 @@ apply_renames :: proc(ir: ^IR, policy: ^Policy) {
 	}
 
 	// Function-pointer types carry parameter names of their own.
-	for &info in ir.types {
-		if variant, is_proc := &info.variant.(Type_Proc); is_proc {
-			rename_params(ir, policy, "", variant.params)
+	for &type_info in ir.types {
+		if procedure_type, is_procedure := &type_info.variant.(Type_Proc); is_procedure {
+			rename_params(ir, policy, "", procedure_type.params)
 		}
 	}
 }
@@ -87,28 +90,34 @@ link_name_for :: proc(policy: ^Policy, c_name: string, odin_name: string) -> str
 // final name whichever path produced it: the absolute map, the override
 // callback, or the generator default. default_odin_name already escapes on
 // the default path; re-running here is idempotent and covers the other two.
-rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, parent: string, deprecated := false) -> (string, bool) {
-	if name == "" {
+rename_of :: proc(ir: ^IR, policy: ^Policy, c_name: string, symbol_kind: Symbol_Kind, parent_c_name: string, deprecated := false) -> (string, bool) {
+	if c_name == "" {
 		return "", false
 	}
 
 	// Absolute map wins before automatic naming.
-	if odin_name, ok := policy.naming_overrides[name]; ok {
+	if odin_name, ok := policy.naming_overrides[c_name]; ok {
 		new_name := keyword_safe_default(odin_name)
-		if new_name == name {
+		if new_name == c_name {
 			return "", false
+		}
+		if new_name == odin_name {
+			new_name = strings.clone(new_name)
 		}
 		return new_name, true
 	}
 
-	default_name := default_odin_name(ir, policy, name, kind)
+	default_name := default_odin_name(ir, policy, c_name, symbol_kind)
 
-	new_name, decided := policy_rename(policy, Symbol_Context{name = name, default_name = default_name, kind = kind, parent = parent, deprecated = deprecated})
+	new_name, decided := policy_rename(
+		policy,
+		Symbol_Context{name = c_name, default_name = default_name, kind = symbol_kind, parent = parent_c_name, deprecated = deprecated},
+	)
 	if !decided {
 		new_name = default_name
 	}
 	new_name = keyword_safe_default(new_name)
-	if new_name == name {
+	if new_name == c_name {
 		return "", false
 	}
 	return new_name, true
@@ -118,15 +127,15 @@ rename_of :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind, par
 // safety. Spelling case is left as in the header (foreign porting convention).
 // If known_tokens is set and the stripped form still has an ambiguous split,
 // emit naming_ambiguity so the user can override that one symbol.
-default_odin_name :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_Kind) -> string {
-	stripped := strip_configured_affixes(policy, name, kind)
+default_odin_name :: proc(ir: ^IR, policy: ^Policy, c_name: string, symbol_kind: Symbol_Kind) -> string {
+	stripped := strip_configured_affixes(policy, c_name, symbol_kind)
 	if len(policy.known_tokens) > 0 {
 		// Touch the tokenizer so known_tokens collisions surface even when
 		// we do not recase — the dictionary is still load-bearing for
 		// callbacks that call h2o.naming.* on sym.default / related names.
 		_, ambiguous := naming_tokenize(stripped, policy.known_tokens, context.temp_allocator)
 		if ambiguous {
-			ir_diag(ir, .Naming_Ambiguity, "%q has an uncertain word split; set naming.overrides or refine known_tokens", name)
+			ir_diag(ir, .Naming_Ambiguity, "%q has an uncertain word split; set naming.overrides or refine known_tokens", c_name)
 		}
 	}
 	return keyword_safe_default(stripped)
@@ -134,10 +143,10 @@ default_odin_name :: proc(ir: ^IR, policy: ^Policy, name: string, kind: Symbol_K
 
 // Strip the first matching configured prefix, then the first matching
 // suffix, for this symbol kind.
-strip_configured_affixes :: proc(policy: ^Policy, name: string, kind: Symbol_Kind) -> string {
+strip_configured_affixes :: proc(policy: ^Policy, c_name: string, symbol_kind: Symbol_Kind) -> string {
 	prefixes: []string
 	suffixes: []string
-	#partial switch kind {
+	#partial switch symbol_kind {
 	case .Func, .Param:
 		prefixes = policy.strip_prefix_proc
 		suffixes = policy.strip_suffix_proc
@@ -151,7 +160,7 @@ strip_configured_affixes :: proc(policy: ^Policy, name: string, kind: Symbol_Kin
 		prefixes = policy.strip_prefix_enum
 		suffixes = policy.strip_suffix_enum
 	}
-	result := name
+	result := c_name
 	for prefix in prefixes {
 		if stripped := str_strip_prefix(result, prefix); stripped != result {
 			result = stripped
@@ -167,18 +176,15 @@ strip_configured_affixes :: proc(policy: ^Policy, name: string, kind: Symbol_Kin
 	return result
 }
 
-// Parameters go through the same naming pipeline as fields: affix strip,
-// the override callback (kind = "param"), and keyword safety. Previously
-// they got keyword safety only, which left C-case params like `Cursor` to
-// shadow a recased type `Cursor` (libclang names many params after their
-// type). Passing the owning proc name as parent matches the field contract
-// and lets config target a specific proc's params if needed.
-rename_params :: proc(ir: ^IR, policy: ^Policy, proc_name: string, params: []Param) {
+// Parameters go through the same naming pipeline as fields. The owning
+// procedure's C name remains the stable callback parent even when that
+// procedure has already received its Odin name.
+rename_params :: proc(ir: ^IR, policy: ^Policy, parent_c_name: string, params: []Param) {
 	for &param in params {
 		if param.name == "" {
 			continue
 		}
-		if new_name, decided := rename_of(ir, policy, param.name, .Param, proc_name); decided {
+		if new_name, decided := rename_of(ir, policy, param.name, .Param, parent_c_name); decided {
 			param.name = new_name
 		}
 	}
@@ -309,25 +315,3 @@ is_odin_keyword :: proc(name: string) -> bool {
 	}
 	return false
 }
-
-// Replace each leaf C type with its fixed-width Odin spelling when that is
-// provably safe: either core:c defines the name as the same Odin type on
-// every target, or the size libclang measured during extraction equals the
-// Odin type's size. Anything unproven keeps its ABI spelling — correctness
-// over convenience, never a guess.
-// Idiomatic mode's default is a native Odin spelling; the ABI spelling
-// (core:c) is the fallback of last resort, used only when the target
-// genuinely gives us too little to choose a native type. Every leaf in the
-// type pool is resolved through a three-rung ladder:
-//
-//  1. Table preference — the type table names a semantic spelling for this
-//     C type (size_t -> uint). Used once the size libclang measured on the
-//     target confirms it; that confirmation is a honesty check, not a real
-//     expectation of failure.
-//  2. Derived from measurement — no table preference applies. Size and
-//     signedness, as libclang measured them, are a complete determination
-//     for any integer leaf, so a fixed-width native spelling (i16, u32,
-//     ...) is derived directly, never guessed.
-//  3. Fallback — the size is unknown, or the type has no scalar shape to
-//     derive from (e.g. void). The ABI spelling is kept, and this rung is
-//     diagnosed since it should be rare in practice.

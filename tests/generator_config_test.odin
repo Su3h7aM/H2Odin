@@ -316,6 +316,25 @@ test_naming_overrides_and_symbol_removal_compose :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_naming_callback_members_keep_original_parent_name :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/rename.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Colour :: enum")
+	expect_contains(t, stdout, "Red")
+	expect_contains(t, stdout, "Green")
+	expect_contains(t, stdout, "Blue")
+	expect_contains(t, stdout, `@(link_name = "paint")`)
+	expect_contains(t, stdout, "lib_paint :: proc(color: Colour, opacity: c.int)")
+	check_generated_output(t, stdout, "/tmp/h2odin-rename")
+}
+
+@(test)
 test_parse_error_fails_without_output :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/bad_parse.lua"}
 	stdout, stderr, exit_code, ok := run_h2odin_expect_failure(t, cmd[:])

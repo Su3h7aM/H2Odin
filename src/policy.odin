@@ -264,7 +264,7 @@ Symbol_Context :: struct {
 	name:         string, // original C name
 	default_name: string, // generator's default choice
 	kind:         Symbol_Kind,
-	parent:       string, // owning declaration for members/fields; "" otherwise
+	parent:       string, // owning declaration's original C name; "" otherwise
 	// C deprecation fact for symbols.remove.where / naming views.
 	deprecated:   bool,
 }
