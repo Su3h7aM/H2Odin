@@ -74,6 +74,46 @@ builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
 	return false
 }
 
+builtin_is_integer :: proc(kind: Builtin_Kind) -> bool {
+	switch kind {
+	case .Char_Signed, .Char_Unsigned, .S_Char, .U_Char, .Short, .U_Short, .Int, .U_Int, .Long, .U_Long, .Long_Long, .U_Long_Long:
+		return true
+	case .Void, .Bool, .Float, .Double:
+		return false
+	}
+	return false
+}
+
+builtin_kind_for_abi_spelling :: proc(spelling: string) -> (Builtin_Kind, bool) {
+	// Both captured plain-char variants spell as core:c.char. The canonical
+	// Odin C-FFI type is unsigned; never let enum metadata depend on table order.
+	if spelling == "c.char" {
+		return .Char_Unsigned, true
+	}
+	for mapping, kind_index in builtin_spellings {
+		if mapping.abi == spelling {
+			return Builtin_Kind(kind_index), true
+		}
+	}
+	return {}, false
+}
+
+enum_backing_spelling_signedness :: proc(spelling: string) -> (unsigned: bool, ok: bool) {
+	if builtin_kind, is_builtin := builtin_kind_for_abi_spelling(spelling); is_builtin {
+		if !builtin_is_integer(builtin_kind) {
+			return false, false
+		}
+		return builtin_is_unsigned(builtin_kind), true
+	}
+	switch spelling {
+	case "i8", "i16", "i32", "i64", "int":
+		return false, true
+	case "u8", "u16", "u32", "u64", "uint", "uintptr":
+		return true, true
+	}
+	return false, false
+}
+
 // A standard C typedef (stdint.h / stddef.h) that core:c spells under the
 // same name, so the generated code can say c.uint32_t instead of re-declaring
 // libc's typedef chain.

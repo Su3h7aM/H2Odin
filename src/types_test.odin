@@ -38,3 +38,13 @@ test_std_mappings_are_lookup_source :: proc(t: ^testing.T) {
 	testing.expect(t, is_std_c_type("uint64_t"))
 	testing.expect(t, !is_std_c_type("__uint64_t"))
 }
+
+@(test)
+test_c_char_spelling_uses_canonical_unsigned_kind :: proc(t: ^testing.T) {
+	kind, found := builtin_kind_for_abi_spelling("c.char")
+	testing.expect(t, found)
+	testing.expect_value(t, kind, Builtin_Kind.Char_Unsigned)
+	unsigned, valid_backing := enum_backing_spelling_signedness("c.char")
+	testing.expect(t, valid_backing)
+	testing.expect(t, unsigned)
+}

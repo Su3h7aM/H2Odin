@@ -591,6 +591,13 @@ policy_read_macros :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	groups := make([dynamic]Macro_Group_Enum, 0, n)
+	groups_owned := true
+	defer if groups_owned {
+		for &group in groups {
+			policy_free_macro_group(&group)
+		}
+		delete(groups)
+	}
 	for i in 0 ..< n {
 		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
 		if elem_type != c.int(lua.Type.TABLE) {
@@ -606,52 +613,63 @@ policy_read_macros :: proc(policy: ^Policy) -> bool {
 		append(&groups, group)
 	}
 	policy.macro_groups = groups[:]
+	groups_owned = false
 	return true
 }
 
 // Group table is at stack top.
 policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: Macro_Group_Enum, ok: bool) {
+	group_owned := true
+	defer if group_owned {
+		policy_free_macro_group(&group)
+	}
 	allowed := []cstring{"id", "name", "base_type", "prefix", "exclude_prefixes", "include", "member_strip_prefix", "emit_original_consts", "diagnostics"}
 	if !policy_reject_unknown_subkeys(L, "macros.groups[]", allowed) {
-		return {}, false
+		return group, false
 	}
 
 	name, name_ok := policy_optional_string_field(L, "macros.groups[]", "name")
 	if !name_ok || name == "" {
 		user_error("h2odin: config: macros.groups[] requires name")
-		return {}, false
+		return group, false
 	}
 	group.name = name
 	group.lua_index = lua_index
 
 	id, id_ok := policy_optional_string_field(L, "macros.groups[]", "id")
 	if !id_ok {
-		return {}, false
+		return group, false
 	}
 	group.id = id
 
 	base, base_ok := policy_optional_string_field(L, "macros.groups[]", "base_type")
 	if !base_ok {
-		return {}, false
+		return group, false
 	}
 	group.base_type = base
+	if base != "" {
+		if _, supported := enum_backing_spelling_signedness(base); !supported {
+			user_errorf("h2odin: config: macros.groups[].base_type %q is not a supported integer backing", base)
+			return group, false
+		}
+	}
 
 	prefix, prefix_ok := policy_optional_string_field(L, "macros.groups[]", "prefix")
 	if !prefix_ok {
-		return {}, false
+		return group, false
 	}
 	group.prefix = prefix
 
 	member_strip, member_strip_ok := policy_optional_string_field(L, "macros.groups[]", "member_strip_prefix")
 	if !member_strip_ok {
-		return {}, false
+		return group, false
 	}
 	group.member_strip_prefix = member_strip
 
 	// exclude_prefixes: string or list
 	excl, excl_ok := policy_string_or_list_field(L, "macros.groups[]", "exclude_prefixes")
 	if !excl_ok {
-		return {}, false
+		return group, false
 	}
 	group.exclude_prefixes = excl
 
@@ -667,7 +685,7 @@ policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: M
 	case:
 		user_error("h2odin: config: macros.groups[].emit_original_consts must be a boolean")
 		lua.pop(L, 1)
-		return {}, false
+		return group, false
 	}
 
 	inc_type := lua.Type(lua.getfield(L, -1, "include"))
@@ -680,15 +698,16 @@ policy_read_macro_group_enum :: proc(L: ^lua.State, lua_index: int) -> (group: M
 	case:
 		user_error("h2odin: config: macros.groups[].include must be a function")
 		lua.pop(L, 1)
-		return {}, false
+		return group, false
 	}
 
 	local_diags, local_ok := policy_read_local_diag_overrides(L, "macros.groups[]")
 	if !local_ok {
-		return {}, false
+		return group, false
 	}
 	group.diag_overrides = local_diags
 
+	group_owned = false
 	return group, true
 }
 

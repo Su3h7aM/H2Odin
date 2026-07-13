@@ -14,52 +14,33 @@ apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
 		return
 	}
 
-	drop_macros := make(map[u32]bool, context.temp_allocator)
-	claimed := make(map[u32]bool, context.temp_allocator)
+	macros_to_drop := make(map[u32]bool, context.temp_allocator)
+	claimed_macros := make(map[u32]bool, context.temp_allocator)
 
 	for group in policy.macro_groups {
+		group_label := group.id if group.id != "" else group.name
 		members := make([dynamic]Enum_Member, context.temp_allocator)
-		// Placement: first matched macro in IR pool order (final input/order).
-		first_home: Input_Header_Handle
-		for macro, mi in ir.macros {
-			if macro.is_function_like {
+		// Output home follows the first member in IR pool order.
+		first_member_home: Input_Header_Handle
+		for macro, macro_index in ir.macros {
+			value, is_member := macro_group_member_value(policy, group, macro)
+			if !is_member {
 				continue
 			}
-			if group.prefix != "" && !strings.has_prefix(macro.name, group.prefix) {
-				continue
-			}
-			excluded := false
-			for excl in group.exclude_prefixes {
-				if excl != "" && strings.has_prefix(macro.name, excl) {
-					excluded = true
-					break
-				}
-			}
-			if excluded {
-				continue
-			}
-			value, is_int := macro_integer_value(macro)
-			if !is_int {
-				continue
-			}
-			if group.has_include && !policy_macro_include(policy, group, macro) {
-				continue
-			}
-			if claimed[u32(mi)] {
-				label := group.id if group.id != "" else group.name
+			if claimed_macros[u32(macro_index)] {
 				ir_diag_with_local(
 					ir,
 					group.diag_overrides,
 					.Macro_Group_Conflict,
 					"%q already claimed by an earlier group; skipping for %q",
 					macro.name,
-					label,
+					group_label,
 				)
 				continue
 			}
-			claimed[u32(mi)] = true
-			if first_home == 0 {
-				first_home = macro.home
+			claimed_macros[u32(macro_index)] = true
+			if first_member_home == 0 {
+				first_member_home = macro.home
 			}
 
 			member_name := macro.name
@@ -68,30 +49,80 @@ apply_macro_groups :: proc(ir: ^IR, policy: ^Policy) {
 			}
 			append(&members, Enum_Member{name = strings.clone(member_name), value = value})
 			if !group.emit_original_consts {
-				drop_macros[u32(mi)] = true
+				macros_to_drop[u32(macro_index)] = true
 			}
 		}
 		if len(members) == 0 {
-			label := group.id if group.id != "" else group.name
-			ir_diag_with_local(ir, group.diag_overrides, .Macro_Group_Empty, "macro group %q matched no macros", label)
+			ir_diag_with_local(ir, group.diag_overrides, .Macro_Group_Empty, "macro group %q matched no macros", group_label)
 			continue
 		}
-		arena_members := make([]Enum_Member, len(members))
-		for m, i in members {
-			arena_members[i] = m
+		persistent_members := make([]Enum_Member, len(members))
+		for member, member_index in members {
+			persistent_members[member_index] = member
 		}
-		_ = ir_add_enum(ir, Enum_Decl{name = strings.clone(group.name), backing = ir_builtin_type(ir, .Int), members = arena_members, home = first_home})
+		_ = ir_add_enum(
+			ir,
+			Enum_Decl{name = strings.clone(group.name), backing = macro_group_backing_type(ir, group), members = persistent_members, home = first_member_home},
+		)
 	}
 
-	if len(drop_macros) == 0 {
+	if len(macros_to_drop) == 0 {
 		return
 	}
-	kept := make([dynamic]Decl_Ref, 0, len(ir.order))
-	for ref in ir.order {
-		if ref.kind == .Macro && drop_macros[ref.index] {
+	kept_declarations := make([dynamic]Decl_Ref, 0, len(ir.order))
+	for declaration in ir.order {
+		if declaration.kind == .Macro && macros_to_drop[declaration.index] {
 			continue
 		}
-		append(&kept, ref)
+		append(&kept_declarations, declaration)
 	}
-	ir.order = kept
+	ir.order = kept_declarations
+}
+
+// Apply the documented filter order before a macro can claim membership:
+// prefix, excluded prefixes, integer value, then the optional policy callback.
+macro_group_member_value :: proc(policy: ^Policy, group: Macro_Group_Enum, macro: Macro_Decl) -> (value: i64, ok: bool) {
+	if group.prefix != "" && !macro_matches_prefix(macro.name, group.prefix) {
+		return 0, false
+	}
+	for excluded_prefix in group.exclude_prefixes {
+		if macro_matches_prefix(macro.name, excluded_prefix) {
+			return 0, false
+		}
+	}
+
+	parsed_value, is_integer := macro_integer_value(macro)
+	if !is_integer || !policy_macro_include(policy, group, macro) {
+		return 0, false
+	}
+	return parsed_value, true
+}
+
+macro_group_backing_type :: proc(ir: ^IR, group: Macro_Group_Enum) -> Type_Handle {
+	default_backing := ir_builtin_type(ir, .Int)
+	if group.base_type == "" {
+		return default_backing
+	}
+	// Resolve C spellings through the captured builtin so the selected type
+	// mode still applies. A core:c distinct type cannot be pasted directly as
+	// an Odin enum base.
+	if builtin_kind, is_builtin := builtin_kind_for_abi_spelling(group.base_type); is_builtin {
+		return ir_builtin_type(ir, builtin_kind)
+	}
+	unsigned, is_supported := enum_backing_spelling_signedness(group.base_type)
+	if !is_supported {
+		return default_backing // rejected while loading; protects direct internal callers
+	}
+	original_kind := Builtin_Kind.Int
+	if unsigned {
+		original_kind = .U_Int
+	}
+	original_backing := ir_builtin_type(ir, original_kind)
+	if leaf, is_substituted := ir_type(ir, original_backing).variant.(Type_Idiomatic_Leaf); is_substituted {
+		original_backing = leaf.original
+	}
+	return ir_add_type(
+		ir,
+		Type_Info{variant = Type_Idiomatic_Leaf{original = original_backing, spelling = strings.clone(group.base_type), reason = .Config_Override}},
+	)
 }

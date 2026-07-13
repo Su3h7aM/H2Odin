@@ -72,7 +72,7 @@ CONFIG_UNWIRED_SECTIONS := [?]cstring{}
 Macro_Group_Enum :: struct {
 	id:                   string,
 	name:                 string, // Odin enum type name
-	base_type:            string, // optional spelling hint; empty → c.int / Int
+	base_type:            string, // optional Odin backing spelling; empty → transformed C int
 	prefix:               string,
 	exclude_prefixes:     []string,
 	member_strip_prefix:  string,
@@ -388,16 +388,8 @@ policy_free_owned :: proc(policy: ^Policy) {
 	policy_free_string_map(&policy.type_overrides)
 	policy_free_string_slice(&policy.types_distinct)
 	policy_free_string_bool_map(&policy.types_opaque)
-	for g in policy.macro_groups {
-		delete(g.id)
-		delete(g.name)
-		delete(g.base_type)
-		delete(g.prefix)
-		delete(g.member_strip_prefix)
-		for s in g.exclude_prefixes {
-			delete(s)
-		}
-		delete(g.exclude_prefixes)
+	for &group in policy.macro_groups {
+		policy_free_macro_group(&group)
 	}
 	delete(policy.macro_groups)
 	policy.macro_groups = nil
@@ -419,6 +411,19 @@ policy_free_owned :: proc(policy: ^Policy) {
 	policy_free_member_action_map(&policy.proc_params)
 	policy_free_member_action_map(&policy.proc_results)
 	policy_free_wrapper_rules(&policy.proc_wrappers)
+}
+
+policy_free_macro_group :: proc(group: ^Macro_Group_Enum) {
+	delete(group.id)
+	delete(group.name)
+	delete(group.base_type)
+	delete(group.prefix)
+	delete(group.member_strip_prefix)
+	for excluded_prefix in group.exclude_prefixes {
+		delete(excluded_prefix)
+	}
+	delete(group.exclude_prefixes)
+	group^ = {}
 }
 
 policy_free_wrapper_rules :: proc(m: ^map[string]Wrapper_Rule) {

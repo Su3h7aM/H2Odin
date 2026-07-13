@@ -67,6 +67,30 @@ test_policy_load_declarative_fields :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_policy_rejects_non_integer_macro_group_backing :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"non-integer-macro-group-backing",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.macros.groups = {
+  h2o.macro_group.enum { name = "Invalid", base_type = "f32", prefix = "LIB_" },
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, !ok)
+}
+
+@(test)
 test_policy_loads_input_output_and_member_sections :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(
 		t,

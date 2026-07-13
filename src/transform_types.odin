@@ -254,7 +254,7 @@ substitute_leaf_types :: proc(ir: ^IR) {
 			}
 			measured_size = variant.size
 			preferred_spelling := builtin_spellings[variant.kind].idiomatic
-			if builtin_supports_integer_derivation(variant.kind) {
+			if builtin_is_integer(variant.kind) {
 				spelling, reason = resolve_integer_leaf_spelling(preferred_spelling, measured_size, builtin_is_unsigned(variant.kind))
 			} else if measured_size == odin_type_size(preferred_spelling) {
 				spelling = preferred_spelling
@@ -298,18 +298,6 @@ resolve_integer_leaf_spelling :: proc(preferred_spelling: string, measured_size:
 		return derived_spelling, .Derived_From_Measurement
 	}
 	return "", {}
-}
-
-// Bool and floating builtins must keep their semantic family. Matching only
-// the width with an integer would preserve layout while changing behavior.
-builtin_supports_integer_derivation :: proc(kind: Builtin_Kind) -> bool {
-	switch kind {
-	case .Char_Signed, .Char_Unsigned, .S_Char, .U_Char, .Short, .U_Short, .Int, .U_Int, .Long, .U_Long, .Long_Long, .U_Long_Long:
-		return true
-	case .Void, .Bool, .Float, .Double:
-		return false
-	}
-	return false
 }
 
 // A fixed-width Odin spelling for an integer leaf of the given measured
