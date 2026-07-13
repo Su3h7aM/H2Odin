@@ -2,64 +2,61 @@ package h2odin
 
 import "core:strings"
 
+LENGTH_PARAMETER_NAMES :: [?]string{"n", "len", "length", "count", "size", "num"}
+LENGTH_PARAMETER_SUFFIXES :: [?]string{"_len", "_length", "_count", "_size", "_num"}
+
 // Analysis adds facts to the IR — things provably true about the C API
 // regardless of any configuration. It reads and annotates; it decides
 // nothing, and it consults no policy, so it is deterministic without caveats.
 analyze :: proc(ir: ^IR) {
-	for i in 0 ..< len(ir.funcs) {
-		analyze_func_params(ir, &ir.funcs[i])
+	for &function in ir.funcs {
+		analyze_pointer_length_relationships(ir, &function)
 	}
 }
 
-analyze_func_params :: proc(ir: ^IR, func: ^Func_Decl) {
-	for i in 0 ..< len(func.params) {
-		param := &func.params[i]
-		param.facts.is_length_like = name_is_length_like(param.name) && type_is_integer_like(ir, param.type)
+analyze_pointer_length_relationships :: proc(ir: ^IR, function: ^Func_Decl) {
+	for &parameter in function.params {
+		parameter.facts = {}
 	}
 
-	for i in 0 ..< len(func.params) {
-		param := &func.params[i]
-		if !type_is_data_pointer(ir, param.type) {
+	for &parameter, pointer_index in function.params {
+		if !type_is_data_pointer(ir, parameter.type) {
 			continue
 		}
-		if i > 0 && func.params[i - 1].facts.is_length_like {
-			mark_length_neighbour(func, i, i - 1)
-		} else if i + 1 < len(func.params) && func.params[i + 1].facts.is_length_like {
-			mark_length_neighbour(func, i, i + 1)
+
+		length_parameter_index := -1
+		if pointer_index > 0 && parameter_is_length_like(ir, function.params[pointer_index - 1]) {
+			length_parameter_index = pointer_index - 1
+		} else if pointer_index + 1 < len(function.params) && parameter_is_length_like(ir, function.params[pointer_index + 1]) {
+			length_parameter_index = pointer_index + 1
+		}
+		if length_parameter_index >= 0 {
+			parameter.facts.has_length_like_neighbour = true
+			parameter.facts.length_param_index = length_parameter_index
 		}
 	}
 }
 
-mark_length_neighbour :: proc(func: ^Func_Decl, pointer_index, length_index: int) {
-	func.params[pointer_index].facts.has_length_like_neighbour = true
-	func.params[pointer_index].facts.length_param_index = i32(length_index)
-	func.params[length_index].facts.length_for_pointer_index = i32(pointer_index)
+parameter_is_length_like :: proc(ir: ^IR, parameter: Param) -> bool {
+	return name_is_length_like(parameter.name) && type_is_integer_like(ir, parameter.type)
 }
 
 name_is_length_like :: proc(name: string) -> bool {
-	if name == "" {
-		return false
+	for candidate in LENGTH_PARAMETER_NAMES {
+		if strings.equal_fold(name, candidate) {
+			return true
+		}
 	}
-	lower, err := strings.to_lower(name, context.temp_allocator)
-	if err != nil {
-		return false
-	}
-	switch lower {
-	case "n", "len", "length", "count", "size", "num":
-		return true
-	}
-	if strings.has_suffix(lower, "_len") ||
-	   strings.has_suffix(lower, "_length") ||
-	   strings.has_suffix(lower, "_count") ||
-	   strings.has_suffix(lower, "_size") ||
-	   strings.has_suffix(lower, "_num") {
-		return true
+	for suffix in LENGTH_PARAMETER_SUFFIXES {
+		if len(name) >= len(suffix) && strings.equal_fold(name[len(name) - len(suffix):], suffix) {
+			return true
+		}
 	}
 	return false
 }
 
-type_is_data_pointer :: proc(ir: ^IR, handle: Type_Handle) -> bool {
-	pointer, is_pointer := ir_type(ir, handle).variant.(Type_Pointer)
+type_is_data_pointer :: proc(ir: ^IR, type_handle: Type_Handle) -> bool {
+	pointer, is_pointer := ir_type(ir, type_handle).variant.(Type_Pointer)
 	if !is_pointer {
 		return false
 	}
@@ -67,8 +64,8 @@ type_is_data_pointer :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 	return !is_proc
 }
 
-type_is_integer_like :: proc(ir: ^IR, handle: Type_Handle) -> bool {
-	#partial switch variant in ir_type(ir, handle).variant {
+type_is_integer_like :: proc(ir: ^IR, type_handle: Type_Handle) -> bool {
+	#partial switch variant in ir_type(ir, type_handle).variant {
 	case Type_Builtin:
 		#partial switch variant.kind {
 		case .Char_Signed, .Char_Unsigned, .S_Char, .U_Char, .Short, .U_Short, .Int, .U_Int, .Long, .U_Long, .Long_Long, .U_Long_Long:
@@ -95,17 +92,17 @@ type_is_integer_like :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 		}
 	case Type_Idiomatic_Leaf:
 		// After idiomatic leaf sub, ints become i32/u32/… spellings.
-		s := variant.spelling
-		if strings.has_prefix(s, "i") || strings.has_prefix(s, "u") {
+		spelling := variant.spelling
+		if strings.has_prefix(spelling, "i") || strings.has_prefix(spelling, "u") {
 			return true
 		}
-		if strings.contains(s, "int") || strings.contains(s, "size") {
+		if strings.contains(spelling, "int") || strings.contains(spelling, "size") {
 			return true
 		}
 	case Type_Typedef_Ref:
-		decl := ir.typedefs[variant.decl]
-		if !decl.is_unresolvable {
-			return type_is_integer_like(ir, decl.aliased)
+		typedef := ir.typedefs[variant.decl]
+		if !typedef.is_unresolvable {
+			return type_is_integer_like(ir, typedef.aliased)
 		}
 	}
 	return false

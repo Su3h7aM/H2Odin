@@ -249,11 +249,11 @@ Decl_Ref :: struct {
 	index: u32,
 }
 
+// Configuration-independent parameter relationships discovered by Analysis.
+// The boolean distinguishes no relationship from a valid index of zero.
 Param_Facts :: struct {
-	is_length_like:            bool,
-	length_for_pointer_index:  i32,
 	has_length_like_neighbour: bool,
-	length_param_index:        i32,
+	length_param_index:        int,
 }
 
 Param :: struct {
