@@ -230,14 +230,14 @@ type_as_record_decl :: proc(ir: ^IR, handle: Type_Handle) -> (decl: Decl_Handle,
 }
 
 substitute_leaf_types :: proc(ir: ^IR) {
-	count := len(ir.types) // slots appended below carry no leaves to revisit
-	for i in 0 ..< count {
-		info := ir.types[i]
+	original_type_count := len(ir.types) // slots appended below carry no leaves to revisit
+	for type_index in 0 ..< original_type_count {
+		type_info := ir.types[type_index]
 		spelling: string
 		reason: Idiomatic_Reason
-		measured := -1
+		measured_size := -1
 
-		#partial switch variant in info.variant {
+		#partial switch variant in type_info.variant {
 		case Type_Builtin:
 			if variant.kind == .Void {
 				// No scalar shape; void is handled elsewhere (bare returns,
@@ -252,56 +252,72 @@ substitute_leaf_types :: proc(ir: ^IR) {
 				// measurement failure — nothing to diagnose.
 				continue
 			}
-			measured = variant.size
-			spelling, reason = resolve_leaf_spelling(builtin_spellings[variant.kind].idiomatic, measured, builtin_is_unsigned(variant.kind))
+			measured_size = variant.size
+			preferred_spelling := builtin_spellings[variant.kind].idiomatic
+			if builtin_supports_integer_derivation(variant.kind) {
+				spelling, reason = resolve_integer_leaf_spelling(preferred_spelling, measured_size, builtin_is_unsigned(variant.kind))
+			} else if measured_size == odin_type_size(preferred_spelling) {
+				spelling = preferred_spelling
+				reason = .Table_Preference
+			}
 		case Type_Std:
-			row, known := std_mapping_for(variant.name)
+			mapping, known := std_mapping_for(variant.name)
 			if !known {
 				continue
 			}
-			measured = variant.size
-			spelling, reason = resolve_leaf_spelling(row.idiomatic, measured, variant.unsigned)
+			measured_size = variant.size
+			spelling, reason = resolve_integer_leaf_spelling(mapping.idiomatic, measured_size, variant.unsigned)
 		case:
 			continue
 		}
 
 		if spelling == "" {
-			report_unresolved_idiomatic_leaf(ir, info, measured)
+			report_unresolved_idiomatic_leaf(ir, type_info, measured_size)
 			continue
 		}
 
 		// Rewriting the shared slot in place substitutes every use at once —
 		// interned builtins and enum backing types included. The original
 		// moves to a fresh slot first.
-		original := ir_add_type(ir, info)
-		ir.types[i] = Type_Info {
-			is_const = info.is_const,
-			variant = Type_Idiomatic_Leaf{original = original, spelling = spelling, reason = reason},
+		original_type := ir_add_type(ir, type_info)
+		ir.types[type_index] = Type_Info {
+			is_const = type_info.is_const,
+			variant = Type_Idiomatic_Leaf{original = original_type, spelling = spelling, reason = reason},
 		}
 	}
 }
 
-// Rungs 1 and 2 of the substitution ladder: prefer the table's semantic
-// spelling if the measured size confirms it on this target, otherwise
-// derive a fixed-width native spelling straight from the measured size and
-// signedness. Returns "" when neither is possible — rung 3, the fallback,
-// is the caller's job.
-resolve_leaf_spelling :: proc(preferred: string, measured: int, unsigned: bool) -> (spelling: string, reason: Idiomatic_Reason) {
-	if preferred != "" && measured >= 0 && measured == odin_type_size(preferred) {
-		return preferred, .Table_Preference
+// Rungs 1 and 2 for integer leaves: prefer the table's semantic spelling
+// when its width matches, otherwise derive a fixed-width spelling from the
+// measured size and signedness. Non-integer builtins never use this fallback.
+resolve_integer_leaf_spelling :: proc(preferred_spelling: string, measured_size: int, unsigned: bool) -> (spelling: string, reason: Idiomatic_Reason) {
+	if preferred_spelling != "" && measured_size >= 0 && measured_size == odin_type_size(preferred_spelling) {
+		return preferred_spelling, .Table_Preference
 	}
-	if derived := derive_native_spelling(measured, unsigned); derived != "" {
-		return derived, .Derived_From_Measurement
+	if derived_spelling := derive_native_integer_spelling(measured_size, unsigned); derived_spelling != "" {
+		return derived_spelling, .Derived_From_Measurement
 	}
 	return "", {}
+}
+
+// Bool and floating builtins must keep their semantic family. Matching only
+// the width with an integer would preserve layout while changing behavior.
+builtin_supports_integer_derivation :: proc(kind: Builtin_Kind) -> bool {
+	switch kind {
+	case .Char_Signed, .Char_Unsigned, .S_Char, .U_Char, .Short, .U_Short, .Int, .U_Int, .Long, .U_Long, .Long_Long, .U_Long_Long:
+		return true
+	case .Void, .Bool, .Float, .Double:
+		return false
+	}
+	return false
 }
 
 // A fixed-width Odin spelling for an integer leaf of the given measured
 // size and signedness. Size and signedness together are a complete
 // determination for any C integer type — there is no partial case here,
 // only "measurable" or not.
-derive_native_spelling :: proc(size: int, unsigned: bool) -> string {
-	switch size {
+derive_native_integer_spelling :: proc(measured_size: int, unsigned: bool) -> string {
+	switch measured_size {
 	case 1:
 		return "u8" if unsigned else "i8"
 	case 2:
@@ -317,9 +333,9 @@ derive_native_spelling :: proc(size: int, unsigned: bool) -> string {
 // Rung 3: the type could not be resolved to a native Odin spelling on this
 // target. Idiomatic mode keeps the ABI spelling for it, but this should be
 // rare, so it is collected for the end-of-run diagnostics report.
-report_unresolved_idiomatic_leaf :: proc(ir: ^IR, info: Type_Info, measured: int) {
+report_unresolved_idiomatic_leaf :: proc(ir: ^IR, type_info: Type_Info, measured_size: int) {
 	name: string
-	#partial switch variant in info.variant {
+	#partial switch variant in type_info.variant {
 	case Type_Builtin:
 		name = builtin_spellings[variant.kind].abi
 	case Type_Std:
@@ -330,13 +346,13 @@ report_unresolved_idiomatic_leaf :: proc(ir: ^IR, info: Type_Info, measured: int
 		.Unresolved_Idiomatic_Leaf,
 		"idiomatic mode: %s has no provable native spelling on this target (measured size %d); keeping ABI spelling",
 		name,
-		measured,
+		measured_size,
 	)
 }
 
-lower_type :: proc(ir: ^IR, handle: Type_Handle) {
-	info := ir_type(ir, handle)
-	#partial switch variant in info.variant {
+lower_type :: proc(ir: ^IR, type_handle: Type_Handle) {
+	type_info := ir_type(ir, type_handle)
+	#partial switch variant in type_info.variant {
 	case Type_Pointer:
 		lower_type(ir, variant.pointee)
 		// Array-parameter decay is a declaration-shape proof of array
@@ -344,49 +360,49 @@ lower_type :: proc(ir: ^IR, handle: Type_Handle) {
 		if variant.is_array_param_decay {
 			// Still honor proven void*/const char*/function special cases if
 			// the array element was one of those (rare); otherwise Multi.
-			base := lower_pointer(ir, variant.pointee)
-			if base.kind == .Single {
-				base.kind = .Multi
-				base.confidence = .Proven
-				base.reason = .Array_Param_Decay
+			lowered_pointer := lower_pointer(ir, variant.pointee)
+			if lowered_pointer.kind == .Single {
+				lowered_pointer.kind = .Multi
+				lowered_pointer.confidence = .Proven
+				lowered_pointer.reason = .Array_Param_Decay
 			}
-			info.variant = base
+			type_info.variant = lowered_pointer
 		} else {
-			info.variant = lower_pointer(ir, variant.pointee)
+			type_info.variant = lower_pointer(ir, variant.pointee)
 		}
-		ir.types[int(handle)] = info
+		ir.types[int(type_handle)] = type_info
 	case Type_Array:
 		lower_type(ir, variant.element)
 	case Type_Proc:
 		lower_type(ir, variant.return_type)
-		for param in variant.params {
-			lower_type(ir, param.type)
+		for parameter in variant.params {
+			lower_type(ir, parameter.type)
 		}
 	}
 }
 
-lower_pointer :: proc(ir: ^IR, pointee: Type_Handle) -> Type_Lowered_Pointer {
-	pointee_info := ir_type(ir, pointee)
+lower_pointer :: proc(ir: ^IR, pointee_type: Type_Handle) -> Type_Lowered_Pointer {
+	pointee_info := ir_type(ir, pointee_type)
 	#partial switch variant in pointee_info.variant {
 	case Type_Builtin:
 		if variant.kind == .Void {
-			return Type_Lowered_Pointer{pointee = pointee, kind = .Rawptr, confidence = .Proven, reason = .Void_Pointer}
+			return Type_Lowered_Pointer{pointee = pointee_type, kind = .Rawptr, confidence = .Proven, reason = .Void_Pointer}
 		}
 		if (variant.kind == .Char_Signed || variant.kind == .Char_Unsigned) && pointee_info.is_const {
-			return Type_Lowered_Pointer{pointee = pointee, kind = .CString, confidence = .Proven, reason = .Const_Char_Pointer}
+			return Type_Lowered_Pointer{pointee = pointee_type, kind = .CString, confidence = .Proven, reason = .Const_Char_Pointer}
 		}
 	case Type_Proc:
-		return Type_Lowered_Pointer{pointee = pointee, kind = .Proc, confidence = .Proven, reason = .Function_Pointer}
+		return Type_Lowered_Pointer{pointee = pointee_type, kind = .Proc, confidence = .Proven, reason = .Function_Pointer}
 	}
 
-	return Type_Lowered_Pointer{pointee = pointee, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}
+	return Type_Lowered_Pointer{pointee = pointee_type, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}
 }
 
 // Force a lowered single (or already multi) pointer to [^]T. Returns false when
 // the type is not a suitable data pointer (rawptr / cstring / proc / non-ptr).
-force_multi_pointer :: proc(ir: ^IR, handle: Type_Handle, reason: Pointer_Lowering_Reason) -> bool {
-	info := ir_type(ir, handle)
-	lowered, is_lowered := info.variant.(Type_Lowered_Pointer)
+force_multi_pointer :: proc(ir: ^IR, type_handle: Type_Handle, reason: Pointer_Lowering_Reason) -> bool {
+	type_info := ir_type(ir, type_handle)
+	lowered, is_lowered := type_info.variant.(Type_Lowered_Pointer)
 	if !is_lowered {
 		return false
 	}
@@ -395,8 +411,8 @@ force_multi_pointer :: proc(ir: ^IR, handle: Type_Handle, reason: Pointer_Loweri
 		lowered.kind = .Multi
 		lowered.confidence = .Proven
 		lowered.reason = reason
-		info.variant = lowered
-		ir.types[int(handle)] = info
+		type_info.variant = lowered
+		ir.types[int(type_handle)] = type_info
 		return true
 	}
 	return false

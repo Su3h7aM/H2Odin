@@ -66,6 +66,14 @@ builtin_spellings := [Builtin_Kind]Type_Spelling {
 	.Double        = {"c.double", "f64", true},
 }
 
+builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
+	#partial switch kind {
+	case .Bool, .Char_Unsigned, .U_Char, .U_Short, .U_Int, .U_Long, .U_Long_Long:
+		return true
+	}
+	return false
+}
+
 // A standard C typedef (stdint.h / stddef.h) that core:c spells under the
 // same name, so the generated code can say c.uint32_t instead of re-declaring
 // libc's typedef chain.

@@ -205,14 +205,6 @@ write_enum_value :: proc(b: ^strings.Builder, ir: ^IR, backing: Type_Handle, val
 	}
 }
 
-builtin_is_unsigned :: proc(kind: Builtin_Kind) -> bool {
-	#partial switch kind {
-	case .Bool, .Char_Unsigned, .U_Char, .U_Short, .U_Int, .U_Long, .U_Long_Long:
-		return true
-	}
-	return false
-}
-
 emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	if decl.is_unresolvable {
 		// Reported during extraction; nothing faithful to emit.

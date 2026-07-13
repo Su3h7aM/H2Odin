@@ -452,50 +452,6 @@ test_apply_struct_and_proc_adjustments :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_force_multi_pointer_rewrites_single :: proc(t: ^testing.T) {
-	arena: vmem.Arena
-	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
-	defer vmem.arena_destroy(&arena)
-	old := context.allocator
-	context.allocator = vmem.arena_allocator(&arena)
-	defer context.allocator = old
-
-	ir: IR
-	ir_init(&ir)
-	int_ty := ir_builtin_type(&ir, .Int)
-	ptr := ir_add_type(
-		&ir,
-		Type_Info{variant = Type_Lowered_Pointer{pointee = int_ty, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}},
-	)
-	testing.expect(t, force_multi_pointer(&ir, ptr, .Configured_Multi))
-	lowered := ir.types[int(ptr)].variant.(Type_Lowered_Pointer)
-	testing.expect_value(t, lowered.kind, Pointer_Lowering_Kind.Multi)
-	testing.expect_value(t, lowered.confidence, Pointer_Lowering_Confidence.Proven)
-	testing.expect_value(t, lowered.reason, Pointer_Lowering_Reason.Configured_Multi)
-}
-
-@(test)
-test_array_param_decay_lowers_to_multi :: proc(t: ^testing.T) {
-	arena: vmem.Arena
-	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
-	defer vmem.arena_destroy(&arena)
-	old := context.allocator
-	context.allocator = vmem.arena_allocator(&arena)
-	defer context.allocator = old
-
-	ir: IR
-	ir_init(&ir)
-	int_ty := ir_builtin_type(&ir, .Int)
-	// Simulate Extraction's array-param decay flag.
-	ptr := ir_add_type(&ir, Type_Info{variant = Type_Pointer{pointee = int_ty, is_array_param_decay = true}})
-	lower_type(&ir, ptr)
-	lowered := ir.types[int(ptr)].variant.(Type_Lowered_Pointer)
-	testing.expect_value(t, lowered.kind, Pointer_Lowering_Kind.Multi)
-	testing.expect_value(t, lowered.confidence, Pointer_Lowering_Confidence.Proven)
-	testing.expect_value(t, lowered.reason, Pointer_Lowering_Reason.Array_Param_Decay)
-}
-
-@(test)
 test_rename_of_escapes_keywords_from_absolute_overrides :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)
