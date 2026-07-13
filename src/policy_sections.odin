@@ -774,6 +774,13 @@ policy_read_enum_anonymous :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 		return true
 	}
 	rules := make([dynamic]Enum_Anonymous_Rule, 0, n)
+	rules_owned := true
+	defer if rules_owned {
+		for &rule in rules {
+			policy_free_anonymous_enum_rule(&rule)
+		}
+		delete(rules)
+	}
 	for i in 0 ..< n {
 		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
 		if elem_type != c.int(lua.Type.TABLE) {
@@ -781,21 +788,41 @@ policy_read_enum_anonymous :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 			lua.pop(L, 1)
 			return false
 		}
-		if !policy_reject_unknown_subkeys(L, "enums.anonymous[]", []cstring{"name", "first_member"}) {
-			lua.pop(L, 1)
-			return false
-		}
-		name, name_ok := policy_optional_string_field(L, "enums.anonymous[]", "name")
-		first, first_ok := policy_optional_string_field(L, "enums.anonymous[]", "first_member")
+		rule, rule_ok := policy_read_anonymous_enum_rule(L)
 		lua.pop(L, 1)
-		if !name_ok || !first_ok || name == "" || first == "" {
-			user_error("h2odin: config: enums.anonymous[] requires name and first_member")
+		if !rule_ok {
 			return false
 		}
-		append(&rules, Enum_Anonymous_Rule{name = name, first_member = first})
+		append(&rules, rule)
 	}
 	policy.enum_anonymous = rules[:]
+	rules_owned = false
 	return true
+}
+
+// Rule table is at stack top.
+policy_read_anonymous_enum_rule :: proc(L: ^lua.State) -> (rule: Enum_Anonymous_Rule, ok: bool) {
+	rule_owned := true
+	defer if rule_owned {
+		policy_free_anonymous_enum_rule(&rule)
+	}
+	if !policy_reject_unknown_subkeys(L, "enums.anonymous[]", []cstring{"name", "first_member"}) {
+		return rule, false
+	}
+	rule.name, ok = policy_optional_string_field(L, "enums.anonymous[]", "name")
+	if !ok {
+		return rule, false
+	}
+	rule.first_member, ok = policy_optional_string_field(L, "enums.anonymous[]", "first_member")
+	if !ok {
+		return rule, false
+	}
+	if rule.name == "" || rule.first_member == "" {
+		user_error("h2odin: config: enums.anonymous[] requires name and first_member")
+		return rule, false
+	}
+	rule_owned = false
+	return rule, true
 }
 
 policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
@@ -816,6 +843,13 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 		return true
 	}
 	rules := make([dynamic]Enum_Bit_Set_Rule, 0, n)
+	rules_owned := true
+	defer if rules_owned {
+		for &rule in rules {
+			policy_free_bit_set_rule(&rule)
+		}
+		delete(rules)
+	}
 	for i in 0 ..< n {
 		elem_type := lua.geti(L, -1, lua.Integer(i + 1))
 		if elem_type != c.int(lua.Type.TABLE) {
@@ -823,31 +857,54 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 			lua.pop(L, 1)
 			return false
 		}
-		if !policy_reject_unknown_subkeys(L, "enums.bit_sets[]", []cstring{"enum", "name", "mode", "diagnostics"}) {
-			lua.pop(L, 1)
-			return false
-		}
-		// "enum" is a Lua keyword-friendly field name in the constructor table.
-		enum_name, enum_ok := policy_optional_string_field(L, "enums.bit_sets[]", "enum")
-		name, name_ok := policy_optional_string_field(L, "enums.bit_sets[]", "name")
-		mode, mode_ok := policy_optional_string_field(L, "enums.bit_sets[]", "mode")
-		local_diags, local_ok := policy_read_local_diag_overrides(L, "enums.bit_sets[]")
+		rule, rule_ok := policy_read_bit_set_rule(L)
 		lua.pop(L, 1)
-		if !enum_ok || !name_ok || !mode_ok || enum_name == "" || name == "" {
-			user_error("h2odin: config: enums.bit_sets[] requires enum, name, and mode")
+		if !rule_ok {
 			return false
 		}
-		if !local_ok {
-			return false
-		}
-		if mode != "log2" {
-			user_errorf("h2odin: config: enums.bit_sets[].mode must be \"log2\", got %q", mode)
-			return false
-		}
-		append(&rules, Enum_Bit_Set_Rule{enum_name = enum_name, name = name, mode = mode, diag_overrides = local_diags})
+		append(&rules, rule)
 	}
 	policy.enum_bit_sets = rules[:]
+	rules_owned = false
 	return true
+}
+
+// Rule table is at stack top.
+policy_read_bit_set_rule :: proc(L: ^lua.State) -> (rule: Enum_Bit_Set_Rule, ok: bool) {
+	rule_owned := true
+	defer if rule_owned {
+		policy_free_bit_set_rule(&rule)
+	}
+	if !policy_reject_unknown_subkeys(L, "enums.bit_sets[]", []cstring{"enum", "name", "mode", "diagnostics"}) {
+		return rule, false
+	}
+	// "enum" is a Lua keyword-friendly field name in the constructor table.
+	rule.enum_name, ok = policy_optional_string_field(L, "enums.bit_sets[]", "enum")
+	if !ok {
+		return rule, false
+	}
+	rule.name, ok = policy_optional_string_field(L, "enums.bit_sets[]", "name")
+	if !ok {
+		return rule, false
+	}
+	rule.mode, ok = policy_optional_string_field(L, "enums.bit_sets[]", "mode")
+	if !ok {
+		return rule, false
+	}
+	if rule.enum_name == "" || rule.name == "" {
+		user_error("h2odin: config: enums.bit_sets[] requires enum, name, and mode")
+		return rule, false
+	}
+	if rule.mode != "log2" {
+		user_errorf("h2odin: config: enums.bit_sets[].mode must be \"log2\", got %q", rule.mode)
+		return rule, false
+	}
+	rule.diag_overrides, ok = policy_read_local_diag_overrides(L, "enums.bit_sets[]")
+	if !ok {
+		return rule, false
+	}
+	rule_owned = false
+	return rule, true
 }
 
 // ---------------------------------------------------------------- Inputs and output

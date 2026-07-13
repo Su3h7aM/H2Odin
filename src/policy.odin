@@ -393,16 +393,13 @@ policy_free_owned :: proc(policy: ^Policy) {
 	}
 	delete(policy.macro_groups)
 	policy.macro_groups = nil
-	for r in policy.enum_anonymous {
-		delete(r.name)
-		delete(r.first_member)
+	for &rule in policy.enum_anonymous {
+		policy_free_anonymous_enum_rule(&rule)
 	}
 	delete(policy.enum_anonymous)
 	policy.enum_anonymous = nil
-	for r in policy.enum_bit_sets {
-		delete(r.enum_name)
-		delete(r.name)
-		delete(r.mode)
+	for &rule in policy.enum_bit_sets {
+		policy_free_bit_set_rule(&rule)
 	}
 	delete(policy.enum_bit_sets)
 	policy.enum_bit_sets = nil
@@ -424,6 +421,19 @@ policy_free_macro_group :: proc(group: ^Macro_Group_Enum) {
 	}
 	delete(group.exclude_prefixes)
 	group^ = {}
+}
+
+policy_free_anonymous_enum_rule :: proc(rule: ^Enum_Anonymous_Rule) {
+	delete(rule.name)
+	delete(rule.first_member)
+	rule^ = {}
+}
+
+policy_free_bit_set_rule :: proc(rule: ^Enum_Bit_Set_Rule) {
+	delete(rule.enum_name)
+	delete(rule.name)
+	delete(rule.mode)
+	rule^ = {}
 }
 
 policy_free_wrapper_rules :: proc(m: ^map[string]Wrapper_Rule) {

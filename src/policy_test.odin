@@ -91,6 +91,56 @@ return config
 }
 
 @(test)
+test_policy_cleans_up_partially_read_anonymous_enum_rules :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"partial-anonymous-enum-rules",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.enums.anonymous = {
+  h2o.enum.anonymous { name = "Named", first_member = "FIRST" },
+  h2o.enum.anonymous { name = "Invalid" },
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_cleans_up_partially_read_bit_set_rules :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"partial-bit-set-rules",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.enums.bit_sets = {
+  h2o.enum.bit_set { enum = "Flag", name = "Flags", mode = "log2" },
+  h2o.enum.bit_set { enum = "Other", name = "Other_Flags", mode = "invalid" },
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, !ok)
+}
+
+@(test)
 test_policy_loads_input_output_and_member_sections :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(
 		t,

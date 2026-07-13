@@ -43,7 +43,7 @@ parse_command_line :: proc(args: []string) -> (options: Command_Line_Options, ok
 			verbose = true
 		case strings.has_prefix(arg, "-config:"), strings.has_prefix(arg, "--config:"):
 			if config_path != "" {
-				fmt.eprintln("h2odin: -config: specified more than once")
+				user_error("h2odin: -config: specified more than once")
 				return {}, false
 			}
 			prefix_len := 8 // "-config:"
@@ -52,12 +52,12 @@ parse_command_line :: proc(args: []string) -> (options: Command_Line_Options, ok
 			}
 			config_path = arg[prefix_len:]
 			if config_path == "" {
-				fmt.eprintln("h2odin: -config: requires a path")
+				user_error("h2odin: -config: requires a path")
 				return {}, false
 			}
 		case strings.has_prefix(arg, "-destination:"), strings.has_prefix(arg, "--destination:"), strings.has_prefix(arg, "-d:"):
 			if destination_set {
-				fmt.eprintln("h2odin: -destination: specified more than once")
+				user_error("h2odin: -destination: specified more than once")
 				return {}, false
 			}
 			value: string
@@ -71,14 +71,14 @@ parse_command_line :: proc(args: []string) -> (options: Command_Line_Options, ok
 			}
 			parsed_destination, destination_ok := parse_output_destination(value)
 			if !destination_ok {
-				fmt.eprintfln("h2odin: -destination: unknown value %q (want config or stdout)", value)
+				user_errorf("h2odin: -destination: unknown value %q (want config or stdout)", value)
 				return {}, false
 			}
 			destination = parsed_destination
 			destination_set = true
 		case strings.has_prefix(arg, "-resource-dir:"), strings.has_prefix(arg, "--resource-dir:"):
 			if resource_dir != "" {
-				fmt.eprintln("h2odin: -resource-dir: specified more than once")
+				user_error("h2odin: -resource-dir: specified more than once")
 				return {}, false
 			}
 			prefix_len := len("-resource-dir:")
@@ -87,16 +87,16 @@ parse_command_line :: proc(args: []string) -> (options: Command_Line_Options, ok
 			}
 			resource_dir = arg[prefix_len:]
 			if resource_dir == "" {
-				fmt.eprintln("h2odin: -resource-dir: requires a path")
+				user_error("h2odin: -resource-dir: requires a path")
 				return {}, false
 			}
 		case strings.has_prefix(arg, "-"):
-			fmt.eprintfln("h2odin: unknown argument %q", arg)
+			user_errorf("h2odin: unknown argument %q", arg)
 			return {}, false
 		case:
 			// Positional: project directory containing H2Odin.lua.
 			if project_dir != "" {
-				fmt.eprintfln("h2odin: unexpected argument %q (only one project directory is accepted)", arg)
+				user_errorf("h2odin: unexpected argument %q (only one project directory is accepted)", arg)
 				return {}, false
 			}
 			project_dir = arg
@@ -104,7 +104,7 @@ parse_command_line :: proc(args: []string) -> (options: Command_Line_Options, ok
 	}
 
 	if quiet && verbose {
-		fmt.eprintln("h2odin: -quiet and -verbose are mutually exclusive")
+		user_error("h2odin: -quiet and -verbose are mutually exclusive")
 		return {}, false
 	}
 
@@ -131,35 +131,35 @@ parse_output_destination :: proc(value: string) -> (Output_Destination, bool) {
 // -config: is explicit; a directory implies directory/H2Odin.lua.
 resolve_config_path :: proc(config_path: string, project_dir: string) -> (path: string, ok: bool) {
 	if config_path != "" && project_dir != "" {
-		fmt.eprintln("h2odin: pass either a project directory or -config:, not both")
+		user_error("h2odin: pass either a project directory or -config:, not both")
 		return "", false
 	}
 	if config_path != "" {
 		return config_path, true
 	}
 	if project_dir == "" {
-		fmt.eprintln("h2odin: pass a project directory (containing H2Odin.lua) or -config:path")
+		user_error("h2odin: pass a project directory (containing H2Odin.lua) or -config:path")
 		return "", false
 	}
 	if !os.exists(project_dir) {
-		fmt.eprintfln("h2odin: project directory %q does not exist", project_dir)
+		user_errorf("h2odin: project directory %q does not exist", project_dir)
 		return "", false
 	}
 	if !os.is_dir(project_dir) {
-		fmt.eprintfln("h2odin: %q is not a directory (use -config: for a Lua file path)", project_dir)
+		user_errorf("h2odin: %q is not a directory (use -config: for a Lua file path)", project_dir)
 		return "", false
 	}
 	joined_path, join_error := filepath.join({project_dir, DEFAULT_CONFIG_NAME})
 	if join_error != nil {
-		fmt.eprintfln("h2odin: cannot join config path under %q: %v", project_dir, join_error)
+		user_errorf("h2odin: cannot join config path under %q: %v", project_dir, join_error)
 		return "", false
 	}
 	if !os.exists(joined_path) {
-		fmt.eprintfln("h2odin: no %s in %q (create one or pass -config:path)", DEFAULT_CONFIG_NAME, project_dir)
+		user_errorf("h2odin: no %s in %q (create one or pass -config:path)", DEFAULT_CONFIG_NAME, project_dir)
 		return "", false
 	}
 	if !os.is_file(joined_path) {
-		fmt.eprintfln("h2odin: %q is not a file", joined_path)
+		user_errorf("h2odin: %q is not a file", joined_path)
 		return "", false
 	}
 	return joined_path, true

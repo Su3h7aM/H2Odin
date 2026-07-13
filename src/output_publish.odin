@@ -18,7 +18,7 @@ write_emit_result :: proc(result: Emit_Result, policy: ^Policy, destination: Out
 write_emit_to_stdout :: proc(result: Emit_Result, policy: ^Policy) -> bool {
 	// Stdout only makes sense for a single merged unit.
 	if len(result.files) != 1 {
-		fmt.eprintln("h2odin: -destination:stdout requires a single output unit (use output.layout = \"merged\")")
+		user_error("h2odin: -destination:stdout requires a single output unit (use output.layout = \"merged\")")
 		return false
 	}
 	text := result.files[0].content
@@ -43,13 +43,13 @@ write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> boo
 	output_folder := resolve_path(policy.output_folder, policy.config_dir) or_return
 
 	if output_folder == "" {
-		fmt.eprintln("h2odin: no config.output_folder set; set it in the Lua config or use -destination:stdout")
+		user_error("h2odin: no config.output_folder set; set it in the Lua config or use -destination:stdout")
 		return false
 	}
 
 	if err := os.make_directory_all(output_folder); err != nil {
 		if !os.is_dir(output_folder) {
-			fmt.eprintfln("h2odin: cannot create output_folder %q: %v", output_folder, err)
+			user_errorf("h2odin: cannot create output_folder %q: %v", output_folder, err)
 			return false
 		}
 	}
@@ -60,12 +60,12 @@ write_emit_to_config_folder :: proc(result: Emit_Result, policy: ^Policy) -> boo
 	// unit tests without an arena stay leak-clean.
 	stage_dir, stage_path_error := filepath.join({output_folder, STAGE_DIR_NAME}, context.temp_allocator)
 	if stage_path_error != nil {
-		fmt.eprintfln("h2odin: cannot join stage path under %q: %v", output_folder, stage_path_error)
+		user_errorf("h2odin: cannot join stage path under %q: %v", output_folder, stage_path_error)
 		return false
 	}
 	_ = os.remove_all(stage_dir)
 	if err := os.make_directory_all(stage_dir); err != nil {
-		fmt.eprintfln("h2odin: cannot create stage directory %q: %v", stage_dir, err)
+		user_errorf("h2odin: cannot create stage directory %q: %v", stage_dir, err)
 		return false
 	}
 	completed := false
@@ -103,11 +103,11 @@ stage_emit_result :: proc(result: Emit_Result, policy: ^Policy, stage_dir: strin
 		}
 		stage_path, path_error := filepath.join({stage_dir, file.filename}, context.temp_allocator)
 		if path_error != nil {
-			fmt.eprintfln("h2odin: cannot join stage file path: %v", path_error)
+			user_errorf("h2odin: cannot join stage file path: %v", path_error)
 			return nil, "", false
 		}
 		if write_error := os.write_entire_file(stage_path, text); write_error != nil {
-			fmt.eprintfln("h2odin: failed to stage %q: %v", stage_path, write_error)
+			user_errorf("h2odin: failed to stage %q: %v", stage_path, write_error)
 			return nil, "", false
 		}
 		filenames[i] = file.filename
@@ -116,11 +116,11 @@ stage_emit_result :: proc(result: Emit_Result, policy: ^Policy, stage_dir: strin
 	manifest_text := format_generated_manifest(filenames)
 	staged_manifest_path, path_error := filepath.join({stage_dir, GENERATED_MANIFEST_NAME}, context.temp_allocator)
 	if path_error != nil {
-		fmt.eprintfln("h2odin: cannot join stage manifest path: %v", path_error)
+		user_errorf("h2odin: cannot join stage manifest path: %v", path_error)
 		return nil, "", false
 	}
 	if write_error := os.write_entire_file(staged_manifest_path, manifest_text); write_error != nil {
-		fmt.eprintfln("h2odin: failed to stage manifest: %v", write_error)
+		user_errorf("h2odin: failed to stage manifest: %v", write_error)
 		return nil, "", false
 	}
 	return filenames, staged_manifest_path, true
@@ -133,14 +133,14 @@ publish_staged_generation :: proc(stage_dir, output_folder, staged_manifest: str
 		source_path, source_path_error := filepath.join({stage_dir, filename}, context.temp_allocator)
 		destination_path, destination_path_error := filepath.join({output_folder, filename}, context.temp_allocator)
 		if source_path_error != nil || destination_path_error != nil {
-			fmt.eprintln("h2odin: cannot join publish paths")
+			user_error("h2odin: cannot join publish paths")
 			return false
 		}
 		publish_file(source_path, destination_path) or_return
 	}
 	destination_manifest, path_error := filepath.join({output_folder, GENERATED_MANIFEST_NAME}, context.temp_allocator)
 	if path_error != nil {
-		fmt.eprintfln("h2odin: cannot join manifest path: %v", path_error)
+		user_errorf("h2odin: cannot join manifest path: %v", path_error)
 		return false
 	}
 	return publish_file(staged_manifest, destination_manifest)
@@ -151,12 +151,12 @@ publish_staged_generation :: proc(stage_dir, output_folder, staged_manifest: str
 publish_file :: proc(source_path, destination_path: string) -> bool {
 	if os.exists(destination_path) {
 		if error := os.remove(destination_path); error != nil {
-			fmt.eprintfln("h2odin: cannot replace %q: %v", destination_path, error)
+			user_errorf("h2odin: cannot replace %q: %v", destination_path, error)
 			return false
 		}
 	}
 	if error := os.rename(source_path, destination_path); error != nil {
-		fmt.eprintfln("h2odin: cannot publish %q → %q: %v", source_path, destination_path, error)
+		user_errorf("h2odin: cannot publish %q → %q: %v", source_path, destination_path, error)
 		return false
 	}
 	return true
@@ -222,7 +222,7 @@ remove_stale_generated_files :: proc(output_folder: string, old_filenames, new_f
 		}
 		if error := os.remove(path); error != nil {
 			// Non-fatal: the new generation is already published.
-			fmt.eprintfln("h2odin: warning: could not remove stale generated file %q: %v", path, error)
+			user_errorf("h2odin: warning: could not remove stale generated file %q: %v", path, error)
 		}
 	}
 }
