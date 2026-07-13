@@ -30,6 +30,20 @@ return config
 `
 
 @(test)
+test_policy_load_without_config_uses_generation_defaults :: proc(t: ^testing.T) {
+	policy, ok := policy_load("")
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+
+	testing.expect(t, ok)
+	testing.expect(t, policy.state == nil)
+	testing.expect(t, policy.procedures_at_end)
+	testing.expect(t, policy.emit_comments)
+	testing.expect_value(t, policy.diag_severity[.Opaque_Record_Complete], Diag_Severity.Error)
+	testing.expect_value(t, policy.diag_severity[.Pointer_Lowering_Guess], Diag_Severity.Warn)
+}
+
+@(test)
 test_policy_load_declarative_fields :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(t, "declarative", SECTIONED_DECLARATIVE)
 	if !path_ok {

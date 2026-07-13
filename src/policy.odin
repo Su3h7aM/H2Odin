@@ -272,64 +272,66 @@ Symbol_Context :: struct {
 // Load and execute the Lua configuration once, at startup. Declarative
 // fields are copied into the Policy; the table stays in the registry for
 // callback queries. Failure leaves no live Lua state for the caller.
-policy_load :: proc(path: string) -> (policy: Policy, ok: bool) {
+policy_load :: proc(path: string) -> (Policy, bool) {
+	// Keep partial ownership separate from the returned value so failure cleanup
+	// can run while the caller still receives a zero Policy.
+	loaded_policy: Policy
+	policy_set_defaults(&loaded_policy)
 	if path == "" {
-		// Same emission defaults as a config with empty sections.
-		empty := Policy {
-			procedures_at_end = true,
-			emit_comments     = true,
-		}
-		policy_set_diag_defaults(&empty)
-		return empty, true
+		return loaded_policy, true
 	}
 
-	L := lua.L_newstate()
-	if L == nil {
+	loaded_policy.state = lua.L_newstate()
+	if loaded_policy.state == nil {
 		user_error("h2odin: failed to create the Lua state")
 		return {}, false
 	}
+	load_succeeded := false
+	defer if !load_succeeded {
+		policy_free_owned(&loaded_policy)
+		policy_destroy(&loaded_policy)
+	}
 
-	config_dir, dir_ok := policy_config_dir(path)
-	if !dir_ok {
-		lua.close(L)
+	config_dir, config_dir_ok := policy_config_dir(path)
+	if !config_dir_ok {
 		return {}, false
 	}
 
-	policy_open_sandbox_libs(L)
-	if !policy_install_require(L, config_dir) {
-		lua.close(L)
+	policy_open_sandbox_libs(loaded_policy.state)
+	if !policy_install_require(loaded_policy.state, config_dir) {
+		return {}, false
+	}
+	if !policy_execute_config(&loaded_policy, path) {
+		return {}, false
+	}
+	if !policy_validate_keys(&loaded_policy) {
+		return {}, false
+	}
+	if !policy_read_config(&loaded_policy) {
 		return {}, false
 	}
 
+	loaded_policy.config_dir = strings.clone(config_dir)
+	load_succeeded = true
+	return loaded_policy, true
+}
+
+// Execute the config in the sandbox and retain its returned table for section
+// readers and later Transformation callbacks.
+policy_execute_config :: proc(policy: ^Policy, path: string) -> bool {
+	L := policy.state
 	config_path := strings.clone_to_cstring(path, context.temp_allocator)
 	if lua.L_dofile(L, config_path) != 0 {
 		user_errorf("h2odin: config error: %s", lua.tostring(L, -1))
-		lua.close(L)
-		return {}, false
+		return false
 	}
 	if !lua.istable(L, -1) {
 		user_errorf("h2odin: config %q must return a table", path)
-		lua.close(L)
-		return {}, false
+		return false
 	}
 
-	policy.state = L
 	lua.setfield(L, lua.REGISTRYINDEX, CONFIG_REGISTRY_KEY)
-
-	// Defaults before reading config so config.diagnostics can override.
-	policy_set_diag_defaults(&policy)
-
-	if !policy_validate_keys(&policy) || !policy_read_config(&policy) {
-		// Partial declarative fields may already be allocated on the caller's
-		// allocator (tests use the tracking allocator; main uses the generation
-		// arena). Free them before closing Lua so failed loads do not leak.
-		policy_free_owned(&policy)
-		policy_destroy(&policy)
-		return {}, false
-	}
-	// Clone only after a successful load so failed validation does not leak.
-	policy.config_dir = strings.clone(config_dir)
-	return policy, true
+	return true
 }
 
 // Free every owned string/map/slice on the policy except the Lua state.
@@ -497,8 +499,12 @@ policy_free_int_map :: proc(m: ^map[string]int) {
 	m^ = nil
 }
 
-// Categories whose default posture is error rather than warn.
-policy_set_diag_defaults :: proc(policy: ^Policy) {
+// Initialize defaults that differ from Policy's useful zero value.
+policy_set_defaults :: proc(policy: ^Policy) {
+	// Current emission defaults for an absent or empty output section.
+	policy.procedures_at_end = true
+	policy.emit_comments = true
+
 	// types.opaque applied to a complete record would change layout.
 	policy.diag_severity[.Opaque_Record_Complete] = .Error
 	// Colliding or self-shadowing Odin names produce broken output.
@@ -584,26 +590,12 @@ config_key_in :: proc(key: string, list: []cstring) -> bool {
 // Copy declarative fields and record which callbacks exist.
 policy_read_config :: proc(policy: ^Policy) -> bool {
 	for section in CONFIG_UNWIRED_SECTIONS {
-		if !policy_reject_if_set(policy, section) {
-			return false
-		}
+		policy_reject_if_set(policy, section) or_return
 	}
 
-	// Default: procedures after types (current emit layout).
-	policy.procedures_at_end = true
-	// Default: pass through C doc comments into the generated Odin.
-	policy.emit_comments = true
+	policy.package_name = policy_optional_string_top(policy, "package") or_return
 
-	package_name, package_ok := policy_optional_string_top(policy, "package")
-	if !package_ok {
-		return false
-	}
-	policy.package_name = package_name
-
-	mode, mode_ok := policy_optional_string_top(policy, "type_mode")
-	if !mode_ok {
-		return false
-	}
+	mode := policy_optional_string_top(policy, "type_mode") or_return
 	defer delete(mode)
 	switch mode {
 	case "":
@@ -618,22 +610,21 @@ policy_read_config :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 
-	return(
-		policy_read_inputs(policy) &&
-		policy_read_output_folder(policy) &&
-		policy_read_comments(policy) &&
-		policy_read_preprocess(policy) &&
-		policy_read_foreign(policy) &&
-		policy_read_naming(policy) &&
-		policy_read_types(policy) &&
-		policy_read_symbols(policy) &&
-		policy_read_macros(policy) &&
-		policy_read_enums(policy) &&
-		policy_read_structs(policy) &&
-		policy_read_procs(policy) &&
-		policy_read_output(policy) &&
-		policy_read_diagnostics(policy) \
-	)
+	policy_read_inputs(policy) or_return
+	policy_read_output_folder(policy) or_return
+	policy_read_comments(policy) or_return
+	policy_read_preprocess(policy) or_return
+	policy_read_foreign(policy) or_return
+	policy_read_naming(policy) or_return
+	policy_read_types(policy) or_return
+	policy_read_symbols(policy) or_return
+	policy_read_macros(policy) or_return
+	policy_read_enums(policy) or_return
+	policy_read_structs(policy) or_return
+	policy_read_procs(policy) or_return
+	policy_read_output(policy) or_return
+	policy_read_diagnostics(policy) or_return
+	return true
 }
 
 // inputs / output_folder may be nil; a non-nil value means the user set

@@ -266,7 +266,7 @@ write_proc_type_prefix :: proc(b: ^strings.Builder, cc: Calling_Conv) {
 // Report every unrepresentable calling convention on *emitted* funcs and on
 // procedure types still reachable from live declarations. Symbols dropped by
 // filter_declarations stay in the pools but are not in `ir.order`, so they
-// must not fail the run. Defaults to error severity (policy_set_diag_defaults).
+// must not fail the run. Defaults to error severity (policy_set_defaults).
 report_unsupported_calling_conventions :: proc(ir: ^IR) {
 	for ref in ir.order {
 		if ref.kind != .Func {
