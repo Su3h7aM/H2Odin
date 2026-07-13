@@ -511,13 +511,14 @@ ir_init :: proc(ir: ^IR) {
 }
 
 // Register config.inputs paths on the IR and return a normalized-path → handle
-// map for Extraction's location checks. Paths are stored as given (for stems).
-ir_register_input_headers :: proc(ir: ^IR, header_paths: []string) -> map[string]Input_Header_Handle {
-	files := make(map[string]Input_Header_Handle)
+// map for Extraction's location checks. Paths are stored as given (for stems);
+// allocator owns only the returned lookup map and its normalized keys.
+ir_register_input_headers :: proc(ir: ^IR, header_paths: []string, allocator := context.allocator) -> map[string]Input_Header_Handle {
+	files := make(map[string]Input_Header_Handle, allocator)
 	for path in header_paths {
 		handle := Input_Header_Handle(len(ir.input_headers))
 		append(&ir.input_headers, path)
-		if key := normalize_source_path(path); key != "" {
+		if key := normalize_source_path(path, allocator); key != "" {
 			files[key] = handle
 		}
 	}

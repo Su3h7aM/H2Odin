@@ -19,23 +19,23 @@ import clang "vendored:libclang"
 // extract_decls.odin and extract_types.odin.
 
 Extract_State :: struct {
-	ctx:         runtime.Context,
-	ir:          ^IR,
-	tu:          clang.Translation_Unit,
+	caller_context:   runtime.Context,
+	ir:               ^IR,
+	translation_unit: clang.Translation_Unit,
 
 	// USR → already-created declaration, so every mention of a tagged type
 	// resolves to one IR decl. Anonymous declarations have no USR and are
 	// never shared, so they skip the map. Funcs/vars/macros also register
 	// here so a sibling input included from another input is not emitted
 	// twice when both appear as config.inputs.
-	decl_map:    map[string]Decl_Ref,
+	decl_map:         map[string]Decl_Ref,
 
 	// Absolute, cleaned paths of every header in config.inputs → home handle.
 	// A declaration is "ours" when its source file is in this map — not merely
 	// when it is the current TU's main file. That keeps typedef names declared
 	// in a sibling input (clang-c/CXString.h used from Index.h) instead of
 	// peeling them to the underlying type at use sites.
-	input_files: map[string]Input_Header_Handle,
+	input_files:      map[string]Input_Header_Handle,
 }
 
 // Preprocess knobs passed into libclang as -I / -D. Paths and define values
@@ -77,23 +77,21 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 		user_error("h2odin: no input headers")
 		return false
 	}
-	index := clang.create_index(0, 0) // diagnostics are printed by check_parse_diagnostics
-	defer clang.dispose_index(index)
+	clang_index := clang.create_index(0, 0) // diagnostics are printed by check_parse_diagnostics
+	if clang_index == nil {
+		user_error("h2odin: failed to create the libclang index")
+		return false
+	}
+	defer clang.dispose_index(clang_index)
 
 	state := Extract_State {
-		ctx         = context,
-		ir          = ir,
-		decl_map    = make(map[string]Decl_Ref),
-		input_files = ir_register_input_headers(ir, header_paths),
+		caller_context = context,
+		ir             = ir,
+		decl_map       = make(map[string]Decl_Ref, context.temp_allocator),
+		input_files    = ir_register_input_headers(ir, header_paths, context.temp_allocator),
 	}
 
-	// Build the shared clang args once: comments, resource dir, -I, -D.
-	base_args := make([dynamic]cstring, context.temp_allocator)
-	append(&base_args, "-fparse-all-comments")
 	resource_dir, resource_source := resolve_clang_resource_dir(preprocess.resource_dir, preprocess.clang_executable)
-	if resource_dir != "" {
-		append(&base_args, strings.clone_to_cstring(fmt.tprintf("-resource-dir=%s", resource_dir), context.temp_allocator))
-	}
 	if provenance != nil {
 		provenance^ = Clang_Provenance {
 			libclang_version    = clone_clang_string(clang.get_clang_version()),
@@ -101,34 +99,60 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 			resource_dir_source = resource_source,
 		}
 	}
-	for path in preprocess.include_paths {
-		append(&base_args, strings.clone_to_cstring(fmt.tprintf("-I%s", path), context.temp_allocator))
-	}
-	if preprocess.defines != nil {
-		for name, value in preprocess.defines {
-			if value == "" {
-				append(&base_args, strings.clone_to_cstring(fmt.tprintf("-D%s", name), context.temp_allocator))
-			} else {
-				append(&base_args, strings.clone_to_cstring(fmt.tprintf("-D%s=%s", name, value), context.temp_allocator))
-			}
-		}
-	}
+	clang_arguments := build_clang_arguments(preprocess, resource_dir)
 
 	for header_path in header_paths {
-		path := strings.clone_to_cstring(header_path, context.temp_allocator)
-		tu := clang.parse_translation_unit(index, path, raw_data(base_args[:]), c.int(len(base_args)), nil, 0, {.Detailed_Preprocessing_Record})
-		if tu == nil {
-			user_errorf("h2odin: failed to parse %q", header_path)
-			return false
-		}
-		if !check_parse_diagnostics(tu, header_path) {
-			clang.dispose_translation_unit(tu)
-			return false
-		}
-		state.tu = tu
-		clang.visit_children(clang.get_translation_unit_cursor(tu), visit_top_level, clang.Client_Data(rawptr(&state)))
-		clang.dispose_translation_unit(tu)
+		extract_header(clang_index, &state, header_path, clang_arguments[:]) or_return
 	}
+	return true
+}
+
+// Build the libclang arguments shared by every input translation unit.
+// The returned array and formatted strings use the temporary allocator and
+// remain valid for this Extraction call.
+build_clang_arguments :: proc(preprocess: Extract_Preprocess, resource_dir: string) -> [dynamic]cstring {
+	arguments := make([dynamic]cstring, context.temp_allocator)
+	append(&arguments, "-fparse-all-comments")
+	if resource_dir != "" {
+		append(&arguments, fmt.ctprintf("-resource-dir=%s", resource_dir))
+	}
+	for include_path in preprocess.include_paths {
+		append(&arguments, fmt.ctprintf("-I%s", include_path))
+	}
+	for name, value in preprocess.defines {
+		if value == "" {
+			append(&arguments, fmt.ctprintf("-D%s", name))
+		} else {
+			append(&arguments, fmt.ctprintf("-D%s=%s", name, value))
+		}
+	}
+	return arguments
+}
+
+// Parse and visit one input while keeping the foreign translation-unit handle
+// scoped to this procedure. No libclang handle survives Extraction.
+extract_header :: proc(clang_index: clang.Index, state: ^Extract_State, header_path: string, clang_arguments: []cstring) -> bool {
+	header_cstring := strings.clone_to_cstring(header_path, context.temp_allocator)
+	translation_unit := clang.parse_translation_unit(
+		clang_index,
+		header_cstring,
+		raw_data(clang_arguments),
+		c.int(len(clang_arguments)),
+		nil,
+		0,
+		{.Detailed_Preprocessing_Record},
+	)
+	if translation_unit == nil {
+		user_errorf("h2odin: failed to parse %q", header_path)
+		return false
+	}
+	defer clang.dispose_translation_unit(translation_unit)
+
+	check_parse_diagnostics(translation_unit, header_path) or_return
+
+	state.translation_unit = translation_unit
+	defer state.translation_unit = nil
+	clang.visit_children(clang.get_translation_unit_cursor(translation_unit), visit_top_level, clang.Client_Data(rawptr(state)))
 	return true
 }
 
@@ -139,14 +163,14 @@ normalize_source_path :: proc(path: string, allocator := context.allocator) -> s
 	if path == "" {
 		return ""
 	}
-	if abs, err := filepath.abs(path, allocator); err == nil {
-		if cleaned, cerr := filepath.clean(abs, allocator); cerr == nil {
-			return cleaned
+	if absolute_path, path_error := filepath.abs(path, allocator); path_error == nil {
+		if cleaned_path, clean_error := filepath.clean(absolute_path, allocator); clean_error == nil {
+			return cleaned_path
 		}
-		return abs
+		return absolute_path
 	}
-	if cleaned, err := filepath.clean(path, allocator); err == nil {
-		return cleaned
+	if cleaned_path, clean_error := filepath.clean(path, allocator); clean_error == nil {
+		return cleaned_path
 	}
 	return path
 }
@@ -205,38 +229,38 @@ location_source_path :: proc(location: clang.Source_Location, allocator := conte
 }
 
 // Like clone_clang_string but into an explicit allocator (temp for probes).
-clone_clang_string_with :: proc(s: clang.String, allocator := context.allocator) -> string {
-	defer clang.dispose_string(s)
-	c_str := clang.get_c_string(s)
-	if c_str == nil {
+clone_clang_string_with :: proc(clang_string: clang.String, allocator := context.allocator) -> string {
+	defer clang.dispose_string(clang_string)
+	c_string := clang.get_c_string(clang_string)
+	if c_string == nil {
 		return ""
 	}
-	return strings.clone_from_cstring(c_str, allocator)
+	return strings.clone_from_cstring(c_string, allocator)
 }
 
 // Print every parse diagnostic; refuse to continue past errors. Clang
 // error-recovers from a bad parse (a missing stddef.h turns size_t into
 // int), so an AST with errors in it describes an ABI the header does not
 // have — no output at all beats silently wrong output.
-check_parse_diagnostics :: proc(tu: clang.Translation_Unit, header_path: string) -> bool {
-	ok := true
-	for i in 0 ..< clang.get_num_diagnostics(tu) {
-		diag := clang.get_diagnostic(tu, i)
-		defer clang.dispose_diagnostic(diag)
+check_parse_diagnostics :: proc(translation_unit: clang.Translation_Unit, header_path: string) -> bool {
+	parse_succeeded := true
+	for diagnostic_index in 0 ..< clang.get_num_diagnostics(translation_unit) {
+		diagnostic := clang.get_diagnostic(translation_unit, diagnostic_index)
+		defer clang.dispose_diagnostic(diagnostic)
 
-		severity := clang.get_diagnostic_severity(diag)
+		severity := clang.get_diagnostic_severity(diagnostic)
 		if severity == .Ignored {
 			continue
 		}
-		user_error(clone_clang_string(clang.format_diagnostic(diag, clang.default_diagnostic_display_options())))
+		user_error(clone_clang_string(clang.format_diagnostic(diagnostic, clang.default_diagnostic_display_options())))
 		if severity >= .Error {
-			ok = false
+			parse_succeeded = false
 		}
 	}
-	if !ok {
+	if !parse_succeeded {
 		user_errorf("h2odin: %q did not parse cleanly; refusing to generate from a guessed AST", header_path)
 	}
-	return ok
+	return parse_succeeded
 }
 
 // Resolve the builtin-header resource directory. Prefer an explicit override
@@ -246,9 +270,9 @@ resolve_clang_resource_dir :: proc(override_dir: string, clang_executable: strin
 	if override_dir != "" {
 		return override_dir, .Override
 	}
-	exe := clang_executable if clang_executable != "" else "clang"
-	if printed, ok := clang_print_resource_dir(exe); ok {
-		return printed, .Clang_Driver
+	executable := clang_executable if clang_executable != "" else "clang"
+	if resource_dir, ok := clang_print_resource_dir(executable); ok {
+		return resource_dir, .Clang_Driver
 	}
 	return "", .None
 }
@@ -257,11 +281,11 @@ resolve_clang_resource_dir :: proc(override_dir: string, clang_executable: strin
 // Result is temp-allocated. Empty/`ok=false` when the driver is missing or
 // fails — the parse-diagnostics gate then reports whatever breaks.
 clang_print_resource_dir :: proc(clang_executable: string) -> (dir: string, ok: bool) {
-	state, stdout, _, err := os.process_exec({command = {clang_executable, "-print-resource-dir"}}, context.temp_allocator)
-	if err != nil || !state.exited || state.exit_code != 0 {
+	process_state, standard_output, _, process_error := os.process_exec({command = {clang_executable, "-print-resource-dir"}}, context.temp_allocator)
+	if process_error != nil || !process_state.exited || process_state.exit_code != 0 {
 		return "", false
 	}
-	dir = strings.trim_space(string(stdout))
+	dir = strings.trim_space(string(standard_output))
 	if dir == "" {
 		return "", false
 	}
@@ -271,14 +295,14 @@ clang_print_resource_dir :: proc(clang_executable: string) -> (dir: string, ok: 
 // Print linked libclang version and the chosen resource directory on stderr.
 // Intended for -verbose so provenance mismatches are visible without changing
 // generation.
-report_clang_provenance :: proc(p: Clang_Provenance) {
-	version := p.libclang_version if p.libclang_version != "" else "(unknown)"
+report_clang_provenance :: proc(provenance: Clang_Provenance) {
+	version := provenance.libclang_version if provenance.libclang_version != "" else "(unknown)"
 	user_errorf("h2odin: libclang: %s", version)
-	switch p.resource_dir_source {
+	switch provenance.resource_dir_source {
 	case .Override:
-		user_errorf("h2odin: resource-dir: %s (override)", p.resource_dir)
+		user_errorf("h2odin: resource-dir: %s (override)", provenance.resource_dir)
 	case .Clang_Driver:
-		user_errorf("h2odin: resource-dir: %s (clang driver)", p.resource_dir)
+		user_errorf("h2odin: resource-dir: %s (clang driver)", provenance.resource_dir)
 	case .None:
 		user_error("h2odin: resource-dir: (none; clang driver unavailable and no override)")
 	}
@@ -286,7 +310,7 @@ report_clang_provenance :: proc(p: Clang_Provenance) {
 
 visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data: clang.Client_Data) -> clang.Child_Visit_Result {
 	state := cast(^Extract_State)rawptr(client_data)
-	context = state.ctx
+	context = state.caller_context
 
 	// Bind declarations from any config.inputs header, not only the current
 	// TU's main file. Sibling inputs included from another input (clang-c)
@@ -312,13 +336,13 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 	return .Continue
 }
 
-clone_clang_string :: proc(s: clang.String) -> string {
-	defer clang.dispose_string(s)
-	c_str := clang.get_c_string(s)
-	if c_str == nil {
+clone_clang_string :: proc(clang_string: clang.String) -> string {
+	defer clang.dispose_string(clang_string)
+	c_string := clang.get_c_string(clang_string)
+	if c_string == nil {
 		return ""
 	}
-	return strings.clone_from_cstring(c_str)
+	return strings.clone_from_cstring(c_string)
 }
 
 // A C parameter of array or function type is really a pointer — decay it

@@ -4,6 +4,45 @@ import vmem "core:mem/virtual"
 import "core:testing"
 
 @(test)
+test_build_clang_arguments_includes_comments_resource_paths_and_defines :: proc(t: ^testing.T) {
+	defines := make(map[string]string, context.temp_allocator)
+	defines["FEATURE"] = "1"
+	defines["FLAG"] = ""
+	preprocess := Extract_Preprocess {
+		include_paths = {"vendor/include"},
+		defines       = defines,
+	}
+
+	arguments := build_clang_arguments(preprocess, "/clang/resource")
+	testing.expect_value(t, len(arguments), 5)
+
+	found_comments := false
+	found_resource_dir := false
+	found_include_path := false
+	found_feature_define := false
+	found_flag_define := false
+	for argument in arguments {
+		switch string(argument) {
+		case "-fparse-all-comments":
+			found_comments = true
+		case "-resource-dir=/clang/resource":
+			found_resource_dir = true
+		case "-Ivendor/include":
+			found_include_path = true
+		case "-DFEATURE=1":
+			found_feature_define = true
+		case "-DFLAG":
+			found_flag_define = true
+		}
+	}
+	testing.expect(t, found_comments)
+	testing.expect(t, found_resource_dir)
+	testing.expect(t, found_include_path)
+	testing.expect(t, found_feature_define)
+	testing.expect(t, found_flag_define)
+}
+
+@(test)
 test_extract_captures_bit_field_widths_offsets_and_record_layout :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

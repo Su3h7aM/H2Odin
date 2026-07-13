@@ -17,12 +17,12 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 
 	tokens: [^]clang.Token
 	num_tokens: c.uint
-	clang.tokenize(state.tu, clang.get_cursor_extent(cursor), &tokens, &num_tokens)
+	clang.tokenize(state.translation_unit, clang.get_cursor_extent(cursor), &tokens, &num_tokens)
 	// disposeTokens must outlive the replacement loop below. A defer inside
 	// `if num_tokens > 0` would free the array at the end of that if-block
 	// (Odin defer is block-scoped), which is a use-after-free.
 	defer if num_tokens > 0 {
-		clang.dispose_tokens(state.tu, tokens, num_tokens)
+		clang.dispose_tokens(state.translation_unit, tokens, num_tokens)
 	}
 
 	replacement_count := max(int(num_tokens) - 1, 0)
@@ -30,7 +30,7 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	for i in 0 ..< replacement_count {
 		token := tokens[i + 1]
 		replacement[i] = Macro_Token {
-			spelling = clone_clang_string(clang.get_token_spelling(state.tu, token)),
+			spelling = clone_clang_string(clang.get_token_spelling(state.translation_unit, token)),
 			kind     = macro_token_kind_from_clang(clang.get_token_kind(token)),
 		}
 	}
@@ -111,7 +111,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 // typedef struct N { TD *p; } TD; — resolves to this decl instead of
 // recursing forever.
 typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
-	usr := clone_clang_string(clang.get_cursor_usr(cursor))
+	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if ref, found := state.decl_map[usr]; usr != "" && found {
 		return Decl_Handle(ref.index)
 	}
@@ -166,7 +166,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 // Get or create the IR declaration for an enum cursor; fill its members when
 // this cursor is the definition. Mirrors record_decl_for_cursor.
 enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
-	usr := clone_clang_string(clang.get_cursor_usr(cursor))
+	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if ref, found := state.decl_map[usr]; usr != "" && found {
 		handle := Decl_Handle(ref.index)
 		if state.ir.enums[int(handle)].doc == "" {
@@ -292,7 +292,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	// by USR would collapse distinct layouts into one IR decl — Box3D's
 	// TreeNode is the dogfood case. Anonymous records are never shared.
 	is_anonymous := clang.cursor_is_anonymous(cursor) != 0
-	usr := clone_clang_string(clang.get_cursor_usr(cursor))
+	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if !is_anonymous {
 		if ref, found := state.decl_map[usr]; usr != "" && found {
 			handle := Decl_Handle(ref.index)
@@ -572,7 +572,7 @@ cursor_deprecation :: proc(cursor: clang.Cursor) -> (deprecated: bool, message: 
 // input TU or an earlier include of the same sibling). Empty USR means the
 // entity cannot be shared; treat it as not-yet-captured.
 already_captured :: proc(state: ^Extract_State, cursor: clang.Cursor) -> bool {
-	usr := clone_clang_string(clang.get_cursor_usr(cursor))
+	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if usr == "" {
 		return false
 	}
@@ -581,7 +581,7 @@ already_captured :: proc(state: ^Extract_State, cursor: clang.Cursor) -> bool {
 }
 
 remember_captured :: proc(state: ^Extract_State, cursor: clang.Cursor, kind: Decl_Kind, index: u32) {
-	usr := clone_clang_string(clang.get_cursor_usr(cursor))
+	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if usr == "" {
 		return
 	}

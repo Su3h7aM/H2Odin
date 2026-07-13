@@ -39,6 +39,7 @@ main :: proc() {
 	}
 	defer vmem.arena_destroy(&arena)
 	context.allocator = vmem.arena_allocator(&arena)
+	defer free_all(context.temp_allocator)
 
 	command_line, command_line_ok := parse_command_line(os.args[1:])
 	if !command_line_ok {
