@@ -65,7 +65,7 @@ apply_enum_bit_sets :: proc(ir: ^IR, policy: ^Policy) {
 			continue
 		}
 
-		// Proven width from the C enum's measured integer type (spec 0004).
+		// Proven width from the C enum's measured integer type.
 		// Unknown or non-power-of-two byte sizes cannot back an Odin bit_set.
 		measured_bytes := type_measured_integer_size(ir, decl.backing)
 		backing_bits := measured_bytes * 8
@@ -151,7 +151,7 @@ type_measured_integer_size :: proc(ir: ^IR, handle: Type_Handle) -> int {
 	return -1
 }
 
-// Unsigned fixed-width spelling for a bit_set's explicit backing (spec 0004).
+// Unsigned fixed-width spelling for a bit_set's explicit backing.
 // "" when bits is not a supported power-of-two width.
 bit_set_backing_spelling :: proc(bits: int) -> string {
 	switch bits {

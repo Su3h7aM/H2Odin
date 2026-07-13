@@ -12,7 +12,7 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comm
 	write_doc(b, record.doc, 0, emit_comments)
 	write_deprecated_attr(b, record.deprecated, record.deprecated_message, 0)
 	fmt.sbprintf(b, "%s :: ", record.name)
-	// Spec 0007: handle style (idiomatic default or types.opaque override).
+	// Handle style (idiomatic default or types.opaque override).
 	// Declaration is distinct rawptr; references already collapsed one
 	// pointer level in Transformation.
 	if record.emit_as_handle {
@@ -110,7 +110,7 @@ write_doc :: proc(b: ^strings.Builder, doc: string, indent: int, emit_comments: 
 	}
 }
 
-// Spec 0009 fallback when the C attribute has no message.
+// Fallback when the C deprecation attribute has no message.
 DEPRECATED_FALLBACK_MESSAGE :: "deprecated in the C header"
 
 // @(deprecated = "msg") for procedures and types. indent matches the decl.
@@ -146,7 +146,7 @@ emit_enum :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, emit_comments: 
 			return
 		}
 		// A C anonymous enum is just a bag of integer constants; that is
-		// exactly what it becomes. Spec 0009: a deprecated anonymous enum
+		// exactly what it becomes. A deprecated anonymous enum
 		// still has no Odin attribute on constants — use Deprecated: lines.
 		for member in decl.members {
 			write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 0)
@@ -239,7 +239,7 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comm
 }
 
 emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, emit_comments: bool, imports: ^Emit_Imports) {
-	// Spec 0009: no @(deprecated) on variables — semantic Deprecated: line.
+	// No @(deprecated) on variables — emit a semantic Deprecated: line.
 	write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 1)
 	write_doc(b, decl.doc, 1, emit_comments)
 	if decl.link_name != "" {
@@ -260,7 +260,7 @@ emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl, emit_comments: bool) {
 		return
 	}
 
-	// Spec 0009: no @(deprecated) on constants — semantic Deprecated: line.
+	// No @(deprecated) on constants — emit a semantic Deprecated: line.
 	write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 0)
 	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
@@ -270,7 +270,7 @@ emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, emit_comm
 	write_doc(b, decl.doc, 0, emit_comments)
 	fmt.sbprintf(b, "%s :: bit_set[", decl.name)
 	write_type(b, ir, decl.elem, 0, emit_comments, imports)
-	// Explicit backing from the measured C enum width (spec 0004). Bare
+	// Explicit backing from the measured C enum width. Bare
 	// bit_set[E] sizes from the highest flag bit and is not ABI-faithful.
 	backing := bit_set_backing_spelling(decl.backing_bits)
 	if backing == "" {

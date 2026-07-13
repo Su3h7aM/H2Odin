@@ -1,4 +1,5 @@
 build/
+*.odin-doc
 *.tar.gz
 
 # mise local overrides (machine-specific; not shared)

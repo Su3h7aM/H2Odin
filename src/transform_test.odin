@@ -719,7 +719,7 @@ test_macro_group_and_bit_set_inherit_home :: proc(t: ^testing.T) {
 	ir_add_macro(&ir, Macro_Decl{name = "FLG_A", tokens = {{spelling = "1", kind = .Literal}}, home = 1})
 	ir_add_macro(&ir, Macro_Decl{name = "FLG_B", tokens = {{spelling = "2", kind = .Literal}}, home = 2})
 	// Backing enum for bit_set lives in header b. Seed a measured size so
-	// the bit_set transform has a proven width (spec 0004).
+	// the bit_set transform has a proven width.
 	int_ty := ir_builtin_type(&ir, .Int)
 	ir.types[int(int_ty)].variant = Type_Builtin {
 		kind = .Int,
@@ -789,7 +789,7 @@ test_bit_set_records_measured_backing_width :: proc(t: ^testing.T) {
 	testing.expect_value(t, len(ir.bit_sets), 1)
 	if len(ir.bit_sets) == 1 {
 		testing.expect_value(t, ir.bit_sets[0].backing_bits, 32)
-		// Hard bar from spec 0004: Odin size of the explicit backing must
+		// The Odin size of the explicit backing must
 		// match the measured C enum size (4 bytes for int).
 		testing.expect_value(t, odin_type_size(bit_set_backing_spelling(ir.bit_sets[0].backing_bits)), 4)
 	}

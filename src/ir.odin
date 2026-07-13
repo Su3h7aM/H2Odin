@@ -115,9 +115,9 @@ Idiomatic_Reason :: enum {
 	Config_Override,
 	// Opaque handle: typedef of a pointer to an incomplete record (automatic)
 	// or a void* typedef opted in via types.distinct. Spelling is
-	// `distinct rawptr` (spec 0005).
+	// `distinct rawptr`.
 	Opaque_Handle,
-	// Foreign C type mapped to its Odin defining package (spec 0010): POSIX
+	// Foreign C type mapped to its Odin defining package: POSIX
 	// names to core:sys/posix (sockaddr → posix.sockaddr), ISO C library
 	// names to core:c/libc (time_t → libc.time_t). Emission imports the
 	// package the spelling names. One spelling in both type modes.
@@ -140,7 +140,7 @@ Type_Idiomatic_Leaf :: struct {
 Type_Pointer :: struct {
 	pointee:              Type_Handle,
 	// Extraction: this pointer came from a C array parameter form that decayed
-	// at the ABI boundary. Proven multi-pointer candidate (spec 0011).
+	// at the ABI boundary. Proven multi-pointer candidate.
 	is_array_param_decay: bool,
 }
 
@@ -222,8 +222,8 @@ Type_Typedef_Ref :: struct {
 
 // Odin `bit_set[Enum; uN]` produced by enums.bit_sets (log2 transform). The
 // element enum is a normal Enum_Decl; this type is only the set wrapper.
-// backing_bits is the proven width from the C enum's measured integer type
-// (spec 0004); never size from the highest flag bit.
+// backing_bits is the proven width from the C enum's measured integer type;
+// never size from the highest flag bit.
 Type_Bit_Set :: struct {
 	elem:         Type_Handle, // Type_Enum_Ref to the flag enum
 	backing_bits: int, // 8 / 16 / 32 / 64
@@ -282,7 +282,7 @@ Func_Decl :: struct {
 	is_variadic:          bool,
 	// libclang calling convention on the function type (Extraction fact).
 	calling_conv:         Calling_Conv,
-	// Spec 0009: C deprecation fact (attribute / availability). Message is
+	// C deprecation fact (attribute / availability). Message is
 	// arena-copied; empty when the attribute carries none.
 	deprecated:           bool,
 	deprecated_message:   string,
@@ -329,16 +329,16 @@ Record_Decl :: struct {
 	// field of an unsupported type). Extraction or the bit-field layout proof
 	// reports why; emission falls back rather than guessing.
 	has_unrepresentable_fields: bool,
-	// Spec 0007: incomplete tag emitted as handle (mode default or
+	// Incomplete tag emitted as handle (mode default or
 	// types.opaque override): `Name :: distinct rawptr`, one pointer level
 	// collapsed at references.
 	emit_as_handle:             bool,
 	is_typedef_named:           bool, // anonymous tag that a typedef gives a name to
 	// Declared in a system header: someone else's type. Its layout is not
-	// ours to claim (spec 0010); Transformation maps it, stubs it, or
+	// ours to claim; Transformation maps it, stubs it, or
 	// diagnoses it. Distinct from `home`, which is about output placement.
 	is_foreign:                 bool,
-	// Spec 0009: C deprecation fact.
+	// C deprecation fact.
 	deprecated:                 bool,
 	deprecated_message:         string,
 	doc:                        string,
@@ -358,7 +358,7 @@ Enum_Decl :: struct {
 	members:            []Enum_Member,
 	is_typedef_named:   bool,
 	is_foreign:         bool, // declared in a system header (see Record_Decl)
-	// Spec 0009: C deprecation fact.
+	// C deprecation fact.
 	deprecated:         bool,
 	deprecated_message: string,
 	doc:                string,
@@ -375,7 +375,7 @@ Typedef_Decl :: struct {
 	// the failure into the generated code.
 	is_unresolvable:    bool,
 	is_foreign:         bool, // declared in a system header (see Record_Decl)
-	// Spec 0009: C deprecation fact.
+	// C deprecation fact.
 	deprecated:         bool,
 	deprecated_message: string,
 	doc:                string,
@@ -386,7 +386,7 @@ Var_Decl :: struct {
 	name:               string,
 	link_name:          string, // as in Func_Decl
 	type:               Type_Handle,
-	// Spec 0009: C deprecation fact. Emitted as a Deprecated: doc line (no
+	// C deprecation fact. Emitted as a Deprecated: doc line (no
 	// Odin attribute on variables).
 	deprecated:         bool,
 	deprecated_message: string,
@@ -413,7 +413,7 @@ Macro_Decl :: struct {
 	name:               string,
 	tokens:             []Macro_Token, // raw replacement-list tokens after the name
 	is_function_like:   bool,
-	// Spec 0009: C deprecation fact when libclang reports it (rare for
+	// C deprecation fact when libclang reports it (rare for
 	// macros). Emitted as a Deprecated: doc line like variables.
 	deprecated:         bool,
 	deprecated_message: string,
@@ -423,7 +423,7 @@ Macro_Decl :: struct {
 
 // A named `Name :: bit_set[Enum; uN]` produced by enums.bit_sets. Stored as
 // its own pool entry so emission stays a pure serialization of IR decls.
-// backing_bits is the C enum's measured integer width in bits (spec 0004).
+// backing_bits is the C enum's measured integer width in bits.
 Bit_Set_Decl :: struct {
 	name:         string,
 	elem:         Type_Handle, // Type_Enum_Ref
@@ -446,8 +446,8 @@ Wrapper_Slice :: struct {
 	public_name:   string,
 }
 
-// Idiomatic-only public procedure that calls a retained faithful foreign func
-// (spec 0011). Transformation plans; Emission serializes a minimal body.
+// Idiomatic-only public procedure that calls a retained faithful foreign func.
+// Transformation plans; Emission serializes a minimal body.
 Wrapper_Decl :: struct {
 	name:            string, // public Odin name
 	target:          Decl_Handle, // ir.funcs index
@@ -460,6 +460,11 @@ Wrapper_Decl :: struct {
 	doc:             string,
 }
 
+// IR owns the complete, libclang-independent model of one generation run.
+// Declarations and types live in dense arena-backed pools and refer to one
+// another by handles, never pointers. `order` is a presentation/provenance
+// index over live declarations; removing an item from it does not invalidate
+// pool handles.
 IR :: struct {
 	types:         [dynamic]Type_Info,
 	funcs:         [dynamic]Func_Decl,

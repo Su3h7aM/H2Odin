@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#MISE description="Generate src.odin-doc from source documentation"
+#MISE alias="doc"
+#MISE sources=["src/**/*.odin", "scripts/doc", "scripts/_common.sh"]
+#MISE outputs=["src.odin-doc"]
+#
+# Generate the machine-readable input consumed by Odin documentation tools.
+set -euo pipefail
+# shellcheck source=scripts/_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+# The binary doc format references imported-package files, so the compiler
+# requires the complete package graph when writing it.
+run_odin doc "$SRC_DIR" -doc-format -all-packages -out:"$ROOT/src.odin-doc" "${ODIN_FLAGS[@]}" "${COLLECTION_FLAGS[@]}"

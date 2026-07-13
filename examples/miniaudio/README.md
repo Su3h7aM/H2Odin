@@ -32,7 +32,7 @@ Or the full corpus gate: `./scripts/validate-examples`.
 | Generate | OK (~0.3s, large single-file package) |
 | `odin check` | **OK** |
 | Opaque handles | pure `typedef void` → `distinct rawptr` |
-| Shadowing | resolved via `naming.override` (spec 0008) |
+| Shadowing | resolved via `naming.override` |
 | Foreign procs (approx.) | 931 |
 | `[^]T` sites | 2 |
 | `#by_ptr` params | 5 |

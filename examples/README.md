@@ -24,11 +24,10 @@ for ex in fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio ggml; do
 done
 ```
 
-Configs default to idiomatic mode where noted. That means generated
-declarations keep the C ABI while using native Odin spellings where H2Odin
-can prove they are equivalent on the target. Curated packages also exercise
-`pointer = "multi"`, `procs.require_results`, and idiomatic `#by_ptr` — see
-[`docs/vendor-parity-metrics-2026-07-12.md`](../docs/vendor-parity-metrics-2026-07-12.md).
+Configs default to idiomatic mode where noted. Generated declarations keep
+the C ABI while using native Odin spellings where H2Odin can prove they are
+equivalent on the target. Curated packages also exercise `pointer = "multi"`,
+`procs.require_results`, idiomatic `#by_ptr`, and selected wrappers.
 
 ## Development fixtures
 
@@ -41,9 +40,9 @@ can prove they are equivalent on the target. Curated packages also exercise
 ## Validation benchmarks
 
 These target Odin's hand-written **`vendor:`** packages as high-quality
-references. The goal is not byte-identical output, but *practical* bindings
-that `odin check`, match naming/shape where the generator can, and document
-remaining intentional gaps in each example README.
+references. The goal is not byte-identical output, but practical bindings
+that pass `odin check` and match naming and shape where the generator can do
+so without inventing library semantics.
 
 | Example | Official reference | Role | `odin check` |
 |---------|-------------------|------|--------------|
@@ -56,11 +55,10 @@ remaining intentional gaps in each example README.
 
 “Functional” for this corpus means: generation does not panic; every emitted
 type resolves; final names are valid in their Odin scopes; transitive foreign
-declarations follow an explicit policy (spec 0010); and the package passes
-`odin check`. Byte-for-byte parity, hand-written helpers, and wrappers are not
-part of that gate. Declaration-level multipointer / `#by_ptr` /
-`require_results` counts are recorded separately in the metrics note above.
+declarations follow an explicit policy; and the package passes `odin check`.
+Byte-for-byte parity and library-specific hand-written helpers are not part of
+that gate.
 
 When a regenerate diverges from the official package in a new way, prefer
-fixing the generator (in a dedicated change) or documenting the gap in that
-example's README over papering over it in the config alone.
+fixing the generator or documenting the intentional choice in that example's
+README over papering over it in the config alone.

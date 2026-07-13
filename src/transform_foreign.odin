@@ -5,7 +5,7 @@ import "core:strings"
 // Foreign types — those a system header declares, not the library's own
 // headers — are captured pool-only by Extraction. Transformation then either:
 //
-//   1. Maps a known system type to its Odin defining package (spec 0010):
+//   1. Maps a known system type to its Odin defining package:
 //      POSIX names to core:sys/posix (sockaddr → posix.sockaddr), ISO C
 //      library names to core:c/libc (time_t → libc.time_t). One spelling in
 //      both type modes — these Odin types are `distinct` and OS-width
@@ -22,12 +22,12 @@ Foreign_Type_Entry :: struct {
 	c_name:    string,
 	spelling:  string, // Unix/default defining-package spelling (posix.* / libc.*)
 	// Scalars are width-guarded against the Odin type's size before mapping
-	// (spec 0010, decision 6); compounds rely on the allowlist plus Odin's
+	// compounds rely on the allowlist plus Odin's
 	// own per-OS layout, since foreign layouts are deliberately not captured.
 	is_scalar: bool,
 }
 
-// The built-in map (spec 0010). Every spelling is verified to exist as an
+// Every spelling in the built-in map is verified to exist as an
 // exported name in the supported Odin version — `sockaddr_dl` and `ip_mreq`,
 // for instance, are *not* exported by core:sys/posix and must not appear here.
 // Grow this from validation-corpus needs, not by inventorying the packages.
@@ -205,7 +205,7 @@ resolve_foreign_typedefs :: proc(ir: ^IR, policy: ^Policy) {
 		if !td.is_foreign || td.name == "" || td.is_unresolvable {
 			continue
 		}
-		// Config first (spec 0010, decision 5). A foreign typedef is never
+		// Config first. A foreign typedef is never
 		// emitted, so even types.overrides — which keeps *our* typedefs as
 		// named aliases — must resolve at the use sites here.
 		if spelling, named := config_spelling(policy, td.name); named {

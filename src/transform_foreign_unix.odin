@@ -5,7 +5,7 @@ import "core:c/libc"
 import "core:sys/posix"
 
 // Odin-side width of a built-in map spelling on the generation target, or -1
-// when the target does not define it (spec 0010, decision 6). size_of on the
+// when the target does not define it. size_of on the
 // real Odin type is the only honest source: core:sys/posix encodes the
 // per-OS widths itself (pid_t is c.int32_t on Darwin/BSD, c.int on Linux),
 // and restating them here would be the duplication the spec rejects.

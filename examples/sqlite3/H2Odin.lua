@@ -9,7 +9,7 @@
 -- sites; those typedef decls are removed as pure aliases.
 --
 -- type_mode = idiomatic: incomplete tag handles (sqlite3, stmt, value, …)
--- become distinct rawptr with collapsed pointers (spec 0007). Complete
+-- become distinct rawptr with collapsed pointers. Complete
 -- records (file, vfs, …) stay as structs. Override a name with
 -- types.opaque = { sqlite3_stmt = false } if you need the faithful shape.
 --

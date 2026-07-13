@@ -227,7 +227,7 @@ Enum_Fill :: struct {
 	members:         [dynamic]Enum_Member,
 	// When true, capture via get_enum_constant_decl_unsigned_value so values
 	// like 0xFFFFFFFF stay bit-correct for unsigned-backed enums (spec note
-	// in ROADMAP: signed-only capture stored -1 for those).
+	// signed-only capture stored -1 for those).
 	unsigned_values: bool,
 }
 
@@ -306,7 +306,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 			if clang.is_cursor_definition(cursor) != 0 && !state.ir.records[int(handle)].is_complete {
 				if cursor_is_foreign(cursor) {
 					// A system header's layout is not ours to copy into the IR
-					// as if we had bound it (spec 0010). Stays a pool-only,
+					// as if we had bound it. Stays a pool-only,
 					// incomplete entry for Transformation to resolve.
 				} else {
 					// Ours: the definition site wins for output placement, and
@@ -548,7 +548,7 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	remember_captured(state, cursor, .Func, u32(len(state.ir.funcs) - 1))
 }
 
-// Spec 0009: deprecation is a header fact. Availability reports Deprecated;
+// Deprecation is a header fact. Availability reports Deprecated;
 // platform availability recovers the attribute message (empty when none).
 cursor_deprecation :: proc(cursor: clang.Cursor) -> (deprecated: bool, message: string) {
 	if clang.get_cursor_availability(cursor) != .Deprecated {

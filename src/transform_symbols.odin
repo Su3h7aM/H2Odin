@@ -145,7 +145,7 @@ filter_declarations :: proc(ir: ^IR, policy: ^Policy) {
 		// Anonymous records are spelled inline where they are used and stand
 		// or fall with their user. Anonymous enums, however, emit as free
 		// constants (NAME :: value); a C-deprecated one is a top-level
-		// constant for remove.deprecated (spec 0009).
+		// constant for remove.deprecated.
 		if name == "" {
 			if ref.kind == .Enum && deprecated && policy.remove_deprecated {
 				continue
@@ -179,7 +179,7 @@ should_remove_symbol :: proc(policy: ^Policy, name: string, kind: Symbol_Kind, d
 			return true
 		}
 	}
-	// Spec 0009: fourth declarative tier — drop every C-deprecated symbol.
+	// Fourth declarative tier: drop every C-deprecated symbol.
 	if policy.remove_deprecated && deprecated {
 		return true
 	}

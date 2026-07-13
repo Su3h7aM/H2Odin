@@ -1,3 +1,23 @@
+// H2Odin generates Odin bindings from C headers.
+//
+// A generation run has four stages:
+//
+//	Extraction -> Analysis -> Transformation -> Emission
+//
+// Extraction is the only stage that uses libclang and copies all foreign-owned
+// data into the generation arena. Analysis adds configuration-independent facts.
+// Transformation is the only stage that consults the Lua-backed policy and makes
+// decisions. Emission only serializes the decided IR into Odin source.
+//
+// Configuration is a sandboxed Lua program that requires `h2odin`, creates a
+// sectioned value with `h2o.config()`, and returns it. Configuration selects
+// behavior; generated Odin is always authored by H2Odin. The IR uses handles
+// rather than pointers because its dense pools may grow during extraction and
+// transformation.
+//
+// Long-lived data belongs to one generation arena. Temporary work uses
+// `context.temp_allocator`, and strings received from libclang or Lua are copied
+// at their boundary.
 package h2odin
 
 import "core:fmt"
@@ -349,7 +369,7 @@ resolve_emit_names :: proc(policy: ^Policy, stem: string) -> (package_name, fore
 
 // Absolute paths stay as-is; relative paths join base_dir when non-empty.
 // Join failure is fatal — a silent cwd-relative fallback can pick the wrong
-// header or output dir (see ROADMAP Code health).
+// header or output directory.
 resolve_path :: proc(path: string, base_dir: string) -> (resolved: string, ok: bool) {
 	if path == "" || filepath.is_abs(path) || base_dir == "" {
 		return path, true

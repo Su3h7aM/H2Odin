@@ -2,7 +2,7 @@ package h2odin
 
 import "core:fmt"
 
-// Post-rename name validation (spec 0008). Detects and reports; never
+// Post-rename name validation detects and reports; it never
 // auto-renames. A collision has no conservative default spelling, so the
 // generator fails closed (default severity error) and the user resolves it
 // via naming.overrides / naming.override.

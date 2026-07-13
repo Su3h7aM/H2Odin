@@ -831,7 +831,7 @@ policy_read_enum_bit_sets :: proc(L: ^lua.State, policy: ^Policy) -> bool {
 	return true
 }
 
-// ---------------------------------------------------------------- Milestone 10
+// ---------------------------------------------------------------- Inputs and output
 
 policy_read_inputs :: proc(policy: ^Policy) -> bool {
 	L := policy.state
@@ -1290,7 +1290,7 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 	}
 	defer lua.pop(L, 1)
 
-	// Reject removed nested keys with a migration message (spec 0006) before
+	// Reject removed nested keys with a migration message before
 	// the generic unknown-key check.
 	removed_type := lua.getfield(L, -1, "imports_file")
 	if removed_type != c.int(lua.Type.NIL) {

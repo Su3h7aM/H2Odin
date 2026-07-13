@@ -355,7 +355,7 @@ test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing
 	// the umbrella-header pattern (Box3D lists only box3d.h and reaches
 	// types.h through it). Ownership is "not a system header", not "listed in
 	// config.inputs": the typedef is ours, so it keeps its name and is
-	// emitted. Only system-header declarations are foreign (spec 0010).
+	// emitted. Only system-header declarations are foreign.
 	ok := extract({"tests/fixtures/m13_peel_main.h"}, &ir)
 	testing.expect(t, ok)
 	if !ok {

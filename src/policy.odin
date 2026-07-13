@@ -14,12 +14,12 @@ import lua "vendor:lua/5.4"
 //
 // Configuration selects and parameterizes; it never authors output.
 //
-// Config shape (Milestone 8): a Lua program that `require "h2odin"` and
+// Config is a Lua program that `require "h2odin"` and
 // builds a sectioned object via `h2o.config()`. Flat legacy keys are
 // rejected with migration messages rather than accepted alongside the new
 // surface.
 //
-// File layout (see docs/source-layout.md):
+// File layout:
 //   policy.odin           — Policy, load/destroy, top-level orchestration
 //   policy_sandbox.odin   — sandboxed VM, require, path_is_under
 //   policy_helpers.odin   — Odin→Lua helper shims (h2o.str / naming / macro views)
@@ -131,6 +131,11 @@ Output_Layout :: enum {
 	Per_Header, // one Odin file per config.inputs header
 }
 
+// Policy is the arena-owned, Odin-side view of a loaded Lua configuration.
+// Transformation reads this data instead of knowing about Lua. Declarative
+// sections are copied into fields; callback booleans indicate which stable,
+// read-only symbol/member views should be dispatched through the policy layer.
+// Lua callbacks return decisions or nil to keep H2Odin's default.
 Policy :: struct {
 	// Private to the policy_* procedures. nil when no config was given.
 	state:               ^lua.State,
@@ -188,7 +193,7 @@ Policy :: struct {
 	type_map:            map[string]string,
 	type_overrides:      map[string]string,
 	// types.distinct: void* typedef C names that opt into `distinct rawptr`
-	// (incomplete-record handles are distinct automatically — spec 0005).
+	// (incomplete-record handles are distinct automatically).
 	types_distinct:      []string,
 	// types.opaque: per-name override for incomplete tag handle style
 	// (true = force handle, false = force faithful; mode supplies default).
@@ -197,7 +202,7 @@ Policy :: struct {
 	// symbols.remove declarative tiers.
 	remove_names:        []string,
 	remove_patterns:     []string,
-	// Spec 0009: drop C-deprecated declarations (fourth declarative tier).
+	// Drop C-deprecated declarations (fourth declarative tier).
 	remove_deprecated:   bool,
 
 	// macros.groups
@@ -243,7 +248,7 @@ Symbol_Kind :: enum {
 	Param, // procedure parameter names
 }
 
-// Kind names as Lua sees them — Odin vocabulary (Milestone 8).
+// Kind names as Lua sees them — Odin vocabulary.
 @(rodata)
 symbol_kind_names := [Symbol_Kind]cstring {
 	.Func        = "proc",
@@ -260,7 +265,7 @@ Symbol_Context :: struct {
 	default_name: string, // generator's default choice
 	kind:         Symbol_Kind,
 	parent:       string, // owning declaration for members/fields; "" otherwise
-	// Spec 0009: C deprecation fact for symbols.remove.where / naming views.
+	// C deprecation fact for symbols.remove.where / naming views.
 	deprecated:   bool,
 }
 
@@ -494,11 +499,11 @@ policy_free_int_map :: proc(m: ^map[string]int) {
 
 // Categories whose default posture is error rather than warn.
 policy_set_diag_defaults :: proc(policy: ^Policy) {
-	// types.opaque applied to a complete record would change layout (spec 0007).
+	// types.opaque applied to a complete record would change layout.
 	policy.diag_severity[.Opaque_Record_Complete] = .Error
-	// Colliding or self-shadowing Odin names produce broken output (spec 0008).
+	// Colliding or self-shadowing Odin names produce broken output.
 	policy.diag_severity[.Symbol_Collision] = .Error
-	// Unrepresentable calling conventions must not silently become `"c"` (spec 0011).
+	// Unrepresentable calling conventions must not silently become `"c"`.
 	policy.diag_severity[.Unsupported_Calling_Conv] = .Error
 	// Explicit wrapper config that cannot apply is a generation failure.
 	policy.diag_severity[.Wrapper_Plan_Failed] = .Error

@@ -2,7 +2,7 @@ package h2odin
 
 import "core:fmt"
 
-// Spec 0005: typedefs of pointers to incomplete records emit
+// Typedefs of pointers to incomplete records emit
 // `Name :: distinct rawptr` (C already distinguishes those types). Multiple
 // typedefs of the same incomplete record stay mutually assignable — first in
 // declaration order is distinct; later ones alias it. Incomplete *Impl
@@ -127,7 +127,7 @@ type_is_void_builtin :: proc(ir: ^IR, handle: Type_Handle) -> bool {
 	return is_builtin && builtin.kind == .Void
 }
 
-// Spec 0007: incomplete tag records may emit as handle style
+// Incomplete tag records may emit as handle style
 // (`T :: distinct rawptr`, one pointer level collapsed: T* → T, T** → ^T).
 // Mode sets the default (ABI faithful, idiomatic collapses); types.opaque
 // is a per-name bool override in either direction. Complete records never
@@ -340,7 +340,7 @@ lower_type :: proc(ir: ^IR, handle: Type_Handle) {
 	case Type_Pointer:
 		lower_type(ir, variant.pointee)
 		// Array-parameter decay is a declaration-shape proof of array
-		// semantics — ABI-identical [^]T, not a guess (spec 0011).
+		// semantics — ABI-identical [^]T, not a guess.
 		if variant.is_array_param_decay {
 			// Still honor proven void*/const char*/function special cases if
 			// the array element was one of those (rare); otherwise Multi.

@@ -133,7 +133,7 @@ apply_member_action_to_param :: proc(param: ^Param, action: Member_Action, ir: ^
 }
 
 // Idiomatic-only #by_ptr: peels one single-pointer level at emission.
-// Never inferred from C const; explicit policy only (spec 0011).
+// Never inferred from C const; explicit policy only.
 apply_param_by_ptr :: proc(ir: ^IR, param: ^Param, mode: Type_Mode, proc_name: string) {
 	pname := param.name if param.name != "" else "_"
 	scope := fmt.tprintf("%s.%s", proc_name, pname) if proc_name != "" else pname

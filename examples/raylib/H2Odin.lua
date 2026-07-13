@@ -35,7 +35,7 @@ config.types.overrides = {
 	Color = "distinct [4]u8",
 }
 
--- Faithful-surface curation (spec 0011): array-shaped parameters and
+-- Faithful-surface curation: array-shaped parameters and
 -- result-bearing loaders. Defaults stay ^T; these are explicit contracts.
 config.procs.params = {
 	["SetWindowIcons.images"] = { pointer = "multi" },

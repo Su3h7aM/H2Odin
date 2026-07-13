@@ -15,10 +15,8 @@ import clang "vendored:libclang"
 // into the generation arena at this boundary, so nothing downstream depends
 // on libclang's lifetime; the library could be shut down the moment this
 // stage returns.
-//
-// File layout (see docs/source-layout.md): extract.odin is TU orchestration;
-// extract_decls.odin holds per-declaration extraction; extract_types.odin
-// holds capture_type and friends.
+// The orchestration lives here; declaration and type capture are split into
+// extract_decls.odin and extract_types.odin.
 
 Extract_State :: struct {
 	ctx:         runtime.Context,
@@ -62,8 +60,8 @@ Resource_Dir_Source :: enum u8 {
 }
 
 // Linked libclang + resource-dir selection for a run. Filled by extract;
-// printed under -verbose so mismatches between the loaded library and the
-// builtin headers are visible (Milestone 16 P0).
+// printed under -verbose so users can verify that the selected builtin headers
+// match the loaded libclang.
 Clang_Provenance :: struct {
 	libclang_version:    string, // arena-copied clang_getClangVersion()
 	resource_dir:        string, // selected path, or ""
@@ -185,7 +183,7 @@ cursor_home :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Input_Header
 // answers "which configured input places this declaration in the output", so
 // a project header reached transitively has no home yet is still ours to emit.
 // Foreignness answers "is this someone else's declaration", which is what
-// decides whether we may claim its layout (spec 0010).
+// decides whether H2Odin may claim its layout.
 cursor_is_foreign :: proc(cursor: clang.Cursor) -> bool {
 	return clang.location_is_in_system_header(clang.get_cursor_location(cursor)) != 0
 }

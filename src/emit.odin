@@ -7,15 +7,13 @@ import "core:strings"
 // been made by the time this runs, so emission only serializes — if
 // something in here starts looking like a real decision, it belongs in an
 // earlier stage.
-//
-// File layout (see docs/source-layout.md): emit.odin is assembly/prelude;
-// emit_decls.odin holds per-declaration emitters; emit_types.odin holds
-// write_type / write_params.
+// Assembly and the prelude live here; declaration and type serialization are
+// split into emit_decls.odin and emit_types.odin.
 
 Emit_Options :: struct {
 	package_name:      string,
 	foreign_lib:       string, // import_lib shorthand when foreign_targets is empty
-	foreign_targets:   []Foreign_Target, // structured per-OS linkage (spec 0011)
+	foreign_targets:   []Foreign_Target, // structured per-OS linkage
 	link_prefix:       string, // foreign.link_prefix; "" = none
 	procedures_at_end: bool, // true: types then foreign; false: source order
 	emit_comments:     bool, // false: suppress doc-comment passthrough
@@ -24,8 +22,8 @@ Emit_Options :: struct {
 // Imports the body may need; prelude writes only those that were used.
 Emit_Imports :: struct {
 	core_c: bool, // import "core:c"
-	posix:  bool, // import "core:sys/posix" (for posix.* spellings, spec 0010)
-	libc:   bool, // import "core:c/libc"    (for libc.* spellings, spec 0010)
+	posix:  bool, // import "core:sys/posix" for posix.* spellings
+	libc:   bool, // import "core:c/libc" for libc.* spellings
 	win32:  bool, // import win32 "core:sys/windows" (for win32.* spellings)
 }
 

@@ -3,7 +3,7 @@ package h2odin
 import "core:fmt"
 import "core:strings"
 
-// Emit a minimal idiomatic wrapper body (spec 0011). Reshape only — no
+// Emit a minimal idiomatic wrapper body. Reshape only — no
 // runtime validation that generation could have done.
 emit_wrapper :: proc(b: ^strings.Builder, ir: ^IR, w: Wrapper_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	fn := ir.funcs[w.target]

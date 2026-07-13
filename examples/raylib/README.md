@@ -41,8 +41,7 @@ odin check examples/raylib -no-entry-point -collection:vendored=$(pwd)/vendored
 
 ## Known gaps vs the hand binding
 
-These are intentional generator limitations or deferred polish, not silent
-ABI lies:
+These are intentional scope choices, not silent ABI substitutions:
 
 1. **Foreign import** — single `system:raylib`. Official uses multi-OS static/shared libs and system frameworks (`foreign.targets` is available when a package needs that shape).
 2. **Palette constants** — hand binding hard-codes `LIGHTGRAY`, `RAYWHITE`, …; the C header only has macros/comments, so we do not invent them.

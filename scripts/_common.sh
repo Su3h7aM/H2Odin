@@ -20,7 +20,7 @@ COLLECTION_FLAGS=(-collection:vendored="$ROOT/vendored")
 # See https://odin-lang.org/docs/testing/#compile-time-options
 TEST_DEFINES=(-define:ODIN_TEST_LOG_LEVEL=warning)
 
-# Validation corpus (Milestone 15). Keep in sync with examples/README.md.
+# Validation corpus. Keep in sync with scripts/validate-examples.
 EXAMPLES=(fff sqlite3 bit_fields raylib box3d cgltf curl miniaudio ggml)
 
 # Pair the odin binary with its stdlib.

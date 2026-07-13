@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI agents working in H2Odin — a C-header-to-Odin bindings generator written in Odin. Design intent lives in [`docs/`](docs/); this file is about how to act.
+Guidance for AI agents working in H2Odin — a C-header-to-Odin bindings generator written in Odin. Design intent and API documentation live in source documentation comments; this file is about how to act.
 
 The pipeline has four stages: **Extraction → Analysis → Transformation → Emission**.
 
@@ -13,7 +13,7 @@ The pipeline has four stages: **Extraction → Analysis → Transformation → E
 - **Lua errors unwind with C `longjmp`.** `lua.L_error` and the `L_check*` helpers never return normally — they jump across Odin frames, skipping `defer`. In any Odin proc callable from Lua: no `defer` that must run, and no owned resource held, across a call that can raise; keep raising calls in small leaf procedures.
 - **IR references are handles, not pointers.** Pool growth invalidates pointers.
 - **The generation arena owns long-lived memory.** `context.allocator` is a convenience, not the owner. Scratch uses `context.temp_allocator` and never enters the IR.
-- **Configuration selects behavior; it never authors output.** The generator owns every byte of Odin emitted. This constrains *who writes the Odin*; it is not the separate question of whether the generator may emit wrapper procedures (Milestone 6, deferred).
+- **Configuration selects behavior; it never authors output.** The generator owns every byte of Odin emitted, including configured wrapper procedures. Configuration selects from supported transformations; it does not provide source text.
 - **Correctness over convenience.** Never swap in a type that could change behavior or break the ABI. When ambiguous, pick a conservative default, flag it, and let config override — never silently guess.
 
 If a task seems to require breaking one of these, stop and surface the conflict.
@@ -60,6 +60,7 @@ mise (`.mise/config.toml` points `task_config.includes` at `scripts/`):
 ./scripts/build              # build/h2odin
 ./scripts/test               # unit tests (src/*_test.odin) + e2e (tests/)
 ./scripts/format             # odinfmt via odinfmt.json
+./scripts/doc                # generate ignored src.odin-doc from source comments
 ./scripts/regen-libclang     # rebuild + rewrite vendored/libclang (self-host package)
 ./scripts/validate-examples  # regen all nine examples + odin check (corpus gate)
 
@@ -80,16 +81,12 @@ miniaudio, ggml) must generate without error-severity diagnostics and pass
 
 Unit tests must stay runnable without inventing new foreign deps in the pure stages. E2e tests drive `build/h2odin` against `tests/fixtures/`.
 
-## Agent skills
+## Issue tracker
 
-### Issue tracker
+Issues and PRDs live in GitHub Issues and are managed with `gh`. External PRs
+are not a triage surface. The canonical triage labels are `needs-triage`,
+`needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`.
 
-Issues and PRDs live in the repo's GitHub Issues, managed via the `gh` CLI; external PRs are **not** a triage surface. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical triage roles use their default label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `CONTEXT.md` at the repo root; design decisions live as numbered specs in `docs/specs/` (this repo's stand-in for `docs/adr/`). See `docs/agents/domain.md`.
+Do not create standalone design documents. Durable design intent belongs in
+concise documentation comments beside the declaration or stage it constrains;
+planning and historical discussion belong in GitHub Issues.

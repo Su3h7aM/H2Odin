@@ -177,7 +177,7 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 
 // Record package imports required by an explicit type spelling: the built-in
 // POSIX/libc map and config spellings both use the qualified `pkg.T` form
-// (spec 0010). Any caller that writes a spelling straight into the output —
+// Any caller that writes a spelling straight into the output —
 // including field/param type_spelling overrides from policy — must call this.
 note_import_for_spelling :: proc(imports: ^Emit_Imports, spelling: string) {
 	if strings.has_prefix(spelling, "posix.") {
@@ -229,7 +229,7 @@ calling_conv_label :: proc(cc: Calling_Conv) -> string {
 
 // Map an IR calling convention to an Odin procedure-type spelling. `ok` is
 // false when the convention has no Odin representation — callers must not
-// treat that as C without a diagnostic (spec 0011 / Milestone 16 P0).
+// treat that as C without a diagnostic.
 // Fallback spelling on failure is still `"c"` so emission stays parseable;
 // the error-severity diagnostic is what fails the run.
 calling_conv_odin_spelling :: proc(cc: Calling_Conv) -> (spelling: string, ok: bool) {

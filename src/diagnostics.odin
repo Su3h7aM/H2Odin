@@ -6,7 +6,7 @@ import "core:strings"
 // Diagnostics are the generator's honesty report: every heuristic and
 // fallback that is not certain lands here with a *named category* and a
 // *severity*. Config can raise a category to error; the default posture is
-// warn so runs still produce usable output (see docs/config-spec.md).
+// warn so runs still produce usable output.
 
 Diag_Severity :: enum u8 {
 	Warn, // zero value — default posture
@@ -28,16 +28,16 @@ Diag_Category :: enum u8 {
 	Bit_Set_Target_Missing,
 	Bit_Set_Backing_Mismatch,
 	Incomplete_Extern_Array,
-	// types.opaque named a complete record (spec 0007); fail closed.
+	// types.opaque named a complete record; fail closed.
 	Opaque_Record_Complete,
 	// Spec-listed; reserved for future emitters.
 	Duplicate_Enum_Value,
 	Unresolved_Type,
 	Unsupported_Macro,
 	Symbol_Collision,
-	// C calling convention has no Odin spelling (Milestone 16 P0).
+	// C calling convention has no Odin spelling.
 	Unsupported_Calling_Conv,
-	// procs.wrappers plan rejected at generation time (spec 0011).
+	// procs.wrappers plan rejected at generation time.
 	Wrapper_Plan_Failed,
 }
 

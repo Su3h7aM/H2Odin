@@ -3,7 +3,7 @@ package h2odin
 import "core:fmt"
 import "core:strings"
 
-// Structured per-target foreign linkage (spec 0011 / Milestone 16 P1).
+// Structured per-target foreign linkage.
 // Config selects library values and closed target keys; Emission authors the
 // `when` / `foreign import` source. foreign.import_lib remains the
 // single-library shorthand when targets is absent.
