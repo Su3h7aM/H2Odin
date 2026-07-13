@@ -14,12 +14,12 @@ Type_Mode :: enum {
 //
 // Macro grouping and enum policies run first because they synthesize ordinary
 // IR declarations that must participate in naming and validation.
-transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
-	for _, i in ir.types {
-		lower_type(ir, Type_Handle(i))
+transform :: proc(ir: ^IR, type_mode: Type_Mode, policy: ^Policy) {
+	for _, type_index in ir.types {
+		lower_type(ir, Type_Handle(type_index))
 	}
 
-	if mode == .Idiomatic {
+	if type_mode == .Idiomatic {
 		substitute_leaf_types(ir)
 	}
 
@@ -30,7 +30,7 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 	// user spelling can still win.
 	apply_opaque_handles(ir, policy)
 	// Incomplete tag records: mode default + types.opaque overrides.
-	apply_opaque_tag_records(ir, policy, mode)
+	apply_opaque_tag_records(ir, policy, type_mode)
 
 	// Foreign (non-input) types: built-in POSIX/libc map, then
 	// incomplete stubs for pointer refs and a diagnostic for by-value use.
@@ -44,15 +44,15 @@ transform :: proc(ir: ^IR, mode: Type_Mode, policy: ^Policy) {
 
 	// Signature/layout spellings before naming so map keys still use C names.
 	apply_struct_adjustments(ir, policy)
-	apply_proc_adjustments(ir, policy, mode)
+	apply_proc_adjustments(ir, policy, type_mode)
 
 	filter_declarations(ir, policy)
 
 	// Wrapper plans key on C names; resolve before renames, materialize after
 	// so public wrapper names and param result names are final Odin spellings.
-	provisional := resolve_wrapper_plans(ir, policy, mode)
+	wrapper_plans := resolve_wrapper_plans(ir, policy, type_mode)
 	apply_renames(ir, policy)
-	materialize_wrapper_plans(ir, policy, provisional)
+	materialize_wrapper_plans(ir, wrapper_plans)
 
 	// Detect package/member collisions and field/param type
 	// shadowing after every rename is final. Reports only — never renames.
