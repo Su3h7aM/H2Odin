@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <time.h>
 
-/* POSIX/libc named types (spec 0010) keep one spelling in both type modes;
+/* POSIX/libc named types keep one spelling in both type modes;
  * ISO C size_t stays on the c.size_t / uint ladder. */
 off_t  lib_seek(int fd, off_t offset);
 pid_t  lib_owner(void);

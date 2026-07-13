@@ -1,4 +1,4 @@
--- Spec 0009: sym.deprecated in a where predicate.
+-- sym.deprecated is available to a where predicate.
 local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "deprecated"

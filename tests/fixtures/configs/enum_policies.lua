@@ -1,8 +1,8 @@
 local h2o = require "h2odin"
 
 local config = h2o.config()
-config.package = "m9_enums"
-config.foreign.import_lib = "m9_enums"
+config.package = "enum_policies"
+config.foreign.import_lib = "enum_policies"
 
 config.enums.anonymous = {
 	h2o.enum.anonymous { name = "Keyboard_Key", first_member = "KEY_NULL" },
@@ -25,5 +25,5 @@ config.naming = h2o.naming.odin {
 	},
 }
 
-config.inputs = { "../m9_enums.h" }
+config.inputs = { "../enum_policies.h" }
 return config

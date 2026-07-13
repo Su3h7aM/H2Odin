@@ -1,6 +1,6 @@
 local h2o = require "h2odin"
 
 local config = h2o.config()
--- "wrappers" is still a roadmap-only top-level key (not a section field).
+-- "wrappers" is invalid at the top level; wrapper rules live under procs.
 config.wrappers = true
 return config

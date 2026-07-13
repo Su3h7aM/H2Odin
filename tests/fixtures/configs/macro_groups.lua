@@ -1,8 +1,8 @@
 local h2o = require "h2odin"
 
 local config = h2o.config()
-config.package = "m9_macros"
-config.foreign.import_lib = "m9_macros"
+config.package = "macro_groups"
+config.foreign.import_lib = "macro_groups"
 
 config.macros.groups = {
 	h2o.macro_group.enum {
@@ -18,5 +18,5 @@ config.macros.groups = {
 	},
 }
 
-config.inputs = { "../m9_macros.h" }
+config.inputs = { "../macro_groups.h" }
 return config

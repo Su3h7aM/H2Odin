@@ -53,10 +53,10 @@ test_policy_load_declarative_fields :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_policy_load_m10_sections :: proc(t: ^testing.T) {
+test_policy_loads_input_output_and_member_sections :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(
 		t,
-		"m10-sections",
+		"input-output-member-sections",
 		`local h2o = require "h2odin"
 local config = h2o.config()
 config.inputs = { "a.h", "b.h" }

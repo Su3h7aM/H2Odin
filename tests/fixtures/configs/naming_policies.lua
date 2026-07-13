@@ -1,8 +1,8 @@
 local h2o = require "h2odin"
 
 local config = h2o.config()
-config.package = "m9_naming"
-config.foreign.import_lib = "m9_naming"
+config.package = "naming_policies"
+config.foreign.import_lib = "naming_policies"
 
 config.naming = h2o.naming.odin {
 	strip_prefixes = { proc = "lib_" },
@@ -24,5 +24,5 @@ config.naming = h2o.naming.odin {
 config.symbols.remove.names = { "lib_internal" }
 config.symbols.remove.patterns = { "*_COUNT" }
 
-config.inputs = { "../m9_naming.h" }
+config.inputs = { "../naming_policies.h" }
 return config

@@ -1,4 +1,4 @@
-/* Calling-convention facts for Extraction + Emission (Milestone 16 P0). */
+/* Calling-convention facts for Extraction and Emission. */
 
 void plain_c(void);
 

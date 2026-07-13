@@ -1,4 +1,4 @@
-/* Spec 0005 fixtures: incomplete-record handles vs void* vs shared record. */
+/* Incomplete-record handles vs void* vs a shared record. */
 
 typedef struct Opaque_A_Impl *Opaque_A;
 typedef struct Opaque_B_Impl *Opaque_B;

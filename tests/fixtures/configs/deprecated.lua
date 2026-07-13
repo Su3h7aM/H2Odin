@@ -1,4 +1,4 @@
--- Spec 0009: default run propagates deprecation.
+-- Default behavior propagates deprecation.
 local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "deprecated"

@@ -1,4 +1,4 @@
-/* Fixture for spec 0009 — deprecated C declarations. */
+/* Deprecated C declarations and messages. */
 
 __attribute__((deprecated("use new_fn instead")))
 void old_fn(void);

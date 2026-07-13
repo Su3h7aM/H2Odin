@@ -60,7 +60,7 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 	ir_init(&ir)
 	// Both headers are inputs: a includes b, and use sites in a must keep
 	// Sibling_Id rather than peeling to the underlying int.
-	ok := extract({"tests/fixtures/m13_sibling_a.h", "tests/fixtures/m13_sibling_b.h"}, &ir)
+	ok := extract({"tests/fixtures/sibling_input_a.h", "tests/fixtures/sibling_input_b.h"}, &ir)
 	testing.expect(t, ok)
 	if !ok {
 		return
@@ -78,7 +78,7 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 	use_sibling := false
 	make_sibling := false
 	for func in ir.funcs {
-		if func.name == "m13_use_sibling" {
+		if func.name == "use_sibling_id" {
 			use_sibling = true
 			testing.expect_value(t, len(func.params), 1)
 			if len(func.params) == 1 {
@@ -88,7 +88,7 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 			_, ret_td := ir_type(&ir, func.return_type).variant.(Type_Typedef_Ref)
 			testing.expect(t, ret_td)
 		}
-		if func.name == "m13_make_sibling" {
+		if func.name == "make_sibling_id" {
 			make_sibling = true
 		}
 	}
@@ -99,7 +99,7 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 	// being its own main-file TU.
 	func_count := 0
 	for func in ir.funcs {
-		if func.name == "m13_make_sibling" || func.name == "m13_use_sibling" {
+		if func.name == "make_sibling_id" || func.name == "use_sibling_id" {
 			func_count += 1
 		}
 	}
@@ -107,7 +107,7 @@ test_extract_keeps_sibling_input_typedef_names :: proc(t: ^testing.T) {
 
 	macro_count := 0
 	for m in ir.macros {
-		if m.name == "M13_SIBLING_FLAG" {
+		if m.name == "SIBLING_FLAG" {
 			macro_count += 1
 		}
 	}
@@ -305,8 +305,8 @@ test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
 
 	ir: IR
 	ir_init(&ir)
-	a := "tests/fixtures/m13_sibling_a.h"
-	b := "tests/fixtures/m13_sibling_b.h"
+	a := "tests/fixtures/sibling_input_a.h"
+	b := "tests/fixtures/sibling_input_b.h"
 	ok := extract({a, b}, &ir)
 	testing.expect(t, ok)
 	if !ok {
@@ -319,10 +319,10 @@ test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
 	home_b := Input_Header_Handle(2)
 
 	for func in ir.funcs {
-		if func.name == "m13_use_sibling" {
+		if func.name == "use_sibling_id" {
 			testing.expect_value(t, func.home, home_a)
 		}
-		if func.name == "m13_make_sibling" {
+		if func.name == "make_sibling_id" {
 			testing.expect_value(t, func.home, home_b)
 		}
 	}
@@ -332,7 +332,7 @@ test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
 		}
 	}
 	for m in ir.macros {
-		if m.name == "M13_SIBLING_FLAG" {
+		if m.name == "SIBLING_FLAG" {
 			testing.expect_value(t, m.home, home_b)
 		}
 	}
@@ -356,7 +356,7 @@ test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing
 	// types.h through it). Ownership is "not a system header", not "listed in
 	// config.inputs": the typedef is ours, so it keeps its name and is
 	// emitted. Only system-header declarations are foreign.
-	ok := extract({"tests/fixtures/m13_peel_main.h"}, &ir)
+	ok := extract({"tests/fixtures/transitive_typedef_main.h"}, &ir)
 	testing.expect(t, ok)
 	if !ok {
 		return

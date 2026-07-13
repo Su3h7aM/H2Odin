@@ -1,4 +1,4 @@
--- Exercise calling-convention emission (Milestone 16 P0).
+-- Exercise unsupported calling-convention diagnostics.
 -- vectorcall is present in the header and must fail with unsupported_calling_conv.
 local h2o = require "h2odin"
 local config = h2o.config()

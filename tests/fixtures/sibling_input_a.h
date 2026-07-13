@@ -1,4 +1,4 @@
 /* Uses a typedef declared in a sibling input header (included, not main file). */
-#include "m13_sibling_b.h"
+#include "sibling_input_b.h"
 
-Sibling_Id m13_use_sibling(Sibling_Id id);
+Sibling_Id use_sibling_id(Sibling_Id id);

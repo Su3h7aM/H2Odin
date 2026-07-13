@@ -1,4 +1,4 @@
--- Spec 0009: symbols.remove.deprecated drops all C-deprecated decls.
+-- symbols.remove.deprecated drops all C-deprecated declarations.
 local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "deprecated"

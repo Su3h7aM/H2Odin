@@ -1,4 +1,4 @@
--- Spec 0009: Deprecated: lines survive comments = false.
+-- Semantic Deprecated: lines survive comments = false.
 local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "deprecated"

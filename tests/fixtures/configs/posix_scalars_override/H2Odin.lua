@@ -6,6 +6,6 @@ config.inputs = { "input.h" }
 config.preprocess.include_paths = { "." }
 config.output_folder = "."
 config.type_mode = "abi"
--- types.map beats the built-in POSIX/libc map (spec 0010, decision 5).
+-- Explicit types.map entries beat the built-in POSIX/libc map.
 config.types.map = { pid_t = "i32" }
 return config

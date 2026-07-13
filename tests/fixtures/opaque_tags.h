@@ -1,4 +1,4 @@
-/* Spec 0007: incomplete tag typedef used as T* / T**. */
+/* Incomplete tag typedef used as T* / T**. */
 
 typedef struct Opaque_Tag Opaque_Tag;
 typedef struct Complete_Tag Complete_Tag;

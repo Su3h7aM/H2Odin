@@ -1,4 +1,4 @@
--- Structured foreign.targets (Milestone 16 P1.1).
+-- Structured per-target foreign libraries.
 local h2o = require "h2odin"
 local config = h2o.config()
 
