@@ -127,7 +127,9 @@ test_opaque_handles_distinct_rawptr :: proc(t: ^testing.T) {
 	// Complete record pointer is still a pointer, not collapsed.
 	expect_contains(t, stdout, "Complete_Ptr ::")
 	expect_contains(t, stdout, "^Complete_Rec")
-	// Incomplete *Impl records are not emitted as empty structs.
+	// Direct struct pointers canonicalize to the equivalent public handle, so
+	// the private implementation record is still unnecessary.
+	expect_contains(t, stdout, "impl: Opaque_A")
 	expect_not_contains(t, stdout, "Opaque_A_Impl")
 	expect_not_contains(t, stdout, "Shared_Impl")
 

@@ -26,11 +26,9 @@ transform :: proc(ir: ^IR, type_mode: Type_Mode, policy: ^Policy) {
 	apply_macro_groups(ir, policy)
 	apply_enum_policies(ir, policy)
 
-	// Incomplete-record handles → distinct rawptr before map/overrides so a
-	// user spelling can still win.
-	apply_opaque_handles(ir, policy)
-	// Incomplete tag records: mode default + types.opaque overrides.
-	apply_opaque_tag_records(ir, policy, type_mode)
+	// Resolve both opaque C idioms before map/overrides so an explicit user
+	// spelling can still win.
+	apply_opaque_types(ir, policy, type_mode)
 
 	// Foreign (non-input) types: built-in POSIX/libc map, then
 	// incomplete stubs for pointer refs and a diagnostic for by-value use.

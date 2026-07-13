@@ -18,3 +18,6 @@ typedef struct Complete_Rec {
 
 void take_handles(Opaque_A a, Opaque_B b, Shared_Handle s, Shared_Alias sa,
                   Void_Handle vh, Void_Plain vp, Complete_Ptr cp);
+
+/* A direct use canonicalizes to the equivalent public handle typedef. */
+void take_opaque_a_impl(struct Opaque_A_Impl *impl);
