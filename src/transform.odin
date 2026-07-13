@@ -34,7 +34,7 @@ transform :: proc(ir: ^IR, type_mode: Type_Mode, policy: ^Policy) {
 	// incomplete stubs for pointer refs and a diagnostic for by-value use.
 	// After the opaque passes so drop lists settle; before the rewrites below
 	// because config must win — the pass skips any name config already names.
-	apply_foreign_type_stubs(ir, policy)
+	apply_foreign_types(ir, policy)
 
 	// map first, then overrides so a types.overrides entry wins on conflict.
 	apply_type_rewrites(ir, policy.type_map, drop_decls = false)

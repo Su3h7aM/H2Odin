@@ -106,12 +106,16 @@ windows_compound_spelling :: proc(c_name: string) -> (spelling: string, ok: bool
 	return "", false
 }
 
-apply_foreign_type_stubs :: proc(ir: ^IR, policy: ^Policy) {
-	by_value := make(map[Decl_Handle]bool, context.temp_allocator)
-	referenced := make(map[Decl_Handle]bool, context.temp_allocator)
-	referrer_home := make(map[Decl_Handle]Input_Header_Handle, context.temp_allocator)
+Foreign_Type_Uses :: struct {
+	record_referenced: []bool,
+	record_by_value:   []bool,
+	record_home:       []Input_Header_Handle,
+	enum_referenced:   []bool,
+	enum_home:         []Input_Header_Handle,
+}
 
-	scan_ordered_type_uses(ir, &by_value, &referenced, &referrer_home)
+apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
+	uses := analyze_foreign_type_uses(ir)
 
 	for i in 0 ..< len(ir.records) {
 		handle := Decl_Handle(i)
@@ -119,7 +123,7 @@ apply_foreign_type_stubs :: proc(ir: ^IR, policy: ^Policy) {
 		if !rec.is_foreign || rec.name == "" {
 			continue
 		}
-		if !referenced[handle] {
+		if !uses.record_referenced[i] {
 			continue
 		}
 		if _, named := config_spelling(policy, rec.name); named {
@@ -139,10 +143,10 @@ apply_foreign_type_stubs :: proc(ir: ^IR, policy: ^Policy) {
 		rec.fields = nil
 		rec.is_complete = false
 		rec.has_unrepresentable_fields = false
-		if home, ok := referrer_home[handle]; ok && home != 0 {
-			rec.home = home
+		if uses.record_home[i] != 0 {
+			rec.home = uses.record_home[i]
 		}
-		if by_value[handle] {
+		if uses.record_by_value[i] {
 			ir_diag(
 				ir,
 				.Unresolved_Type,
@@ -160,7 +164,7 @@ apply_foreign_type_stubs :: proc(ir: ^IR, policy: ^Policy) {
 		if !enm.is_foreign || enm.name == "" {
 			continue
 		}
-		if !referenced_enum(ir, handle) {
+		if !uses.enum_referenced[i] {
 			continue
 		}
 		if _, named := config_spelling(policy, enm.name); named {
@@ -171,8 +175,8 @@ apply_foreign_type_stubs :: proc(ir: ^IR, policy: ^Policy) {
 			continue
 		}
 		enm.members = nil
-		if home, ok := referrer_home_for_enum(ir, handle); ok && home != 0 {
-			enm.home = home
+		if uses.enum_home[i] != 0 {
+			enm.home = uses.enum_home[i]
 		}
 		ir_diag(
 			ir,
@@ -331,8 +335,9 @@ platform_spelling :: proc(ir: ^IR, policy: ^Policy, name: string, aliased: Type_
 // width to compare (never a reason to map — the caller keeps the C spelling).
 type_measured_size :: proc(ir: ^IR, handle: Type_Handle) -> int {
 	cur := handle
-	// Bound the peel so a pathological typedef cycle cannot hang.
-	for _ in 0 ..< 32 {
+	// A chain cannot visit more distinct type slots than the pool contains.
+	// The same bound also terminates malformed typedef cycles.
+	for _ in 0 ..< len(ir.types) {
 		if cur == 0 {
 			return -1
 		}
@@ -405,176 +410,92 @@ rewrite_typedef_refs_to_spelling :: proc(ir: ^IR, handle: Decl_Handle, spelling:
 	}
 }
 
-scan_ordered_type_uses :: proc(
-	ir: ^IR,
-	by_value: ^map[Decl_Handle]bool,
-	referenced: ^map[Decl_Handle]bool,
-	referrer_home: ^map[Decl_Handle]Input_Header_Handle,
-) {
-	for ref in ir.order {
-		home := ir_decl_home(ir, ref)
-		switch ref.kind {
+// Analyze live declaration roots once. Dense slices match the IR pools and
+// make record and enum handling follow the same traversal. The scan guards its
+// current recursion path, so malformed typedef cycles terminate without
+// suppressing a later use with different by-value or home-header context.
+analyze_foreign_type_uses :: proc(ir: ^IR) -> Foreign_Type_Uses {
+	uses := Foreign_Type_Uses {
+		record_referenced = make([]bool, len(ir.records), context.temp_allocator),
+		record_by_value   = make([]bool, len(ir.records), context.temp_allocator),
+		record_home       = make([]Input_Header_Handle, len(ir.records), context.temp_allocator),
+		enum_referenced   = make([]bool, len(ir.enums), context.temp_allocator),
+		enum_home         = make([]Input_Header_Handle, len(ir.enums), context.temp_allocator),
+	}
+	visiting := make([]bool, len(ir.types), context.temp_allocator)
+
+	for declaration in ir.order {
+		home := ir_decl_home(ir, declaration)
+		switch declaration.kind {
 		case .Invalid:
 		case .Func:
-			fn := ir.funcs[ref.index]
-			scan_type_use(ir, fn.return_type, false, home, by_value, referenced, referrer_home)
-			for p in fn.params {
-				scan_type_use(ir, p.type, false, home, by_value, referenced, referrer_home)
+			function := ir.funcs[declaration.index]
+			scan_foreign_type_use(ir, function.return_type, true, home, &uses, &visiting)
+			for parameter in function.params {
+				scan_foreign_type_use(ir, parameter.type, true, home, &uses, &visiting)
 			}
 		case .Record:
-			rec := ir.records[ref.index]
-			for f in rec.fields {
-				scan_type_use(ir, f.type, true, home, by_value, referenced, referrer_home)
+			for field in ir.records[declaration.index].fields {
+				scan_foreign_type_use(ir, field.type, true, home, &uses, &visiting)
 			}
 		case .Enum:
+			scan_foreign_type_use(ir, ir.enums[declaration.index].backing, true, home, &uses, &visiting)
 		case .Typedef:
-			td := ir.typedefs[ref.index]
-			scan_type_use(ir, td.aliased, true, home, by_value, referenced, referrer_home)
+			scan_foreign_type_use(ir, ir.typedefs[declaration.index].aliased, true, home, &uses, &visiting)
 		case .Var:
-			v := ir.vars[ref.index]
-			scan_type_use(ir, v.type, true, home, by_value, referenced, referrer_home)
-		case .Macro, .Bit_Set, .Wrapper:
+			scan_foreign_type_use(ir, ir.vars[declaration.index].type, true, home, &uses, &visiting)
+		case .Bit_Set:
+			scan_foreign_type_use(ir, ir.bit_sets[declaration.index].elem, true, home, &uses, &visiting)
+		case .Macro, .Wrapper:
 		}
 	}
+	return uses
 }
 
-scan_type_use :: proc(
-	ir: ^IR,
-	handle: Type_Handle,
-	surface_by_value: bool,
-	home: Input_Header_Handle,
-	by_value: ^map[Decl_Handle]bool,
-	referenced: ^map[Decl_Handle]bool,
-	referrer_home: ^map[Decl_Handle]Input_Header_Handle,
-) {
-	if handle == 0 {
+scan_foreign_type_use :: proc(ir: ^IR, handle: Type_Handle, surface_by_value: bool, home: Input_Header_Handle, uses: ^Foreign_Type_Uses, visiting: ^[]bool) {
+	type_index := int(handle)
+	if type_index <= 0 || type_index >= len(ir.types) || visiting^[type_index] {
 		return
 	}
+	visiting^[type_index] = true
+	defer visiting^[type_index] = false
+
 	info := ir_type(ir, handle)
-	#partial switch v in info.variant {
+	#partial switch variant in info.variant {
 	case Type_Record_Ref:
-		referenced^[v.decl] = true
+		record_index := int(variant.decl)
+		uses.record_referenced[record_index] = true
 		if surface_by_value {
-			by_value^[v.decl] = true
+			uses.record_by_value[record_index] = true
 		}
-		if home != 0 {
-			if _, has := referrer_home^[v.decl]; !has {
-				referrer_home^[v.decl] = home
-			}
+		if home != 0 && uses.record_home[record_index] == 0 {
+			uses.record_home[record_index] = home
 		}
-	case Type_Pointer:
-		scan_type_use(ir, v.pointee, false, home, by_value, referenced, referrer_home)
-	case Type_Lowered_Pointer:
-		scan_type_use(ir, v.pointee, false, home, by_value, referenced, referrer_home)
-	case Type_Array:
-		scan_type_use(ir, v.element, surface_by_value, home, by_value, referenced, referrer_home)
-	case Type_Proc:
-		scan_type_use(ir, v.return_type, false, home, by_value, referenced, referrer_home)
-		for p in v.params {
-			scan_type_use(ir, p.type, false, home, by_value, referenced, referrer_home)
-		}
-	case Type_Typedef_Ref:
-		scan_type_use(ir, ir.typedefs[v.decl].aliased, surface_by_value, home, by_value, referenced, referrer_home)
-	case Type_Idiomatic_Leaf:
-		scan_type_use(ir, v.original, surface_by_value, home, by_value, referenced, referrer_home)
-	}
-}
-
-referenced_enum :: proc(ir: ^IR, handle: Decl_Handle) -> bool {
-	for ref in ir.order {
-		#partial switch ref.kind {
-		case .Func:
-			fn := ir.funcs[ref.index]
-			if type_mentions_enum(ir, fn.return_type, handle) {
-				return true
-			}
-			for p in fn.params {
-				if type_mentions_enum(ir, p.type, handle) {
-					return true
-				}
-			}
-		case .Record:
-			for f in ir.records[ref.index].fields {
-				if type_mentions_enum(ir, f.type, handle) {
-					return true
-				}
-			}
-		case .Typedef:
-			if type_mentions_enum(ir, ir.typedefs[ref.index].aliased, handle) {
-				return true
-			}
-		case .Var:
-			if type_mentions_enum(ir, ir.vars[ref.index].type, handle) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-referrer_home_for_enum :: proc(ir: ^IR, handle: Decl_Handle) -> (Input_Header_Handle, bool) {
-	for ref in ir.order {
-		home := ir_decl_home(ir, ref)
-		if home == 0 {
-			continue
-		}
-		#partial switch ref.kind {
-		case .Func:
-			fn := ir.funcs[ref.index]
-			if type_mentions_enum(ir, fn.return_type, handle) {
-				return home, true
-			}
-			for p in fn.params {
-				if type_mentions_enum(ir, p.type, handle) {
-					return home, true
-				}
-			}
-		case .Record:
-			for f in ir.records[ref.index].fields {
-				if type_mentions_enum(ir, f.type, handle) {
-					return home, true
-				}
-			}
-		case .Typedef:
-			if type_mentions_enum(ir, ir.typedefs[ref.index].aliased, handle) {
-				return home, true
-			}
-		case .Var:
-			if type_mentions_enum(ir, ir.vars[ref.index].type, handle) {
-				return home, true
-			}
-		}
-	}
-	return 0, false
-}
-
-type_mentions_enum :: proc(ir: ^IR, handle: Type_Handle, enum_handle: Decl_Handle) -> bool {
-	if handle == 0 {
-		return false
-	}
-	info := ir_type(ir, handle)
-	#partial switch v in info.variant {
 	case Type_Enum_Ref:
-		return v.decl == enum_handle
-	case Type_Pointer:
-		return type_mentions_enum(ir, v.pointee, enum_handle)
-	case Type_Lowered_Pointer:
-		return type_mentions_enum(ir, v.pointee, enum_handle)
-	case Type_Array:
-		return type_mentions_enum(ir, v.element, enum_handle)
-	case Type_Proc:
-		if type_mentions_enum(ir, v.return_type, enum_handle) {
-			return true
+		enum_index := int(variant.decl)
+		uses.enum_referenced[enum_index] = true
+		if home != 0 && uses.enum_home[enum_index] == 0 {
+			uses.enum_home[enum_index] = home
 		}
-		for p in v.params {
-			if type_mentions_enum(ir, p.type, enum_handle) {
-				return true
-			}
+	case Type_Pointer:
+		scan_foreign_type_use(ir, variant.pointee, false, home, uses, visiting)
+	case Type_Lowered_Pointer:
+		scan_foreign_type_use(ir, variant.pointee, false, home, uses, visiting)
+	case Type_Array:
+		scan_foreign_type_use(ir, variant.element, surface_by_value, home, uses, visiting)
+	case Type_Proc:
+		scan_foreign_type_use(ir, variant.return_type, true, home, uses, visiting)
+		for parameter in variant.params {
+			scan_foreign_type_use(ir, parameter.type, true, home, uses, visiting)
 		}
 	case Type_Typedef_Ref:
-		return type_mentions_enum(ir, ir.typedefs[v.decl].aliased, enum_handle)
+		typedef := ir.typedefs[variant.decl]
+		if !typedef.is_unresolvable {
+			scan_foreign_type_use(ir, typedef.aliased, surface_by_value, home, uses, visiting)
+		}
 	case Type_Idiomatic_Leaf:
-		return type_mentions_enum(ir, v.original, enum_handle)
+		// The decided spelling is terminal. Its original type remains only for
+		// diagnostics and ABI auditing; emission does not follow it.
+		return
 	}
-	return false
 }
