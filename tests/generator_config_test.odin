@@ -353,3 +353,19 @@ test_member_policies_and_link_prefix_shape_output :: proc(t: ^testing.T) {
 	expect_contains(t, stdout, "GetKeyPressed :: proc() -> c.int")
 	expect_contains(t, stdout, "DrawTexturePro :: proc(tint: Color = WHITE)")
 }
+
+@(test)
+test_member_callback_type_replaces_declarative_pointer_shape :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/member_action_precedence.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "BorrowOrSpell :: proc(value: ^c.int)")
+	expect_contains(t, stdout, "MultiOrSpell :: proc(values: [^]c.int)")
+	expect_not_contains(t, stdout, "#by_ptr")
+	expect_not_contains(t, stderr, "cannot combine with an explicit type spelling")
+}

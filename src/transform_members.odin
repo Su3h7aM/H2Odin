@@ -2,47 +2,90 @@ package h2odin
 
 import "core:fmt"
 
-// structs.fields → structs.field → structs.align. Keys and align names are
-// C names (this pass runs before naming).
+// Apply configured field and alignment decisions while declarations still
+// carry their C names. A callback refines the matching declarative field
+// action; the combined action is applied once so stale partial state cannot
+// survive a stronger callback decision.
 apply_struct_adjustments :: proc(ir: ^IR, policy: ^Policy) {
-	has_fields := policy.struct_fields != nil && len(policy.struct_fields) > 0
-	has_align := policy.struct_align != nil && len(policy.struct_align) > 0
-	if !has_fields && !policy.has_struct_field && !has_align {
+	has_field_actions := len(policy.struct_fields) > 0
+	has_field_callback := policy.has_struct_field
+	has_alignment_overrides := len(policy.struct_align) > 0
+	if !has_field_actions && !has_field_callback && !has_alignment_overrides {
 		return
 	}
 	for &record in ir.records {
 		if record.name == "" {
 			continue
 		}
-		if has_align {
-			if n, ok := policy.struct_align[record.name]; ok {
-				record.align = n
+		if has_alignment_overrides {
+			if alignment, found := policy.struct_align[record.name]; found {
+				record.align = alignment
 			}
 		}
-		if !has_fields && !policy.has_struct_field {
+		if !has_field_actions && !has_field_callback {
 			continue
 		}
 		for &field in record.fields {
 			if field.name == "" {
 				continue
 			}
-			key := fmt.tprintf("%s.%s", record.name, field.name)
-			if has_fields {
-				if action, ok := policy.struct_fields[key]; ok {
-					apply_member_action_to_field(&field, action)
+
+			action: Member_Action
+			has_action := false
+			if has_field_actions {
+				key := fmt.tprintf("%s.%s", record.name, field.name)
+				if configured_action, found := policy.struct_fields[key]; found {
+					action = configured_action
+					has_action = true
 				}
 			}
-			if policy.has_struct_field {
-				view_type := type_name_for_view(ir, field.type)
-				if action, decided := policy_struct_field_action(policy, record.name, field.name, view_type); decided {
-					apply_member_action_to_field(&field, action)
+			if has_field_callback {
+				view_type := type_name_for_policy_view(ir, field.type)
+				if refinement, decided := policy_struct_field_action(policy, record.name, field.name, view_type); decided {
+					action = refine_member_action(action, refinement)
+					has_action = true
 				}
+			}
+			if has_action {
+				apply_field_action(&field, action)
 			}
 		}
 	}
 }
 
-apply_member_action_to_field :: proc(field: ^Field, action: Member_Action) {
+// Overlay non-empty decisions. Member_Action uses empty values for "unset",
+// so callback fields that are absent leave declarative fields intact.
+refine_member_action :: proc(base, refinement: Member_Action) -> Member_Action {
+	result := base
+	// Type spelling, pointer shape, and #by_ptr are alternative ways to
+	// decide a parameter's emitted type. When a callback supplies any one of
+	// them, replace the declarative shape group as a unit. If the callback
+	// itself supplies conflicting members, retain them so normal validation
+	// can report that conflict.
+	if refinement.type != "" || refinement.pointer != "" || refinement.by_ptr {
+		result.type = ""
+		result.pointer = ""
+		result.by_ptr = false
+	}
+	if refinement.type != "" {
+		result.type = refinement.type
+	}
+	if refinement.tag != "" {
+		result.tag = refinement.tag
+	}
+	if refinement.default != "" {
+		result.default = refinement.default
+	}
+	if refinement.pointer != "" {
+		result.pointer = refinement.pointer
+	}
+	if refinement.by_ptr {
+		result.by_ptr = true
+	}
+	return result
+}
+
+apply_field_action :: proc(field: ^Field, action: Member_Action) {
 	if action.type != "" {
 		field.type_spelling = action.type
 	}
@@ -51,111 +94,127 @@ apply_member_action_to_field :: proc(field: ^Field, action: Member_Action) {
 	}
 }
 
-// procs.params → procs.param; procs.results → procs.result; require_results.
-// mode gates idiomatic-only features (by_ptr).
-apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy, mode: Type_Mode = .ABI) {
-	has_params := policy.proc_params != nil && len(policy.proc_params) > 0
-	has_results := policy.proc_results != nil && len(policy.proc_results) > 0
-	has_req := len(policy.require_results) > 0
-	if !has_params && !has_results && !has_req && !policy.has_proc_param && !policy.has_proc_result {
+// Apply configured parameter, result, and require-results decisions. Callback
+// actions refine declarative actions before either mutates the IR.
+apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy, type_mode: Type_Mode = .ABI) {
+	has_parameter_actions := len(policy.proc_params) > 0
+	has_parameter_callback := policy.has_proc_param
+	has_result_actions := len(policy.proc_results) > 0
+	has_result_callback := policy.has_proc_result
+	has_required_results := len(policy.require_results) > 0
+	if !has_parameter_actions && !has_parameter_callback && !has_result_actions && !has_result_callback && !has_required_results {
 		return
 	}
-	req_set: map[string]bool
-	if has_req {
-		req_set = make(map[string]bool, context.temp_allocator)
+	required_result_names: map[string]struct{}
+	if has_required_results {
+		required_result_names = make(map[string]struct{}, context.temp_allocator)
 		for name in policy.require_results {
-			req_set[name] = true
+			required_result_names[name] = {}
 		}
 	}
-	for &fn in ir.funcs {
-		if has_params || policy.has_proc_param {
-			for &param in fn.params {
-				key_name := param.name if param.name != "" else "_"
-				key := fmt.tprintf("%s.%s", fn.name, key_name)
-				if has_params {
-					if action, ok := policy.proc_params[key]; ok {
-						apply_member_action_to_param(&param, action, ir, mode, fn.name)
+	for &function in ir.funcs {
+		if has_parameter_actions || has_parameter_callback {
+			for &parameter in function.params {
+				parameter_name := parameter.name if parameter.name != "" else "_"
+				action: Member_Action
+				has_action := false
+				if has_parameter_actions {
+					key := fmt.tprintf("%s.%s", function.name, parameter_name)
+					if configured_action, found := policy.proc_params[key]; found {
+						action = configured_action
+						has_action = true
 					}
 				}
-				if policy.has_proc_param {
-					view_type := type_name_for_view(ir, param.type)
-					if action, decided := policy_proc_param_action(policy, fn.name, param.name, view_type); decided {
-						apply_member_action_to_param(&param, action, ir, mode, fn.name)
+				if has_parameter_callback {
+					view_type := type_name_for_policy_view(ir, parameter.type)
+					if refinement, decided := policy_proc_param_action(policy, function.name, parameter.name, view_type); decided {
+						action = refine_member_action(action, refinement)
+						has_action = true
 					}
 				}
-			}
-		}
-		if has_results {
-			if action, ok := policy.proc_results[fn.name]; ok {
-				if action.type != "" {
-					fn.return_type_spelling = action.type
+				if has_action {
+					apply_parameter_action(&parameter, action, ir, type_mode, function.name)
 				}
 			}
 		}
-		if policy.has_proc_result {
-			view_type := type_name_for_view(ir, fn.return_type)
-			if action, decided := policy_proc_result_action(policy, fn.name, view_type); decided {
-				if action.type != "" {
-					fn.return_type_spelling = action.type
+
+		if has_result_actions || has_result_callback {
+			action: Member_Action
+			has_action := false
+			if has_result_actions {
+				if configured_action, found := policy.proc_results[function.name]; found {
+					action = configured_action
+					has_action = true
 				}
 			}
+			if has_result_callback {
+				view_type := type_name_for_policy_view(ir, function.return_type)
+				if refinement, decided := policy_proc_result_action(policy, function.name, view_type); decided {
+					action = refine_member_action(action, refinement)
+					has_action = true
+				}
+			}
+			if has_action && action.type != "" {
+				function.return_type_spelling = action.type
+			}
 		}
+
 		// Match on C name before renames (this pass runs before naming).
-		if has_req && req_set[fn.name] {
-			fn.require_results = true
+		if has_required_results && function.name in required_result_names {
+			function.require_results = true
 		}
 	}
 }
 
-apply_member_action_to_param :: proc(param: ^Param, action: Member_Action, ir: ^IR, mode: Type_Mode = .ABI, proc_name: string = "") {
+apply_parameter_action :: proc(parameter: ^Param, action: Member_Action, ir: ^IR, type_mode: Type_Mode = .ABI, function_name: string = "") {
 	if action.type != "" {
-		param.type_spelling = action.type
+		parameter.type_spelling = action.type
 	}
 	if action.default != "" {
-		param.default = action.default
+		parameter.default = action.default
 	}
 	// pointer = "multi" rewrites the lowered type when the user did not
 	// supply a full type spelling (that spelling is authoritative).
-	if action.pointer == "multi" && action.type == "" {
-		if !force_multi_pointer(ir, param.type, .Configured_Multi) {
+	if action.pointer == "multi" && parameter.type_spelling == "" {
+		if !force_multi_pointer(ir, parameter.type, .Configured_Multi) {
 			// Soft: leave ^T (or other lowering) and note why multi failed.
 			ir_diag(
 				ir,
 				.Pointer_Lowering_Guess,
 				"procs.params pointer = \"multi\" ignored for parameter %q: type is not a single data pointer",
-				param.name if param.name != "" else "_",
+				parameter.name if parameter.name != "" else "_",
 			)
 		}
 	}
 	if action.by_ptr {
-		apply_param_by_ptr(ir, param, mode, proc_name)
+		apply_parameter_by_pointer(ir, parameter, type_mode, function_name)
 	}
 }
 
 // Idiomatic-only #by_ptr: peels one single-pointer level at emission.
 // Never inferred from C const; explicit policy only.
-apply_param_by_ptr :: proc(ir: ^IR, param: ^Param, mode: Type_Mode, proc_name: string) {
-	pname := param.name if param.name != "" else "_"
-	scope := fmt.tprintf("%s.%s", proc_name, pname) if proc_name != "" else pname
-	if mode != .Idiomatic {
+apply_parameter_by_pointer :: proc(ir: ^IR, parameter: ^Param, type_mode: Type_Mode, function_name: string) {
+	parameter_name := parameter.name if parameter.name != "" else "_"
+	scope := fmt.tprintf("%s.%s", function_name, parameter_name) if function_name != "" else parameter_name
+	if type_mode != .Idiomatic {
 		ir_diag(ir, .Pointer_Lowering_Guess, "procs.params by_ptr ignored for %s: #by_ptr is idiomatic-only (type_mode = \"idiomatic\")", scope)
 		return
 	}
-	if param.type_spelling != "" {
+	if parameter.type_spelling != "" {
 		ir_diag(ir, .Pointer_Lowering_Guess, "procs.params by_ptr ignored for %s: cannot combine with an explicit type spelling", scope)
 		return
 	}
-	lowered, is_ptr := ir_type(ir, param.type).variant.(Type_Lowered_Pointer)
-	if !is_ptr || lowered.kind != .Single {
+	lowered_pointer, is_pointer := ir_type(ir, parameter.type).variant.(Type_Lowered_Pointer)
+	if !is_pointer || lowered_pointer.kind != .Single {
 		ir_diag(ir, .Pointer_Lowering_Guess, "procs.params by_ptr ignored for %s: type is not a single data pointer (^T)", scope)
 		return
 	}
-	param.by_ptr = true
+	parameter.by_ptr = true
 }
 
 // Best-effort type name for callback views — named refs only; complex types
 // report empty so configs match on parent/child names instead.
-type_name_for_view :: proc(ir: ^IR, handle: Type_Handle) -> string {
+type_name_for_policy_view :: proc(ir: ^IR, handle: Type_Handle) -> string {
 	info := ir_type(ir, handle)
 	#partial switch variant in info.variant {
 	case Type_Record_Ref:
@@ -169,18 +228,9 @@ type_name_for_view :: proc(ir: ^IR, handle: Type_Handle) -> string {
 	case Type_Idiomatic_Leaf:
 		return variant.spelling
 	case Type_Lowered_Pointer:
-		return type_name_for_view(ir, variant.pointee)
+		return type_name_for_policy_view(ir, variant.pointee)
 	case Type_Pointer:
-		return type_name_for_view(ir, variant.pointee)
+		return type_name_for_policy_view(ir, variant.pointee)
 	}
 	return ""
 }
-
-// A config type spelling names an explicit Odin form for a C type by name —
-// stronger than an idiomatic proof, since the user asked for it directly —
-// so it applies in both type modes and can override an idiomatic
-// substitution already made. Anything not named is untouched.
-//
-// types.map rewrites references only. types.overrides rewrites the declaration:
-// typedefs become `Name :: <spelling>` (use sites keep the name); named
-// records/enums are dropped and the spelling is inlined at use sites.
