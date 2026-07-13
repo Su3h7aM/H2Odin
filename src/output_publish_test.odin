@@ -92,3 +92,46 @@ test_write_emit_to_config_folder_stages_and_removes_stale :: proc(t: ^testing.T)
 	testing.expect_value(t, names[0], "keep.odin")
 	testing.expect_value(t, names[1], "new.odin")
 }
+
+@(test)
+test_write_emit_to_config_folder_removes_failed_stage_without_touching_output :: proc(t: ^testing.T) {
+	dir := "/tmp/h2odin-failed-stage"
+	_ = os.remove_all(dir)
+	testing.expect_value(t, os.make_directory_all(dir), nil)
+	defer _ = os.remove_all(dir)
+
+	published_path := strings.concatenate({dir, "/published.odin"})
+	defer delete(published_path)
+	manifest_path := strings.concatenate({dir, "/", GENERATED_MANIFEST_NAME})
+	defer delete(manifest_path)
+	stage_path := strings.concatenate({dir, "/", STAGE_DIR_NAME})
+	defer delete(stage_path)
+
+	testing.expect_value(t, os.write_entire_file(published_path, "package prior\n"), nil)
+	manifest := format_generated_manifest({"published.odin"})
+	testing.expect_value(t, os.write_entire_file(manifest_path, manifest), nil)
+
+	policy := Policy {
+		output_folder = dir,
+	}
+	result := Emit_Result {
+		files = {{filename = "missing/generated.odin", stem = "generated", content = "package generated\n"}},
+	}
+	testing.expect(t, !write_emit_to_config_folder(result, &policy))
+
+	testing.expect(t, !os.exists(stage_path))
+	published_data, published_error := os.read_entire_file(published_path, context.allocator)
+	defer delete(published_data)
+	testing.expect_value(t, published_error, nil)
+	testing.expect_value(t, string(published_data), "package prior\n")
+
+	names := read_generated_manifest(dir)
+	defer {
+		for filename in names {
+			delete(filename)
+		}
+		delete(names)
+	}
+	testing.expect_value(t, len(names), 1)
+	testing.expect_value(t, names[0], "published.odin")
+}
