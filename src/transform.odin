@@ -36,9 +36,7 @@ transform :: proc(ir: ^IR, type_mode: Type_Mode, policy: ^Policy) {
 	// because config must win — the pass skips any name config already names.
 	apply_foreign_types(ir, policy)
 
-	// map first, then overrides so a types.overrides entry wins on conflict.
-	apply_type_rewrites(ir, policy.type_map, drop_decls = false)
-	apply_type_rewrites(ir, policy.type_overrides, drop_decls = true)
+	apply_configured_type_rewrites(ir, policy)
 
 	// Signature/layout spellings before naming so map keys still use C names.
 	apply_struct_adjustments(ir, policy)

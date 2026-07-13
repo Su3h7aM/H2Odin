@@ -14,7 +14,7 @@ import "core:strings"
 //   3. Diagnoses by-value use of an unmapped foreign type (layout unavailable).
 //
 // Config wins over the built-in map: a name in types.map / types.overrides is
-// left for apply_type_rewrites. On Windows, compounds that exist in
+// left for apply_configured_type_rewrites. On Windows, compounds that exist in
 // core:sys/windows are rewritten to win32.* (platform_foreign_spelling);
 // pure-POSIX names still need types.map.
 
@@ -126,8 +126,8 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 		if !uses.record_referenced[i] {
 			continue
 		}
-		if _, named := config_spelling(policy, rec.name); named {
-			// apply_type_rewrites spells the use sites; the foreign record
+		if _, named := configured_type_spelling(policy, rec.name); named {
+			// apply_configured_type_rewrites spells the use sites; the foreign record
 			// stays unpromoted, so no stub declaration is emitted for it.
 			continue
 		}
@@ -167,7 +167,7 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 		if !uses.enum_referenced[i] {
 			continue
 		}
-		if _, named := config_spelling(policy, enm.name); named {
+		if _, named := configured_type_spelling(policy, enm.name); named {
 			continue // config spells the use sites; emit no stub
 		}
 		if spelling, mapped := platform_spelling(ir, policy, enm.name, 0); mapped {
@@ -195,7 +195,7 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 // surviving reference would name a type this package never emits. Two
 // outcomes, in precedence order:
 //
-//   1. The built-in map (or config, which the map pass defers to) knows the
+//   1. The built-in map or config knows the
 //      name: use sites spell posix.off_t / libc.time_t, keeping the distinct
 //      C identity. The declaration stays unemitted — the Odin package that
 //      owns the name already declares it.
@@ -212,7 +212,7 @@ resolve_foreign_typedefs :: proc(ir: ^IR, policy: ^Policy) {
 		// Config first. A foreign typedef is never
 		// emitted, so even types.overrides — which keeps *our* typedefs as
 		// named aliases — must resolve at the use sites here.
-		if spelling, named := config_spelling(policy, td.name); named {
+		if spelling, named := configured_type_spelling(policy, td.name); named {
 			rewrite_typedef_refs_to_spelling(ir, handle, spelling, .Config_Override)
 			continue
 		}
@@ -249,18 +249,6 @@ peel_typedef_refs :: proc(ir: ^IR, handle: Decl_Handle) {
 	}
 }
 
-// The spelling config gives a type name, if any. types.overrides wins over
-// types.map, matching the pass order in transform().
-config_spelling :: proc(policy: ^Policy, name: string) -> (spelling: string, ok: bool) {
-	if s, named := policy.type_overrides[name]; named {
-		return s, true
-	}
-	if s, named := policy.type_map[name]; named {
-		return s, true
-	}
-	return "", false
-}
-
 // The built-in spelling for a foreign C type name, if one applies here.
 // Returns not-mapped when config names the type (config wins), when the name
 // is not in the map, when the target does not define the Odin type, or when a
@@ -268,7 +256,7 @@ config_spelling :: proc(policy: ^Policy, name: string) -> (spelling: string, ok:
 // target. `aliased` is the underlying type for typedefs and 0 for tags (which
 // carry no scalar width).
 platform_spelling :: proc(ir: ^IR, policy: ^Policy, name: string, aliased: Type_Handle) -> (spelling: string, ok: bool) {
-	if _, in_config := config_spelling(policy, name); in_config {
+	if _, in_config := configured_type_spelling(policy, name); in_config {
 		return "", false
 	}
 	entry, known := foreign_type_entry(name)
