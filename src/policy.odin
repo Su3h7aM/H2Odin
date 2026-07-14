@@ -96,6 +96,12 @@ Enum_Bit_Set_Rule :: struct {
 	diag_overrides: Diag_Local_Overrides,
 }
 
+// Closed mode for procs.require_results. Zero value means no mode (names only).
+Require_Results_Mode :: enum {
+	None,
+	Non_Void, // every foreign procedure with a non-void C return type
+}
+
 // A type/tag/default/pointer action from structs.fields / procs.params.
 // Empty strings mean "not set"; callbacks may refine further.
 Member_Action :: struct {
@@ -138,104 +144,106 @@ Output_Layout :: enum {
 // Lua callbacks return decisions or nil to keep H2Odin's default.
 Policy :: struct {
 	// Private to the policy_* procedures. nil when no config was given.
-	state:               ^lua.State,
+	state:                ^lua.State,
 
 	// Directory containing the config file (absolute). Used to resolve
 	// relative inputs and preprocess paths. Empty when no config was given.
-	config_dir:          string,
+	config_dir:           string,
 
 	// Declarative settings copied out of the config; "" means absent.
-	package_name:        string,
-	foreign_lib:         string, // foreign.import_lib (shorthand; mutually exclusive with targets)
+	package_name:         string,
+	foreign_lib:          string, // foreign.import_lib (shorthand; mutually exclusive with targets)
 	// foreign.targets — ordered after load via sort_foreign_targets. Empty when
 	// using the import_lib shorthand.
-	foreign_targets:     []Foreign_Target,
-	foreign_link_prefix: string, // foreign.link_prefix — C symbol prefix
-	type_mode:           Type_Mode,
-	type_mode_is_set:    bool,
+	foreign_targets:      []Foreign_Target,
+	foreign_link_prefix:  string, // foreign.link_prefix — C symbol prefix
+	type_mode:            Type_Mode,
+	type_mode_is_set:     bool,
 
 	// Multi-header inputs and clang preprocess knobs.
-	inputs:              []string,
-	include_paths:       []string,
-	defines:             map[string]string, // NAME → value ("" when -DNAME alone)
+	inputs:               []string,
+	include_paths:        []string,
+	defines:              map[string]string, // NAME → value ("" when -DNAME alone)
 	// preprocess.resource_dir — explicit -resource-dir for builtin headers.
 	// Empty: query the clang driver (see clang_executable).
-	resource_dir:        string,
+	resource_dir:         string,
 	// preprocess.clang — driver used only for `-print-resource-dir` when
 	// resource_dir is empty. Empty → "clang" on PATH.
-	clang_executable:    string,
+	clang_executable:     string,
 
 	// Output layout.
-	output_folder:       string,
-	output_layout:       Output_Layout, // config.output.layout; default .Merged
-	procedures_at_end:   bool, // default true when output section absent
-	footer_per_header:   bool,
-	emit_comments:       bool, // config.comments; default true
+	output_folder:        string,
+	output_layout:        Output_Layout, // config.output.layout; default .Merged
+	procedures_at_end:    bool, // default true when output section absent
+	footer_per_header:    bool,
+	emit_comments:        bool, // config.comments; default true
 
 	// naming.strip_prefixes / strip_suffixes — first match wins per kind.
 	// Backing memory lives in the generation arena (or the test allocator).
-	strip_prefix_proc:   []string,
-	strip_prefix_type:   []string,
-	strip_prefix_const:  []string,
-	strip_prefix_enum:   []string,
-	strip_suffix_proc:   []string,
-	strip_suffix_type:   []string,
-	strip_suffix_const:  []string,
-	strip_suffix_enum:   []string,
+	strip_prefix_proc:    []string,
+	strip_prefix_type:    []string,
+	strip_prefix_const:   []string,
+	strip_prefix_enum:    []string,
+	strip_suffix_proc:    []string,
+	strip_suffix_type:    []string,
+	strip_suffix_const:   []string,
+	strip_suffix_enum:    []string,
 
 	// naming.known_tokens: surface spelling → lower form.
-	known_tokens:        map[string]string,
+	known_tokens:         map[string]string,
 	// naming.overrides: C name → Odin name (absolute).
-	naming_overrides:    map[string]string,
+	naming_overrides:     map[string]string,
 
 	// types.map rewrites references; types.overrides rewrites the declaration
 	// (typedef → named alias; record/enum → drop + inline spelling).
-	type_map:            map[string]string,
-	type_overrides:      map[string]string,
+	type_map:             map[string]string,
+	type_overrides:       map[string]string,
 	// types.distinct: void* typedef C names that opt into `distinct rawptr`
 	// (incomplete-record handles are distinct automatically).
-	types_distinct:      []string,
+	types_distinct:       []string,
 	// types.opaque: per-name override for incomplete tag handle style
 	// (true = force handle, false = force faithful; mode supplies default).
-	types_opaque:        map[string]bool,
+	types_opaque:         map[string]bool,
 
 	// symbols.remove declarative tiers.
-	remove_names:        []string,
-	remove_patterns:     []string,
+	remove_names:         []string,
+	remove_patterns:      []string,
 	// Drop C-deprecated declarations (fourth declarative tier).
-	remove_deprecated:   bool,
+	remove_deprecated:    bool,
 
 	// macros.groups
-	macro_groups:        []Macro_Group_Enum,
+	macro_groups:         []Macro_Group_Enum,
 
 	// enums.*
-	enum_anonymous:      []Enum_Anonymous_Rule,
-	enum_bit_sets:       []Enum_Bit_Set_Rule,
+	enum_anonymous:       []Enum_Anonymous_Rule,
+	enum_bit_sets:        []Enum_Bit_Set_Rule,
 
 	// structs.* — "Struct.field" → action; align is C struct name → N.
-	struct_fields:       map[string]Member_Action,
-	struct_align:        map[string]int,
+	struct_fields:        map[string]Member_Action,
+	struct_align:         map[string]int,
 
 	// procs.* — "Proc.param" / "Proc" (results) → action.
-	proc_params:         map[string]Member_Action,
-	proc_results:        map[string]Member_Action,
-	// procs.require_results: C proc names that get @(require_results).
-	require_results:     []string,
+	proc_params:          map[string]Member_Action,
+	proc_results:         map[string]Member_Action,
+	// procs.require_results: explicit C names and/or a closed mode (e.g. non_void).
+	// Mode and name list compose: a procedure matches if either applies.
+	require_results_mode: Require_Results_Mode,
+	require_results:      []string,
 	// procs.wrappers: C proc name → closed conversion plan (idiomatic only).
-	proc_wrappers:       map[string]Wrapper_Rule,
+	proc_wrappers:        map[string]Wrapper_Rule,
 
 	// Callbacks present in the config (checked once at load).
-	has_rename:          bool, // naming.override
-	has_remove_where:    bool, // symbols.remove.where
-	has_enum_member:     bool, // enums.member
-	has_struct_field:    bool, // structs.field
-	has_proc_param:      bool, // procs.param
-	has_proc_result:     bool, // procs.result
+	has_rename:           bool, // naming.override
+	has_remove_where:     bool, // symbols.remove.where
+	has_enum_member:      bool, // enums.member
+	has_struct_field:     bool, // structs.field
+	has_proc_param:       bool, // procs.param
+	has_proc_result:      bool, // procs.result
 
 	// config.diagnostics: per-category severity. Zero value is Warn for
 	// every category (default posture). Local constructor overrides beat
 	// these when present on a rule.
-	diag_severity:       [Diag_Category]Diag_Severity,
+	diag_severity:        [Diag_Category]Diag_Severity,
 }
 
 Symbol_Kind :: enum {

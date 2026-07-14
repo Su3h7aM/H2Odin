@@ -63,6 +63,66 @@ test_declarative_member_adjustments_update_matching_declarations :: proc(t: ^tes
 }
 
 @(test)
+test_require_results_non_void_mode_marks_only_non_void_returns :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	integer_type := ir_builtin_type(&ir, .Int)
+	void_type := ir_builtin_type(&ir, .Void)
+
+	ir_add_func(&ir, Func_Decl{name = "SetConfigFlags", return_type = void_type, params = {{name = "flags", type = integer_type}}})
+	ir_add_func(&ir, Func_Decl{name = "GetKeyPressed", return_type = integer_type})
+	ir_add_func(&ir, Func_Decl{name = "DrawTexturePro", return_type = void_type})
+
+	policy := Policy {
+		require_results_mode = .Non_Void,
+	}
+	apply_proc_adjustments(&ir, &policy)
+
+	testing.expect(t, !ir.funcs[0].require_results)
+	testing.expect(t, ir.funcs[1].require_results)
+	testing.expect(t, !ir.funcs[2].require_results)
+}
+
+@(test)
+test_require_results_mode_and_names_compose :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	integer_type := ir_builtin_type(&ir, .Int)
+	void_type := ir_builtin_type(&ir, .Void)
+
+	// Name list can mark a void procedure (edge case); mode marks non-void.
+	ir_add_func(&ir, Func_Decl{name = "listed_void", return_type = void_type})
+	ir_add_func(&ir, Func_Decl{name = "non_void", return_type = integer_type})
+	ir_add_func(&ir, Func_Decl{name = "other_void", return_type = void_type})
+
+	policy := Policy {
+		require_results_mode = .Non_Void,
+		require_results      = {"listed_void"},
+	}
+	apply_proc_adjustments(&ir, &policy)
+
+	testing.expect(t, ir.funcs[0].require_results)
+	testing.expect(t, ir.funcs[1].require_results)
+	testing.expect(t, !ir.funcs[2].require_results)
+}
+
+@(test)
 test_member_action_refinement_preserves_unspecified_decisions :: proc(t: ^testing.T) {
 	declarative := Member_Action {
 		type    = "Initial_Type",

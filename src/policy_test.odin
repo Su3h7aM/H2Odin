@@ -250,6 +250,187 @@ return config
 }
 
 @(test)
+test_policy_load_require_results_mode_string :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-mode",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = "non_void"
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.require_results_mode, Require_Results_Mode.Non_Void)
+	testing.expect_value(t, len(policy.require_results), 0)
+}
+
+@(test)
+test_policy_load_require_results_name_list :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-list",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = { "add", "mul" }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.require_results_mode, Require_Results_Mode.None)
+	testing.expect_value(t, len(policy.require_results), 2)
+	testing.expect_value(t, policy.require_results[0], "add")
+	testing.expect_value(t, policy.require_results[1], "mul")
+}
+
+@(test)
+test_policy_load_require_results_mode_and_names :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-both",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = { mode = "non_void", names = { "extra" } }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.require_results_mode, Require_Results_Mode.Non_Void)
+	testing.expect_value(t, len(policy.require_results), 1)
+	testing.expect_value(t, policy.require_results[0], "extra")
+}
+
+@(test)
+test_policy_load_require_results_structured_mode_only :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-mode-only",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = { mode = "non_void" }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.require_results_mode, Require_Results_Mode.Non_Void)
+	testing.expect_value(t, len(policy.require_results), 0)
+}
+
+@(test)
+test_policy_load_require_results_empty_list_is_noop :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-empty-list",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = {}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.require_results_mode, Require_Results_Mode.None)
+	testing.expect_value(t, len(policy.require_results), 0)
+}
+
+@(test)
+test_policy_load_rejects_unknown_require_results_mode :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-bad-mode",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = "all"
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_load_rejects_hybrid_require_results_table :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-hybrid",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = { "foo", mode = "non_void" }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
+test_policy_load_rejects_empty_structured_require_results :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"require-results-empty-struct",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.procs.require_results = { names = {} }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
+}
+
+@(test)
 test_policy_load_foreign_targets :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(
 		t,

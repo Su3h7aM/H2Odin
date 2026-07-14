@@ -33,6 +33,29 @@ test_require_results_block_attr :: proc(t: ^testing.T) {
 	expect_not_contains(t, stdout, "\t@(require_results)\n")
 	check_generated_output(t, stdout, "/tmp/h2odin-require-results")
 }
+
+@(test)
+test_require_results_non_void_mode :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/require_results_non_void.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+	// Only GetKeyPressed returns non-void; void procs are not attributed.
+	expect_contains(t, stdout, "GetKeyPressed :: proc")
+	expect_contains(t, stdout, "@(require_results)")
+	// Mixed segment: attribute is per-proc, not block-level on every foreign.
+	expect_contains(t, stdout, "\t@(require_results)\n\tGetKeyPressed :: proc")
+	expect_contains(t, stdout, "SetConfigFlags :: proc")
+	expect_contains(t, stdout, "DrawTexturePro :: proc")
+	// Void procedures must not carry the attribute immediately above them.
+	expect_not_contains(t, stdout, "\t@(require_results)\n\tSetConfigFlags :: proc")
+	expect_not_contains(t, stdout, "\t@(require_results)\n\tDrawTexturePro :: proc")
+	check_generated_output(t, stdout, "/tmp/h2odin-require-results-non-void")
+}
+
 @(test)
 test_wrappers_out_param_and_slice :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/wrappers.lua"}

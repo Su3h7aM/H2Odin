@@ -101,12 +101,14 @@ apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy, type_mode: Type_Mode = 
 	has_parameter_callback := policy.has_proc_param
 	has_result_actions := len(policy.proc_results) > 0
 	has_result_callback := policy.has_proc_result
-	has_required_results := len(policy.require_results) > 0
+	has_required_results_names := len(policy.require_results) > 0
+	has_required_results_mode := policy.require_results_mode != .None
+	has_required_results := has_required_results_names || has_required_results_mode
 	if !has_parameter_actions && !has_parameter_callback && !has_result_actions && !has_result_callback && !has_required_results {
 		return
 	}
 	required_result_names: map[string]struct{}
-	if has_required_results {
+	if has_required_results_names {
 		required_result_names = make(map[string]struct{}, context.temp_allocator)
 		for name in policy.require_results {
 			required_result_names[name] = {}
@@ -160,10 +162,25 @@ apply_proc_adjustments :: proc(ir: ^IR, policy: ^Policy, type_mode: Type_Mode = 
 		}
 
 		// Match on C name before renames (this pass runs before naming).
-		if has_required_results && function.name in required_result_names {
+		// Mode and explicit names are a union: either is enough.
+		by_mode := has_required_results_mode && require_results_mode_matches(ir, policy.require_results_mode, function.return_type)
+		by_name := has_required_results_names && function.name in required_result_names
+		if by_mode || by_name {
 			function.require_results = true
 		}
 	}
+}
+
+// True when the closed require_results mode selects this foreign procedure.
+// non_void uses the C return type (not a later spelling override).
+require_results_mode_matches :: proc(ir: ^IR, mode: Require_Results_Mode, return_type: Type_Handle) -> bool {
+	switch mode {
+	case .None:
+		return false
+	case .Non_Void:
+		return !type_is_void(ir, return_type)
+	}
+	return false
 }
 
 apply_parameter_action :: proc(parameter: ^Param, action: Member_Action, ir: ^IR, type_mode: Type_Mode = .ABI, function_name: string = "") {

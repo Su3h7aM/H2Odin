@@ -1120,11 +1120,9 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 	}
 	policy.proc_results = results
 
-	req, req_ok := policy_string_list_field(L, "procs", "require_results")
-	if !req_ok {
+	if !policy_read_require_results(L, policy) {
 		return false
 	}
-	policy.require_results = req
 
 	wrappers, wrappers_ok := policy_read_proc_wrappers(L, policy)
 	if !wrappers_ok {
@@ -1132,6 +1130,129 @@ policy_read_procs :: proc(policy: ^Policy) -> bool {
 	}
 	policy.proc_wrappers = wrappers
 	return true
+}
+
+// procs.require_results accepts:
+//   - a mode string: "non_void"
+//   - a pure list of C procedure names (including {} as a no-op)
+//   - a table { mode = "non_void"?, names = { ... }? } for both
+// Mode and names compose (union): a procedure gets the attribute if either matches.
+// List form and structured form must not be mixed in one table.
+// Mode strings are matched in place (Lua-owned until pop); only name lists are
+// cloned into the generation arena.
+policy_read_require_results :: proc(L: ^lua.State, policy: ^Policy) -> bool {
+	field_type := lua.getfield(L, -1, "require_results")
+	#partial switch lua.Type(field_type) {
+	case .NIL:
+		lua.pop(L, 1)
+		return true
+	case .STRING:
+		mode, mode_ok := policy_parse_require_results_mode(string(lua.tostring(L, -1)))
+		if !mode_ok {
+			lua.pop(L, 1)
+			return false
+		}
+		policy.require_results_mode = mode
+		lua.pop(L, 1)
+		return true
+	case .TABLE:
+	// fall through
+	case:
+		user_error("h2odin: config: procs.require_results must be \"non_void\", a list of names, or { mode, names }")
+		lua.pop(L, 1)
+		return false
+	}
+	// Table: pure name list, or structured { mode?, names? }.
+	defer lua.pop(L, 1)
+
+	// Classify keys once: pure list (integer keys only) vs structured (string
+	// keys only). A hybrid of both forms is rejected with an explicit message.
+	has_string_key := false
+	has_array_key := false
+	lua.pushnil(L)
+	for lua.next(L, -2) != 0 {
+		if lua.type(L, -2) == .STRING {
+			has_string_key = true
+		} else if bool(lua.isinteger(L, -2)) {
+			has_array_key = true
+		} else {
+			user_error("h2odin: config: procs.require_results table keys must be strings or array indices")
+			lua.pop(L, 2)
+			return false
+		}
+		lua.pop(L, 1) // value; leave key for next
+	}
+
+	if has_string_key && has_array_key {
+		user_error("h2odin: config: procs.require_results must not mix a name list with mode/names fields")
+		return false
+	}
+
+	if !has_string_key {
+		// Pure list (or {}). Empty list is a no-op, matching absent config.
+		names, names_ok := policy_read_string_list_at_top(L, "procs", "require_results")
+		if !names_ok {
+			return false
+		}
+		policy.require_results = names
+		return true
+	}
+
+	if !policy_reject_unknown_subkeys(L, "procs.require_results", []cstring{"mode", "names"}) {
+		return false
+	}
+
+	mode, mode_ok := policy_read_require_results_mode_field(L)
+	if !mode_ok {
+		return false
+	}
+	policy.require_results_mode = mode
+
+	names, names_ok := policy_string_list_field(L, "procs.require_results", "names")
+	if !names_ok {
+		return false
+	}
+	policy.require_results = names
+
+	// Structured form with neither mode nor names is empty config noise.
+	// Pure {} is the no-op list form above; require at least one selection here.
+	if policy.require_results_mode == .None && len(policy.require_results) == 0 {
+		user_error("h2odin: config: procs.require_results table requires mode and/or names")
+		return false
+	}
+	return true
+}
+
+// mode field of a structured procs.require_results table. Absent → .None.
+// Matches the Lua string without cloning; only the closed enum is stored.
+policy_read_require_results_mode_field :: proc(L: ^lua.State) -> (Require_Results_Mode, bool) {
+	field_type := lua.getfield(L, -1, "mode")
+	#partial switch lua.Type(field_type) {
+	case .NIL:
+		lua.pop(L, 1)
+		return .None, true
+	case .STRING:
+		parsed, parse_ok := policy_parse_require_results_mode(string(lua.tostring(L, -1)))
+		lua.pop(L, 1)
+		if !parse_ok {
+			return .None, false
+		}
+		return parsed, true
+	case:
+		user_error("h2odin: config: procs.require_results.mode must be a string")
+		lua.pop(L, 1)
+		return .None, false
+	}
+}
+
+policy_parse_require_results_mode :: proc(mode: string) -> (Require_Results_Mode, bool) {
+	switch mode {
+	case "non_void":
+		return .Non_Void, true
+	case:
+		user_errorf("h2odin: config: procs.require_results mode must be \"non_void\", got %q", mode)
+		return .None, false
+	}
 }
 
 // procs.wrappers: map C proc name → h2o.proc.wrapper { out_params?, slices?, keep_return? }.
