@@ -16,7 +16,7 @@ write_emit_result :: proc(result: Emit_Result, policy: ^Policy, destination: Out
 }
 
 write_emit_to_stdout :: proc(result: Emit_Result, policy: ^Policy) -> bool {
-	// Stdout only makes sense for a single merged unit.
+	// Stdout only makes sense for one unit (one root or explicit merged layout).
 	if len(result.files) != 1 {
 		user_error("h2odin: -destination:stdout requires a single output unit (use output.layout = \"merged\")")
 		return false

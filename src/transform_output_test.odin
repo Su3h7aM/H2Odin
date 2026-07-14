@@ -4,6 +4,32 @@ import vmem "core:mem/virtual"
 import "core:testing"
 
 @(test)
+test_plan_outputs_auto_derives_layout_from_root_count :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	one_root: IR
+	ir_init(&one_root)
+	_ = ir_register_input_headers(&one_root, {"headers/a.h"})
+	one_plan, one_ok := plan_outputs(&one_root, &Policy{})
+	testing.expect(t, one_ok)
+	testing.expect_value(t, len(one_plan.units), 1)
+
+	two_roots: IR
+	ir_init(&two_roots)
+	_ = ir_register_input_headers(&two_roots, {"headers/a.h", "headers/b.h"})
+	two_plan, two_ok := plan_outputs(&two_roots, &Policy{output_folder = "out"})
+	testing.expect(t, two_ok)
+	testing.expect_value(t, len(two_plan.units), 2)
+}
+
+@(test)
 test_plan_outputs_merged_keeps_only_live_declarations_in_order :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

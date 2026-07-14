@@ -84,7 +84,7 @@ capture_type :: proc(state: ^Extract_State, type: clang.Type) -> (handle: Type_H
 		// underlying type; whether a foreign name survives as posix.off_t,
 		// as a config spelling, or peels away to c.long is Transformation's
 		// decision, not a fact Extraction may destroy here.
-		if !location_is_ours(state, clang.get_cursor_location(decl_cursor)) {
+		if cursor_is_foreign(decl_cursor) {
 			name := clone_clang_string(clang.get_cursor_spelling(decl_cursor))
 			if is_std_c_type(name) {
 				return ir_add_type(

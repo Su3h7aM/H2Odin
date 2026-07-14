@@ -15,6 +15,8 @@ Type_Mode :: enum {
 // Macro grouping and enum policies run first because they synthesize ordinary
 // IR declarations that must participate in naming and validation.
 transform :: proc(ir: ^IR, type_mode: Type_Mode, policy: ^Policy) {
+	assign_header_ownership(ir)
+
 	for _, type_index in ir.types {
 		lower_type(ir, Type_Handle(type_index))
 	}

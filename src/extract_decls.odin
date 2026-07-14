@@ -11,7 +11,8 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 	}
 	// Skip when this macro was already captured from a sibling input's TU
 	// (or earlier in this walk). Macros have USRs in modern libclang.
-	if already_captured(state, cursor) {
+	if ref, captured := captured_decl(state, cursor); captured {
+		record_decl_occurrence(state, ref, cursor)
 		return
 	}
 
@@ -45,7 +46,7 @@ extract_macro :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 			deprecated = deprecated,
 			deprecated_message = deprecated_message,
 			doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
-			home = cursor_home(state, cursor),
+			source_path = cursor_source_path(cursor),
 		},
 	)
 	remember_captured(state, cursor, .Macro, u32(len(state.ir.macros) - 1))
@@ -68,7 +69,8 @@ macro_token_kind_from_clang :: proc(kind: clang.Token_Kind) -> Macro_Token_Kind 
 }
 
 extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
-	if already_captured(state, cursor) {
+	if ref, captured := captured_decl(state, cursor); captured {
+		record_decl_occurrence(state, ref, cursor)
 		return
 	}
 	name := clone_clang_string(clang.get_cursor_spelling(cursor))
@@ -100,7 +102,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 			deprecated = deprecated,
 			deprecated_message = deprecated_message,
 			doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
-			home = cursor_home(state, cursor),
+			source_path = cursor_source_path(cursor),
 		},
 	)
 	remember_captured(state, cursor, .Var, u32(len(state.ir.vars) - 1))
@@ -113,6 +115,7 @@ extract_var :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
 	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if ref, found := state.decl_map[usr]; usr != "" && found {
+		record_decl_occurrence(state, ref, cursor)
 		return Decl_Handle(ref.index)
 	}
 
@@ -123,7 +126,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 		deprecated         = deprecated,
 		deprecated_message = deprecated_message,
 		doc                = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
-		home               = cursor_home(state, cursor),
+		source_path        = cursor_source_path(cursor),
 		is_foreign         = is_foreign,
 	}
 	// System-header typedefs enter the pool so the type graph resolves and the
@@ -133,10 +136,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 	// so no dangling name can reach Emission.
 	handle := ir_create_typedef(state.ir, decl) if is_foreign else ir_add_typedef(state.ir, decl)
 	if usr != "" {
-		state.decl_map[usr] = Decl_Ref {
-			kind  = .Typedef,
-			index = u32(handle),
-		}
+		remember_captured(state, cursor, .Typedef, u32(handle))
 	}
 
 	aliased, aliased_ok := capture_type(state, clang.get_typedef_decl_underlying_type(cursor))
@@ -168,6 +168,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Decl_Handle {
 	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if ref, found := state.decl_map[usr]; usr != "" && found {
+		record_decl_occurrence(state, ref, cursor)
 		handle := Decl_Handle(ref.index)
 		if state.ir.enums[int(handle)].doc == "" {
 			state.ir.enums[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
@@ -178,9 +179,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 		}
 		if clang.is_cursor_definition(cursor) != 0 && state.ir.enums[int(handle)].members == nil {
 			if !cursor_is_foreign(cursor) {
-				if home := cursor_home(state, cursor); home != 0 {
-					state.ir.enums[int(handle)].home = home
-				}
+				state.ir.enums[int(handle)].source_path = cursor_source_path(cursor)
 				ir_promote_enum(state.ir, handle)
 				fill_enum(state, handle, cursor)
 			}
@@ -189,7 +188,6 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 		return handle
 	}
 
-	home := cursor_home(state, cursor)
 	is_foreign := cursor_is_foreign(cursor)
 	decl: Enum_Decl
 	if clang.cursor_is_anonymous(cursor) == 0 {
@@ -197,7 +195,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 	}
 	decl.deprecated, decl.deprecated_message = cursor_deprecation(cursor)
 	decl.doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
-	decl.home = home
+	decl.source_path = cursor_source_path(cursor)
 	decl.is_foreign = is_foreign
 	// The backing integer type is known for any enum cursor — clang answers
 	// with the target's ABI choice — so capture it even for a declaration
@@ -210,10 +208,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 		ir_promote_enum(state.ir, handle)
 	}
 	if usr != "" {
-		state.decl_map[usr] = Decl_Ref {
-			kind  = .Enum,
-			index = u32(handle),
-		}
+		remember_captured(state, cursor, .Enum, u32(handle))
 	}
 	if clang.is_cursor_definition(cursor) != 0 && !is_foreign {
 		fill_enum(state, handle, cursor)
@@ -295,6 +290,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if !is_anonymous {
 		if ref, found := state.decl_map[usr]; usr != "" && found {
+			record_decl_occurrence(state, ref, cursor)
 			handle := Decl_Handle(ref.index)
 			if state.ir.records[int(handle)].doc == "" {
 				state.ir.records[int(handle)].doc = clone_clang_string(clang.cursor_get_raw_comment_text(cursor))
@@ -309,12 +305,10 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 					// as if we had bound it. Stays a pool-only,
 					// incomplete entry for Transformation to resolve.
 				} else {
-					// Ours: the definition site wins for output placement, and
-					// a record first seen through another type now becomes a
-					// real emitted declaration with its layout.
-					if home := cursor_home(state, cursor); home != 0 {
-						state.ir.records[int(handle)].home = home
-					}
+					// Project declaration: the definition site replaces the
+					// placeholder provenance and supplies the real layout.
+					// Transformation later decides whether it is owned.
+					state.ir.records[int(handle)].source_path = cursor_source_path(cursor)
 					ir_promote_record(state.ir, handle)
 					fill_record(state, handle, cursor)
 				}
@@ -323,12 +317,11 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 		}
 	}
 
-	home := cursor_home(state, cursor)
 	is_foreign := cursor_is_foreign(cursor)
 	record := Record_Decl {
-		is_union   = clang.get_cursor_kind(cursor) == .Union_Decl,
-		home       = home,
-		is_foreign = is_foreign,
+		is_union    = clang.get_cursor_kind(cursor) == .Union_Decl,
+		is_foreign  = is_foreign,
+		source_path = cursor_source_path(cursor),
 	}
 	// Anonymous records keep "" as their name: recent libclang spells them
 	// as "struct (unnamed at file:line)", which is a description, not a name.
@@ -347,13 +340,11 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	// Only named records enter decl_map. Anonymous ones must not: shared USRs
 	// would alias distinct nested types (see is_anonymous note above).
 	if !is_anonymous && usr != "" {
-		state.decl_map[usr] = Decl_Ref {
-			kind  = .Record,
-			index = u32(handle),
-		}
+		remember_captured(state, cursor, .Record, u32(handle))
 	}
-	// Only fill layout for records that are ours. System tags stay incomplete
-	// so we never claim a system header's field list as our binding.
+	// Fill layouts for non-system project records. System tags stay incomplete
+	// so we never claim a system header's field list as our binding;
+	// Transformation later removes project records outside owned roots.
 	if clang.is_cursor_definition(cursor) != 0 && !is_foreign {
 		fill_record(state, handle, cursor)
 	}
@@ -498,7 +489,8 @@ visit_record_child :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_da
 }
 
 extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
-	if already_captured(state, cursor) {
+	if ref, captured := captured_decl(state, cursor); captured {
+		record_decl_occurrence(state, ref, cursor)
 		return
 	}
 	name := clone_clang_string(clang.get_cursor_spelling(cursor))
@@ -542,7 +534,7 @@ extract_func :: proc(state: ^Extract_State, cursor: clang.Cursor) {
 		deprecated         = deprecated,
 		deprecated_message = deprecated_message,
 		doc                = clone_clang_string(clang.cursor_get_raw_comment_text(cursor)),
-		home               = cursor_home(state, cursor),
+		source_path        = cursor_source_path(cursor),
 	}
 	ir_add_func(state.ir, func)
 	remember_captured(state, cursor, .Func, u32(len(state.ir.funcs) - 1))
@@ -571,13 +563,13 @@ cursor_deprecation :: proc(cursor: clang.Cursor) -> (deprecated: bool, message: 
 // True when this cursor's USR is already in decl_map (captured from another
 // input TU or an earlier include of the same sibling). Empty USR means the
 // entity cannot be shared; treat it as not-yet-captured.
-already_captured :: proc(state: ^Extract_State, cursor: clang.Cursor) -> bool {
+captured_decl :: proc(state: ^Extract_State, cursor: clang.Cursor) -> (Decl_Ref, bool) {
 	usr := clone_clang_string_with(clang.get_cursor_usr(cursor), context.temp_allocator)
 	if usr == "" {
-		return false
+		return {}, false
 	}
-	_, found := state.decl_map[usr]
-	return found
+	ref, found := state.decl_map[usr]
+	return ref, found
 }
 
 remember_captured :: proc(state: ^Extract_State, cursor: clang.Cursor, kind: Decl_Kind, index: u32) {
@@ -585,9 +577,18 @@ remember_captured :: proc(state: ^Extract_State, cursor: clang.Cursor, kind: Dec
 	if usr == "" {
 		return
 	}
-	state.decl_map[usr] = Decl_Ref {
+	ref := Decl_Ref {
 		kind  = kind,
 		index = index,
+	}
+	state.decl_map[usr] = ref
+	record_decl_occurrence(state, ref, cursor)
+}
+
+record_decl_occurrence :: proc(state: ^Extract_State, ref: Decl_Ref, cursor: clang.Cursor) {
+	path := cursor_source_path(cursor)
+	if path != "" {
+		append(&state.ir.decl_occurrences, Decl_Occurrence{decl = ref, path = path})
 	}
 }
 

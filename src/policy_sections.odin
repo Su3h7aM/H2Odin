@@ -1503,7 +1503,7 @@ policy_read_output :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 
-	// layout defaults to "merged" when absent.
+	// An absent layout derives from root count during output planning.
 	layout_type := lua.getfield(L, -1, "layout")
 	#partial switch lua.Type(layout_type) {
 	case .NIL:

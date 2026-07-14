@@ -19,22 +19,37 @@ Output_Plan :: struct {
 	units: []Output_Unit,
 }
 
-// Partition the final ordering list into output units according to
-// policy.output_layout. Fails before any write on collisions, missing homes,
-// or option combinations incompatible with the layout.
+// Partition the final ordering list into output units. Without an explicit
+// override, one root produces one file and multiple roots produce one file
+// per root. Fails before any write on collisions, missing homes, or option
+// combinations incompatible with the layout.
 plan_outputs :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) {
 	switch policy.output_layout {
+	case .Auto:
+		// One real root → single merged file; more → one file per root.
+		if ir_real_root_count(ir) == 1 {
+			return plan_merged(ir)
+		}
+		return plan_per_header(ir)
 	case .Merged:
 		return plan_merged(ir)
 	case .Per_Header:
-		return plan_per_header(ir, policy)
+		return plan_per_header(ir)
 	}
 	user_error("h2odin: internal error: unknown output layout")
 	return {}, false
 }
 
-plan_merged :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
+// Count configured roots, excluding the empty sentinel at input_headers[0].
+ir_real_root_count :: proc(ir: ^IR) -> int {
 	if len(ir.input_headers) < 2 {
+		return 0
+	}
+	return len(ir.input_headers) - 1
+}
+
+plan_merged :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
+	if ir_real_root_count(ir) < 1 {
 		user_error("h2odin: internal error: no input headers registered for output planning")
 		return {}, false
 	}
@@ -66,13 +81,9 @@ plan_merged :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
 	return Output_Plan{units = units}, true
 }
 
-plan_per_header :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) {
-	if policy.output_folder == "" {
-		user_error("h2odin: output.layout = \"per_header\" requires config.output_folder")
-		return {}, false
-	}
+plan_per_header :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
 	// Real headers: slots 1..n-1 of input_headers.
-	header_count := len(ir.input_headers) - 1
+	header_count := ir_real_root_count(ir)
 	if header_count < 1 {
 		user_error("h2odin: internal error: no input headers registered for per_header planning")
 		return {}, false

@@ -1147,16 +1147,7 @@ NPatchLayout :: enum u32 {
 
 // Callbacks to hook some internal functions
 // WARNING: These callbacks are intended for advanced users
-TraceLogCallback :: proc "c" (_: i32, _: cstring, _: __builtin_va_list)
-
-__builtin_va_list :: [1]__va_list_tag
-
-__va_list_tag :: struct {
-	gp_offset:         u32,
-	fp_offset:         u32,
-	overflow_arg_area: rawptr,
-	reg_save_area:     rawptr,
-}
+TraceLogCallback :: proc "c" (_: i32, _: cstring, _: [1]__va_list_tag)
 
 LoadFileDataCallback :: proc "c" (_: cstring, _: ^i32) -> ^u8
 
@@ -1170,6 +1161,8 @@ SaveFileTextCallback :: proc "c" (_: cstring, _: cstring) -> bool
 // Audio Loading and Playing Functions (Module: audio)
 //------------------------------------------------------------------------------------
 AudioCallback :: proc "c" (_: rawptr, _: u32)
+
+__va_list_tag :: distinct rawptr
 
 foreign lib {
 	// Window-related functions
