@@ -387,7 +387,7 @@ test_bit_fields_emit_only_when_layout_is_proven :: proc(t: ^testing.T) {
 	expect_contains(t, stdout, "H2O_Plain :: struct")
 	expect_contains(t, stdout, "x: c.int")
 	expect_contains(t, stdout, "H2O_Overlapping :: struct {}")
-	expect_contains(t, stderr, "warning[bit_field_layout_fallback]:")
+	expect_contains(t, stderr, "warning[bit_field_layout_fallback]")
 	expect_not_contains(t, stderr, `record "H2O_Overlapping" field "pointer"`)
 
 	out_dir := "/tmp/h2odin-bit-fields"
@@ -417,7 +417,9 @@ import clang "vendored:libclang"
 	defer delete(override_stderr)
 	if override_ok {
 		expect_contains(t, override_stdout, "H2O_IndexOptions :: struct {}")
-		expect_contains(t, override_stderr, `warning[bit_field_layout_fallback]: "H2O_IndexOptions"`)
+		// Multi-site bit-field fallback is summarized (category + count + cause).
+		expect_contains(t, override_stderr, "warning[bit_field_layout_fallback]")
+		expect_contains(t, override_stderr, "×")
 	}
 }
 

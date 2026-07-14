@@ -44,6 +44,32 @@ test_policy_load_without_config_uses_generation_defaults :: proc(t: ^testing.T) 
 }
 
 @(test)
+test_policy_load_diagnostics_accepts_info_and_hint :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"diag-levels",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.diagnostics = {
+  pointer_lowering_guess = "hint",
+  incomplete_extern_array = "info",
+}
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, ok)
+	testing.expect_value(t, policy.diag_severity[.Pointer_Lowering_Guess], Diag_Severity.Hint)
+	testing.expect_value(t, policy.diag_severity[.Incomplete_Extern_Array], Diag_Severity.Info)
+}
+
+@(test)
 test_policy_load_declarative_fields :: proc(t: ^testing.T) {
 	path, path_ok := write_test_config(t, "declarative", SECTIONED_DECLARATIVE)
 	if !path_ok {

@@ -85,205 +85,205 @@ MA_LOG_LEVEL_ERROR
     always have this log level enabled.
 */
 log_level :: enum u32 {
-	MA_LOG_LEVEL_DEBUG   = 4,
-	MA_LOG_LEVEL_INFO    = 3,
+	MA_LOG_LEVEL_DEBUG = 4,
+	MA_LOG_LEVEL_INFO = 3,
 	MA_LOG_LEVEL_WARNING = 2,
-	MA_LOG_LEVEL_ERROR   = 1,
+	MA_LOG_LEVEL_ERROR = 1,
 }
 
 context_ :: struct {
-	callbacks:               backend_callbacks,
+	callbacks: backend_callbacks,
 	/* DirectSound, ALSA, etc. */
-	backend:                 backend,
-	pLog:                    ^log,
+	backend: backend,
+	pLog: ^log,
 	/* Only used if the log is owned by the context. The pLog member will be set to &log in this case. */
-	log_:                    log,
-	threadPriority:          thread_priority,
-	threadStackSize:         uint,
-	pUserData:               rawptr,
-	allocationCallbacks:     allocation_callbacks,
+	log_: log,
+	threadPriority: thread_priority,
+	threadStackSize: uint,
+	pUserData: rawptr,
+	allocationCallbacks: allocation_callbacks,
 	/* Used to make ma_context_get_devices() thread safe. */
-	deviceEnumLock:          mutex,
+	deviceEnumLock: mutex,
 	/* Used to make ma_context_get_device_info() thread safe. */
-	deviceInfoLock:          mutex,
+	deviceInfoLock: mutex,
 	/* Total capacity of pDeviceInfos. */
-	deviceInfoCapacity:      uint32,
+	deviceInfoCapacity: uint32,
 	playbackDeviceInfoCount: uint32,
-	captureDeviceInfoCount:  uint32,
+	captureDeviceInfoCount: uint32,
 	/* Playback devices first, then capture. */
-	pDeviceInfos:            ^device_info,
-	using _:                 struct #raw_union {
-		alsa:         struct {
-			asoundSO:                               handle,
-			snd_pcm_open:                           proc_,
-			snd_pcm_close:                          proc_,
-			snd_pcm_hw_params_sizeof:               proc_,
-			snd_pcm_hw_params_any:                  proc_,
-			snd_pcm_hw_params_set_format:           proc_,
-			snd_pcm_hw_params_set_format_first:     proc_,
-			snd_pcm_hw_params_get_format_mask:      proc_,
-			snd_pcm_hw_params_set_channels:         proc_,
-			snd_pcm_hw_params_set_channels_near:    proc_,
-			snd_pcm_hw_params_set_channels_minmax:  proc_,
-			snd_pcm_hw_params_set_rate_resample:    proc_,
-			snd_pcm_hw_params_set_rate:             proc_,
-			snd_pcm_hw_params_set_rate_near:        proc_,
-			snd_pcm_hw_params_set_rate_minmax:      proc_,
+	pDeviceInfos: ^device_info,
+	using _: struct #raw_union {
+		alsa: struct {
+			asoundSO: handle,
+			snd_pcm_open: proc_,
+			snd_pcm_close: proc_,
+			snd_pcm_hw_params_sizeof: proc_,
+			snd_pcm_hw_params_any: proc_,
+			snd_pcm_hw_params_set_format: proc_,
+			snd_pcm_hw_params_set_format_first: proc_,
+			snd_pcm_hw_params_get_format_mask: proc_,
+			snd_pcm_hw_params_set_channels: proc_,
+			snd_pcm_hw_params_set_channels_near: proc_,
+			snd_pcm_hw_params_set_channels_minmax: proc_,
+			snd_pcm_hw_params_set_rate_resample: proc_,
+			snd_pcm_hw_params_set_rate: proc_,
+			snd_pcm_hw_params_set_rate_near: proc_,
+			snd_pcm_hw_params_set_rate_minmax: proc_,
 			snd_pcm_hw_params_set_buffer_size_near: proc_,
-			snd_pcm_hw_params_set_periods_near:     proc_,
-			snd_pcm_hw_params_set_access:           proc_,
-			snd_pcm_hw_params_get_format:           proc_,
-			snd_pcm_hw_params_get_channels:         proc_,
-			snd_pcm_hw_params_get_channels_min:     proc_,
-			snd_pcm_hw_params_get_channels_max:     proc_,
-			snd_pcm_hw_params_get_rate:             proc_,
-			snd_pcm_hw_params_get_rate_min:         proc_,
-			snd_pcm_hw_params_get_rate_max:         proc_,
-			snd_pcm_hw_params_get_buffer_size:      proc_,
-			snd_pcm_hw_params_get_periods:          proc_,
-			snd_pcm_hw_params_get_access:           proc_,
-			snd_pcm_hw_params_test_format:          proc_,
-			snd_pcm_hw_params_test_channels:        proc_,
-			snd_pcm_hw_params_test_rate:            proc_,
-			snd_pcm_hw_params:                      proc_,
-			snd_pcm_sw_params_sizeof:               proc_,
-			snd_pcm_sw_params_current:              proc_,
-			snd_pcm_sw_params_get_boundary:         proc_,
-			snd_pcm_sw_params_set_avail_min:        proc_,
-			snd_pcm_sw_params_set_start_threshold:  proc_,
-			snd_pcm_sw_params_set_stop_threshold:   proc_,
-			snd_pcm_sw_params:                      proc_,
-			snd_pcm_format_mask_sizeof:             proc_,
-			snd_pcm_format_mask_test:               proc_,
-			snd_pcm_get_chmap:                      proc_,
-			snd_pcm_state:                          proc_,
-			snd_pcm_prepare:                        proc_,
-			snd_pcm_start:                          proc_,
-			snd_pcm_drop:                           proc_,
-			snd_pcm_drain:                          proc_,
-			snd_pcm_reset:                          proc_,
-			snd_device_name_hint:                   proc_,
-			snd_device_name_get_hint:               proc_,
-			snd_card_get_index:                     proc_,
-			snd_device_name_free_hint:              proc_,
-			snd_pcm_mmap_begin:                     proc_,
-			snd_pcm_mmap_commit:                    proc_,
-			snd_pcm_recover:                        proc_,
-			snd_pcm_readi:                          proc_,
-			snd_pcm_writei:                         proc_,
-			snd_pcm_avail:                          proc_,
-			snd_pcm_avail_update:                   proc_,
-			snd_pcm_wait:                           proc_,
-			snd_pcm_nonblock:                       proc_,
-			snd_pcm_info:                           proc_,
-			snd_pcm_info_sizeof:                    proc_,
-			snd_pcm_info_get_name:                  proc_,
-			snd_pcm_poll_descriptors:               proc_,
-			snd_pcm_poll_descriptors_count:         proc_,
-			snd_pcm_poll_descriptors_revents:       proc_,
-			snd_config_update_free_global:          proc_,
-			internalDeviceEnumLock:                 mutex,
-			useVerboseDeviceEnumeration:            bool32,
+			snd_pcm_hw_params_set_periods_near: proc_,
+			snd_pcm_hw_params_set_access: proc_,
+			snd_pcm_hw_params_get_format: proc_,
+			snd_pcm_hw_params_get_channels: proc_,
+			snd_pcm_hw_params_get_channels_min: proc_,
+			snd_pcm_hw_params_get_channels_max: proc_,
+			snd_pcm_hw_params_get_rate: proc_,
+			snd_pcm_hw_params_get_rate_min: proc_,
+			snd_pcm_hw_params_get_rate_max: proc_,
+			snd_pcm_hw_params_get_buffer_size: proc_,
+			snd_pcm_hw_params_get_periods: proc_,
+			snd_pcm_hw_params_get_access: proc_,
+			snd_pcm_hw_params_test_format: proc_,
+			snd_pcm_hw_params_test_channels: proc_,
+			snd_pcm_hw_params_test_rate: proc_,
+			snd_pcm_hw_params: proc_,
+			snd_pcm_sw_params_sizeof: proc_,
+			snd_pcm_sw_params_current: proc_,
+			snd_pcm_sw_params_get_boundary: proc_,
+			snd_pcm_sw_params_set_avail_min: proc_,
+			snd_pcm_sw_params_set_start_threshold: proc_,
+			snd_pcm_sw_params_set_stop_threshold: proc_,
+			snd_pcm_sw_params: proc_,
+			snd_pcm_format_mask_sizeof: proc_,
+			snd_pcm_format_mask_test: proc_,
+			snd_pcm_get_chmap: proc_,
+			snd_pcm_state: proc_,
+			snd_pcm_prepare: proc_,
+			snd_pcm_start: proc_,
+			snd_pcm_drop: proc_,
+			snd_pcm_drain: proc_,
+			snd_pcm_reset: proc_,
+			snd_device_name_hint: proc_,
+			snd_device_name_get_hint: proc_,
+			snd_card_get_index: proc_,
+			snd_device_name_free_hint: proc_,
+			snd_pcm_mmap_begin: proc_,
+			snd_pcm_mmap_commit: proc_,
+			snd_pcm_recover: proc_,
+			snd_pcm_readi: proc_,
+			snd_pcm_writei: proc_,
+			snd_pcm_avail: proc_,
+			snd_pcm_avail_update: proc_,
+			snd_pcm_wait: proc_,
+			snd_pcm_nonblock: proc_,
+			snd_pcm_info: proc_,
+			snd_pcm_info_sizeof: proc_,
+			snd_pcm_info_get_name: proc_,
+			snd_pcm_poll_descriptors: proc_,
+			snd_pcm_poll_descriptors_count: proc_,
+			snd_pcm_poll_descriptors_revents: proc_,
+			snd_config_update_free_global: proc_,
+			internalDeviceEnumLock: mutex,
+			useVerboseDeviceEnumeration: bool32,
 		},
-		pulse:        struct {
-			pulseSO:                            handle,
-			pa_mainloop_new:                    proc_,
-			pa_mainloop_free:                   proc_,
-			pa_mainloop_quit:                   proc_,
-			pa_mainloop_get_api:                proc_,
-			pa_mainloop_iterate:                proc_,
-			pa_mainloop_wakeup:                 proc_,
-			pa_threaded_mainloop_new:           proc_,
-			pa_threaded_mainloop_free:          proc_,
-			pa_threaded_mainloop_start:         proc_,
-			pa_threaded_mainloop_stop:          proc_,
-			pa_threaded_mainloop_lock:          proc_,
-			pa_threaded_mainloop_unlock:        proc_,
-			pa_threaded_mainloop_wait:          proc_,
-			pa_threaded_mainloop_signal:        proc_,
-			pa_threaded_mainloop_accept:        proc_,
-			pa_threaded_mainloop_get_retval:    proc_,
-			pa_threaded_mainloop_get_api:       proc_,
-			pa_threaded_mainloop_in_thread:     proc_,
-			pa_threaded_mainloop_set_name:      proc_,
-			pa_context_new:                     proc_,
-			pa_context_unref:                   proc_,
-			pa_context_connect:                 proc_,
-			pa_context_disconnect:              proc_,
-			pa_context_set_state_callback:      proc_,
-			pa_context_get_state:               proc_,
-			pa_context_get_sink_info_list:      proc_,
-			pa_context_get_source_info_list:    proc_,
-			pa_context_get_sink_info_by_name:   proc_,
+		pulse: struct {
+			pulseSO: handle,
+			pa_mainloop_new: proc_,
+			pa_mainloop_free: proc_,
+			pa_mainloop_quit: proc_,
+			pa_mainloop_get_api: proc_,
+			pa_mainloop_iterate: proc_,
+			pa_mainloop_wakeup: proc_,
+			pa_threaded_mainloop_new: proc_,
+			pa_threaded_mainloop_free: proc_,
+			pa_threaded_mainloop_start: proc_,
+			pa_threaded_mainloop_stop: proc_,
+			pa_threaded_mainloop_lock: proc_,
+			pa_threaded_mainloop_unlock: proc_,
+			pa_threaded_mainloop_wait: proc_,
+			pa_threaded_mainloop_signal: proc_,
+			pa_threaded_mainloop_accept: proc_,
+			pa_threaded_mainloop_get_retval: proc_,
+			pa_threaded_mainloop_get_api: proc_,
+			pa_threaded_mainloop_in_thread: proc_,
+			pa_threaded_mainloop_set_name: proc_,
+			pa_context_new: proc_,
+			pa_context_unref: proc_,
+			pa_context_connect: proc_,
+			pa_context_disconnect: proc_,
+			pa_context_set_state_callback: proc_,
+			pa_context_get_state: proc_,
+			pa_context_get_sink_info_list: proc_,
+			pa_context_get_source_info_list: proc_,
+			pa_context_get_sink_info_by_name: proc_,
 			pa_context_get_source_info_by_name: proc_,
-			pa_operation_unref:                 proc_,
-			pa_operation_get_state:             proc_,
-			pa_channel_map_init_extend:         proc_,
-			pa_channel_map_valid:               proc_,
-			pa_channel_map_compatible:          proc_,
-			pa_stream_new:                      proc_,
-			pa_stream_unref:                    proc_,
-			pa_stream_connect_playback:         proc_,
-			pa_stream_connect_record:           proc_,
-			pa_stream_disconnect:               proc_,
-			pa_stream_get_state:                proc_,
-			pa_stream_get_sample_spec:          proc_,
-			pa_stream_get_channel_map:          proc_,
-			pa_stream_get_buffer_attr:          proc_,
-			pa_stream_set_buffer_attr:          proc_,
-			pa_stream_get_device_name:          proc_,
-			pa_stream_set_write_callback:       proc_,
-			pa_stream_set_read_callback:        proc_,
-			pa_stream_set_suspended_callback:   proc_,
-			pa_stream_set_moved_callback:       proc_,
-			pa_stream_is_suspended:             proc_,
-			pa_stream_flush:                    proc_,
-			pa_stream_drain:                    proc_,
-			pa_stream_is_corked:                proc_,
-			pa_stream_cork:                     proc_,
-			pa_stream_trigger:                  proc_,
-			pa_stream_begin_write:              proc_,
-			pa_stream_write:                    proc_,
-			pa_stream_peek:                     proc_,
-			pa_stream_drop:                     proc_,
-			pa_stream_writable_size:            proc_,
-			pa_stream_readable_size:            proc_,
+			pa_operation_unref: proc_,
+			pa_operation_get_state: proc_,
+			pa_channel_map_init_extend: proc_,
+			pa_channel_map_valid: proc_,
+			pa_channel_map_compatible: proc_,
+			pa_stream_new: proc_,
+			pa_stream_unref: proc_,
+			pa_stream_connect_playback: proc_,
+			pa_stream_connect_record: proc_,
+			pa_stream_disconnect: proc_,
+			pa_stream_get_state: proc_,
+			pa_stream_get_sample_spec: proc_,
+			pa_stream_get_channel_map: proc_,
+			pa_stream_get_buffer_attr: proc_,
+			pa_stream_set_buffer_attr: proc_,
+			pa_stream_get_device_name: proc_,
+			pa_stream_set_write_callback: proc_,
+			pa_stream_set_read_callback: proc_,
+			pa_stream_set_suspended_callback: proc_,
+			pa_stream_set_moved_callback: proc_,
+			pa_stream_is_suspended: proc_,
+			pa_stream_flush: proc_,
+			pa_stream_drain: proc_,
+			pa_stream_is_corked: proc_,
+			pa_stream_cork: proc_,
+			pa_stream_trigger: proc_,
+			pa_stream_begin_write: proc_,
+			pa_stream_write: proc_,
+			pa_stream_peek: proc_,
+			pa_stream_drop: proc_,
+			pa_stream_writable_size: proc_,
+			pa_stream_readable_size: proc_,
 			/*pa_mainloop**/
-			pMainLoop:                          ptr,
+			pMainLoop: ptr,
 			/*pa_context**/
-			pPulseContext:                      ptr,
+			pPulseContext: ptr,
 			/* Set when the context is initialized. Used by devices for their local pa_context objects. */
-			pApplicationName:                   ^u8,
+			pApplicationName: ^u8,
 			/* Set when the context is initialized. Used by devices for their local pa_context objects. */
-			pServerName:                        ^u8,
+			pServerName: ^u8,
 		},
-		jack:         struct {
-			jackSO:                        handle,
-			jack_client_open:              proc_,
-			jack_client_close:             proc_,
-			jack_client_name_size:         proc_,
-			jack_set_process_callback:     proc_,
+		jack: struct {
+			jackSO: handle,
+			jack_client_open: proc_,
+			jack_client_close: proc_,
+			jack_client_name_size: proc_,
+			jack_set_process_callback: proc_,
 			jack_set_buffer_size_callback: proc_,
-			jack_on_shutdown:              proc_,
-			jack_get_sample_rate:          proc_,
-			jack_get_buffer_size:          proc_,
-			jack_get_ports:                proc_,
-			jack_activate:                 proc_,
-			jack_deactivate:               proc_,
-			jack_connect:                  proc_,
-			jack_port_register:            proc_,
-			jack_port_name:                proc_,
-			jack_port_get_buffer:          proc_,
-			jack_free:                     proc_,
-			pClientName:                   ^u8,
-			tryStartServer:                bool32,
+			jack_on_shutdown: proc_,
+			jack_get_sample_rate: proc_,
+			jack_get_buffer_size: proc_,
+			jack_get_ports: proc_,
+			jack_activate: proc_,
+			jack_deactivate: proc_,
+			jack_connect: proc_,
+			jack_port_register: proc_,
+			jack_port_name: proc_,
+			jack_port_get_buffer: proc_,
+			jack_free: proc_,
+			pClientName: ^u8,
+			tryStartServer: bool32,
 		},
 		null_backend: struct {
 			_unused: i32,
 		},
 	},
-	using _:                 struct #raw_union {
-		posix:   struct {
+	using _: struct #raw_union {
+		posix: struct {
 			_unused: i32,
 		},
 		_unused: i32,
@@ -291,158 +291,158 @@ context_ :: struct {
 }
 
 device :: struct {
-	pContext:                  ^context_,
-	type:                      device_type,
-	sampleRate:                uint32,
+	pContext: ^context_,
+	type: device_type,
+	sampleRate: uint32,
 	/* The state of the device is variable and can change at any time on any thread. Must be used atomically. */
-	state:                     atomic_device_state,
+	state: atomic_device_state,
 	/* Set once at initialization time and should not be changed after. */
-	onData:                    device_data_proc,
+	onData: device_data_proc,
 	/* Set once at initialization time and should not be changed after. */
-	onNotification:            device_notification_proc,
+	onNotification: device_notification_proc,
 	/* DEPRECATED. Use the notification callback instead. Set once at initialization time and should not be changed after. */
-	onStop:                    stop_proc,
+	onStop: stop_proc,
 	/* Application defined data. */
-	pUserData:                 rawptr,
-	startStopLock:             mutex,
-	wakeupEvent:               event,
-	startEvent:                event,
-	stopEvent:                 event,
-	thread_:                   thread,
+	pUserData: rawptr,
+	startStopLock: mutex,
+	wakeupEvent: event,
+	startEvent: event,
+	stopEvent: event,
+	thread_: thread,
 	/* This is set by the worker thread after it's finished doing a job. */
-	workResult:                result,
+	workResult: result,
 	/* When set to true, uninitializing the device will also uninitialize the context. Set to true when NULL is passed into ma_device_init(). */
-	isOwnerOfContext:          bool8,
+	isOwnerOfContext: bool8,
 	noPreSilencedOutputBuffer: bool8,
-	noClip:                    bool8,
-	noDisableDenormals:        bool8,
-	noFixedSizedCallback:      bool8,
+	noClip: bool8,
+	noDisableDenormals: bool8,
+	noFixedSizedCallback: bool8,
 	/* Linear 0..1. Can be read and written simultaneously by different threads. Must be used atomically. */
-	masterVolumeFactor:        atomic_float,
+	masterVolumeFactor: atomic_float,
 	/* Intermediary buffer for duplex device on asynchronous backends. */
-	duplexRB:                  duplex_rb,
-	resampling:                struct {
-		algorithm:        resample_algorithm,
-		pBackendVTable:   ^resampling_backend_vtable,
+	duplexRB: duplex_rb,
+	resampling: struct {
+		algorithm: resample_algorithm,
+		pBackendVTable: ^resampling_backend_vtable,
 		pBackendUserData: rawptr,
-		linear:           struct {
+		linear: struct {
 			lpfOrder: uint32,
 		},
 	},
-	playback:                  struct {
+	playback: struct {
 		/* Set to NULL if using default ID, otherwise set to the address of "id". */
-		pID:                             ^device_id,
+		pID: ^device_id,
 		/* If using an explicit device, will be set to a copy of the ID used for initialization. Otherwise cleared to 0. */
-		id:                              device_id,
+		id: device_id,
 		/* Maybe temporary. Likely to be replaced with a query API. */
-		name:                            [256]u8,
+		name: [256]u8,
 		/* Set to whatever was passed in when the device was initialized. */
-		shareMode:                       share_mode,
-		format_:                         format,
-		channels:                        uint32,
-		channelMap:                      [254]channel,
-		internalFormat:                  format,
-		internalChannels:                uint32,
-		internalSampleRate:              uint32,
-		internalChannelMap:              [254]channel,
-		internalPeriodSizeInFrames:      uint32,
-		internalPeriods:                 uint32,
-		channelMixMode:                  channel_mix_mode,
+		shareMode: share_mode,
+		format_: format,
+		channels: uint32,
+		channelMap: [254]channel,
+		internalFormat: format,
+		internalChannels: uint32,
+		internalSampleRate: uint32,
+		internalChannelMap: [254]channel,
+		internalPeriodSizeInFrames: uint32,
+		internalPeriods: uint32,
+		channelMixMode: channel_mix_mode,
 		calculateLFEFromSpatialChannels: bool32,
-		converter:                       data_converter,
+		converter: data_converter,
 		/* For implementing fixed sized buffer callbacks. Will be null if using variable sized callbacks. */
-		pIntermediaryBuffer:             rawptr,
-		intermediaryBufferCap:           uint32,
+		pIntermediaryBuffer: rawptr,
+		intermediaryBufferCap: uint32,
 		/* How many valid frames are sitting in the intermediary buffer. */
-		intermediaryBufferLen:           uint32,
+		intermediaryBufferLen: uint32,
 		/* In external format. Can be null. */
-		pInputCache:                     rawptr,
-		inputCacheCap:                   uint64,
-		inputCacheConsumed:              uint64,
-		inputCacheRemaining:             uint64,
+		pInputCache: rawptr,
+		inputCacheCap: uint64,
+		inputCacheConsumed: uint64,
+		inputCacheRemaining: uint64,
 	},
-	capture:                   struct {
+	capture: struct {
 		/* Set to NULL if using default ID, otherwise set to the address of "id". */
-		pID:                             ^device_id,
+		pID: ^device_id,
 		/* If using an explicit device, will be set to a copy of the ID used for initialization. Otherwise cleared to 0. */
-		id:                              device_id,
+		id: device_id,
 		/* Maybe temporary. Likely to be replaced with a query API. */
-		name:                            [256]u8,
+		name: [256]u8,
 		/* Set to whatever was passed in when the device was initialized. */
-		shareMode:                       share_mode,
-		format_:                         format,
-		channels:                        uint32,
-		channelMap:                      [254]channel,
-		internalFormat:                  format,
-		internalChannels:                uint32,
-		internalSampleRate:              uint32,
-		internalChannelMap:              [254]channel,
-		internalPeriodSizeInFrames:      uint32,
-		internalPeriods:                 uint32,
-		channelMixMode:                  channel_mix_mode,
+		shareMode: share_mode,
+		format_: format,
+		channels: uint32,
+		channelMap: [254]channel,
+		internalFormat: format,
+		internalChannels: uint32,
+		internalSampleRate: uint32,
+		internalChannelMap: [254]channel,
+		internalPeriodSizeInFrames: uint32,
+		internalPeriods: uint32,
+		channelMixMode: channel_mix_mode,
 		calculateLFEFromSpatialChannels: bool32,
-		converter:                       data_converter,
+		converter: data_converter,
 		/* For implementing fixed sized buffer callbacks. Will be null if using variable sized callbacks. */
-		pIntermediaryBuffer:             rawptr,
-		intermediaryBufferCap:           uint32,
+		pIntermediaryBuffer: rawptr,
+		intermediaryBufferCap: uint32,
 		/* How many valid frames are sitting in the intermediary buffer. */
-		intermediaryBufferLen:           uint32,
+		intermediaryBufferLen: uint32,
 	},
-	using _:                   struct #raw_union {
-		alsa:        struct {
+	using _: struct #raw_union {
+		alsa: struct {
 			/*snd_pcm_t**/
-			pPCMPlayback:                ptr,
+			pPCMPlayback: ptr,
 			/*snd_pcm_t**/
-			pPCMCapture:                 ptr,
+			pPCMCapture: ptr,
 			/*struct pollfd**/
-			pPollDescriptorsPlayback:    rawptr,
+			pPollDescriptorsPlayback: rawptr,
 			/*struct pollfd**/
-			pPollDescriptorsCapture:     rawptr,
+			pPollDescriptorsCapture: rawptr,
 			pollDescriptorCountPlayback: i32,
-			pollDescriptorCountCapture:  i32,
+			pollDescriptorCountCapture: i32,
 			/* eventfd for waking up from poll() when the playback device is stopped. */
-			wakeupfdPlayback:            i32,
+			wakeupfdPlayback: i32,
 			/* eventfd for waking up from poll() when the capture device is stopped. */
-			wakeupfdCapture:             i32,
-			isUsingMMapPlayback:         bool8,
-			isUsingMMapCapture:          bool8,
+			wakeupfdCapture: i32,
+			isUsingMMapPlayback: bool8,
+			isUsingMMapCapture: bool8,
 		},
-		pulse:       struct {
+		pulse: struct {
 			/*pa_mainloop**/
-			pMainLoop:       ptr,
+			pMainLoop: ptr,
 			/*pa_context**/
-			pPulseContext:   ptr,
+			pPulseContext: ptr,
 			/*pa_stream**/
 			pStreamPlayback: ptr,
 			/*pa_stream**/
-			pStreamCapture:  ptr,
+			pStreamCapture: ptr,
 		},
-		jack:        struct {
+		jack: struct {
 			/*jack_client_t**/
-			pClient:                     ptr,
+			pClient: ptr,
 			/*jack_port_t**/
-			ppPortsPlayback:             ^ptr,
+			ppPortsPlayback: ^ptr,
 			/*jack_port_t**/
-			ppPortsCapture:              ^ptr,
+			ppPortsCapture: ^ptr,
 			/* Typed as a float because JACK is always floating point. */
 			pIntermediaryBufferPlayback: ^f32,
-			pIntermediaryBufferCapture:  ^f32,
+			pIntermediaryBufferCapture: ^f32,
 		},
 		null_device: struct {
-			deviceThread:                         thread,
-			operationEvent:                       event,
-			operationCompletionEvent:             event,
-			operationSemaphore:                   semaphore,
-			operation:                            uint32,
-			operationResult:                      result,
-			timer:                                timer,
-			priorRunTime:                         f64,
+			deviceThread: thread,
+			operationEvent: event,
+			operationCompletionEvent: event,
+			operationSemaphore: semaphore,
+			operation: uint32,
+			operationResult: result,
+			timer: timer,
+			priorRunTime: f64,
 			currentPeriodFramesRemainingPlayback: uint32,
-			currentPeriodFramesRemainingCapture:  uint32,
-			lastProcessedFramePlayback:           uint64,
-			lastProcessedFrameCapture:            uint64,
+			currentPeriodFramesRemainingCapture: uint32,
+			lastProcessedFramePlayback: uint64,
+			lastProcessedFrameCapture: uint64,
 			/* Read and written by multiple threads. Must be used atomically, and must be 32-bit for compiler compatibility. */
-			isStarted:                            atomic_bool32,
+			isStarted: atomic_bool32,
 		},
 	},
 }
@@ -633,28 +633,28 @@ format :: enum u32 {
 
 standard_sample_rate :: enum u32 {
 	/* Most common */
-	standard_sample_rate_48000  = 48000,
-	standard_sample_rate_44100  = 44100,
+	standard_sample_rate_48000 = 48000,
+	standard_sample_rate_44100 = 44100,
 	/* Lows */
-	standard_sample_rate_32000  = 32000,
-	standard_sample_rate_24000  = 24000,
-	standard_sample_rate_22050  = 22050,
+	standard_sample_rate_32000 = 32000,
+	standard_sample_rate_24000 = 24000,
+	standard_sample_rate_22050 = 22050,
 	/* Highs */
-	standard_sample_rate_88200  = 88200,
-	standard_sample_rate_96000  = 96000,
+	standard_sample_rate_88200 = 88200,
+	standard_sample_rate_96000 = 96000,
 	standard_sample_rate_176400 = 176400,
 	standard_sample_rate_192000 = 192000,
 	/* Extreme lows */
-	standard_sample_rate_16000  = 16000,
-	standard_sample_rate_11025  = 11025,
-	standard_sample_rate_8000   = 8000,
+	standard_sample_rate_16000 = 16000,
+	standard_sample_rate_11025 = 11025,
+	standard_sample_rate_8000 = 8000,
 	/* Extreme highs */
 	standard_sample_rate_352800 = 352800,
 	standard_sample_rate_384000 = 384000,
-	standard_sample_rate_min    = 8000,
-	standard_sample_rate_max    = 384000,
+	standard_sample_rate_min = 8000,
+	standard_sample_rate_max = 384000,
 	/* Need to maintain the count manually. Make sure this is updated if items are added to enum. */
-	standard_sample_rate_count  = 14,
+	standard_sample_rate_count = 14,
 }
 
 channel_mix_mode :: enum u32 {
@@ -690,9 +690,9 @@ performance_profile :: enum u32 {
 
 allocation_callbacks :: struct {
 	pUserData: rawptr,
-	onMalloc:  proc "c" (_: uint, _: rawptr) -> rawptr,
+	onMalloc: proc "c" (_: uint, _: rawptr) -> rawptr,
 	onRealloc: proc "c" (_: rawptr, _: uint, _: rawptr) -> rawptr,
-	onFree:    proc "c" (_: rawptr, _: rawptr),
+	onFree: proc "c" (_: rawptr, _: rawptr),
 }
 
 lcg :: struct {
@@ -740,14 +740,14 @@ mutex :: pthread_mutex_t
 
 event :: struct {
 	value: uint32,
-	lock:  pthread_mutex_t,
-	cond:  pthread_cond_t,
+	lock: pthread_mutex_t,
+	cond: pthread_cond_t,
 }
 
 semaphore :: struct {
 	value: i32,
-	lock:  pthread_mutex_t,
-	cond:  pthread_cond_t,
+	lock: pthread_mutex_t,
+	cond: pthread_cond_t,
 }
 
 /*
@@ -777,17 +777,17 @@ pMessage (in)
 log_callback_proc :: proc "c" (_: rawptr, _: uint32, _: cstring)
 
 log_callback :: struct {
-	onLog:     log_callback_proc,
+	onLog: log_callback_proc,
 	pUserData: rawptr,
 }
 
 log :: struct {
-	callbacks:           [4]log_callback,
-	callbackCount:       uint32,
+	callbacks: [4]log_callback,
+	callbackCount: uint32,
 	/* Need to store these persistently because ma_log_postv() might need to allocate a buffer on the heap. */
 	allocationCallbacks: allocation_callbacks,
 	/* For thread safety just to make it easier and safer for the logging implementation. */
-	lock:                mutex,
+	lock: mutex,
 }
 
 /**************************************************************************************************************************************************************
@@ -801,28 +801,28 @@ biquad_coefficient :: struct #raw_union {
 }
 
 biquad_config :: struct {
-	format_:  format,
+	format_: format,
 	channels: uint32,
-	b0:       f64,
-	b1:       f64,
-	b2:       f64,
-	a0:       f64,
-	a1:       f64,
-	a2:       f64,
+	b0: f64,
+	b1: f64,
+	b2: f64,
+	a0: f64,
+	a1: f64,
+	a2: f64,
 }
 
 biquad :: struct {
-	format_:   format,
-	channels:  uint32,
-	b0:        biquad_coefficient,
-	b1:        biquad_coefficient,
-	b2:        biquad_coefficient,
-	a1:        biquad_coefficient,
-	a2:        biquad_coefficient,
-	pR1:       ^biquad_coefficient,
-	pR2:       ^biquad_coefficient,
+	format_: format,
+	channels: uint32,
+	b0: biquad_coefficient,
+	b1: biquad_coefficient,
+	b2: biquad_coefficient,
+	a1: biquad_coefficient,
+	a2: biquad_coefficient,
+	pR1: ^biquad_coefficient,
+	pR2: ^biquad_coefficient,
 	/* Memory management. */
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 	_ownsHeap: bool32,
 }
 
@@ -832,11 +832,11 @@ Low-Pass Filtering
 
 **************************************************************************************************************************************************************/
 lpf1_config :: struct {
-	format_:         format,
-	channels:        uint32,
-	sampleRate:      uint32,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
 	cutoffFrequency: f64,
-	q:               f64,
+	q: f64,
 }
 
 /**************************************************************************************************************************************************************
@@ -847,12 +847,12 @@ Low-Pass Filtering
 lpf2_config :: lpf1_config
 
 lpf1 :: struct {
-	format_:   format,
-	channels:  uint32,
-	a:         biquad_coefficient,
-	pR1:       ^biquad_coefficient,
+	format_: format,
+	channels: uint32,
+	a: biquad_coefficient,
+	pR1: ^biquad_coefficient,
 	/* Memory management. */
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 	_ownsHeap: bool32,
 }
 
@@ -862,25 +862,25 @@ lpf2 :: struct {
 }
 
 lpf_config :: struct {
-	format_:         format,
-	channels:        uint32,
-	sampleRate:      uint32,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
 	cutoffFrequency: f64,
 	/* If set to 0, will be treated as a passthrough (no filtering will be applied). */
-	order:           uint32,
+	order: uint32,
 }
 
 lpf :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	lpf1Count:  uint32,
-	lpf2Count:  uint32,
-	pLPF1:      ^lpf1,
-	pLPF2:      ^lpf2,
+	lpf1Count: uint32,
+	lpf2Count: uint32,
+	pLPF1: ^lpf1,
+	pLPF2: ^lpf2,
 	/* Memory management. */
-	_pHeap:     rawptr,
-	_ownsHeap:  bool32,
+	_pHeap: rawptr,
+	_ownsHeap: bool32,
 }
 
 /**************************************************************************************************************************************************************
@@ -889,11 +889,11 @@ High-Pass Filtering
 
 **************************************************************************************************************************************************************/
 hpf1_config :: struct {
-	format_:         format,
-	channels:        uint32,
-	sampleRate:      uint32,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
 	cutoffFrequency: f64,
-	q:               f64,
+	q: f64,
 }
 
 /**************************************************************************************************************************************************************
@@ -904,12 +904,12 @@ High-Pass Filtering
 hpf2_config :: hpf1_config
 
 hpf1 :: struct {
-	format_:   format,
-	channels:  uint32,
-	a:         biquad_coefficient,
-	pR1:       ^biquad_coefficient,
+	format_: format,
+	channels: uint32,
+	a: biquad_coefficient,
+	pR1: ^biquad_coefficient,
 	/* Memory management. */
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 	_ownsHeap: bool32,
 }
 
@@ -919,25 +919,25 @@ hpf2 :: struct {
 }
 
 hpf_config :: struct {
-	format_:         format,
-	channels:        uint32,
-	sampleRate:      uint32,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
 	cutoffFrequency: f64,
 	/* If set to 0, will be treated as a passthrough (no filtering will be applied). */
-	order:           uint32,
+	order: uint32,
 }
 
 hpf :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	hpf1Count:  uint32,
-	hpf2Count:  uint32,
-	pHPF1:      ^hpf1,
-	pHPF2:      ^hpf2,
+	hpf1Count: uint32,
+	hpf2Count: uint32,
+	pHPF1: ^hpf1,
+	pHPF2: ^hpf2,
 	/* Memory management. */
-	_pHeap:     rawptr,
-	_ownsHeap:  bool32,
+	_pHeap: rawptr,
+	_ownsHeap: bool32,
 }
 
 /**************************************************************************************************************************************************************
@@ -946,11 +946,11 @@ Band-Pass Filtering
 
 **************************************************************************************************************************************************************/
 bpf2_config :: struct {
-	format_:         format,
-	channels:        uint32,
-	sampleRate:      uint32,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
 	cutoffFrequency: f64,
-	q:               f64,
+	q: f64,
 }
 
 bpf2 :: struct {
@@ -959,21 +959,21 @@ bpf2 :: struct {
 }
 
 bpf_config :: struct {
-	format_:         format,
-	channels:        uint32,
-	sampleRate:      uint32,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
 	cutoffFrequency: f64,
 	/* If set to 0, will be treated as a passthrough (no filtering will be applied). */
-	order:           uint32,
+	order: uint32,
 }
 
 bpf :: struct {
-	format_:   format,
-	channels:  uint32,
+	format_: format,
+	channels: uint32,
 	bpf2Count: uint32,
-	pBPF2:     ^bpf2,
+	pBPF2: ^bpf2,
 	/* Memory management. */
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 	_ownsHeap: bool32,
 }
 
@@ -983,11 +983,11 @@ Notching Filter
 
 **************************************************************************************************************************************************************/
 notch2_config :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	q:          f64,
-	frequency:  f64,
+	q: f64,
+	frequency: f64,
 }
 
 /**************************************************************************************************************************************************************
@@ -1007,12 +1007,12 @@ Peaking EQ Filter
 
 **************************************************************************************************************************************************************/
 peak2_config :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	gainDB:     f64,
-	q:          f64,
-	frequency:  f64,
+	gainDB: f64,
+	q: f64,
+	frequency: f64,
 }
 
 /**************************************************************************************************************************************************************
@@ -1032,12 +1032,12 @@ Low Shelf Filter
 
 **************************************************************************************************************************************************************/
 loshelf2_config :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	gainDB:     f64,
+	gainDB: f64,
 	shelfSlope: f64,
-	frequency:  f64,
+	frequency: f64,
 }
 
 /**************************************************************************************************************************************************************
@@ -1057,12 +1057,12 @@ High Shelf Filter
 
 **************************************************************************************************************************************************************/
 hishelf2_config :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	gainDB:     f64,
+	gainDB: f64,
 	shelfSlope: f64,
-	frequency:  f64,
+	frequency: f64,
 }
 
 /**************************************************************************************************************************************************************
@@ -1080,42 +1080,42 @@ hishelf2 :: struct {
 Delay
 */
 delay_config :: struct {
-	channels:      uint32,
-	sampleRate:    uint32,
+	channels: uint32,
+	sampleRate: uint32,
 	delayInFrames: uint32,
 	/* Set to true to delay the start of the output; false otherwise. */
-	delayStart:    bool32,
+	delayStart: bool32,
 	/* 0..1. Default = 1. */
-	wet:           f32,
+	wet: f32,
 	/* 0..1. Default = 1. */
-	dry:           f32,
+	dry: f32,
 	/* 0..1. Default = 0 (no feedback). Feedback decay. Use this for echo. */
-	decay:         f32,
+	decay: f32,
 }
 
 delay :: struct {
-	config:             delay_config,
+	config: delay_config,
 	/* Feedback is written to this cursor. Always equal or in front of the read cursor. */
-	cursor:             uint32,
+	cursor: uint32,
 	bufferSizeInFrames: uint32,
-	pBuffer:            ^f32,
+	pBuffer: ^f32,
 }
 
 /* Gainer for smooth volume changes. */
 gainer_config :: struct {
-	channels:           uint32,
+	channels: uint32,
 	smoothTimeInFrames: uint32,
 }
 
 gainer :: struct {
-	config:       gainer_config,
-	t:            uint32,
+	config: gainer_config,
+	t: uint32,
 	masterVolume: f32,
-	pOldGains:    ^f32,
-	pNewGains:    ^f32,
+	pOldGains: ^f32,
+	pNewGains: ^f32,
 	/* Memory management. */
-	_pHeap:       rawptr,
-	_ownsHeap:    bool32,
+	_pHeap: rawptr,
+	_ownsHeap: bool32,
 }
 
 /* Stereo panner. */
@@ -1127,32 +1127,32 @@ pan_mode :: enum u32 {
 }
 
 panner_config :: struct {
-	format_:  format,
+	format_: format,
 	channels: uint32,
-	mode:     pan_mode,
-	pan:      f32,
+	mode: pan_mode,
+	pan: f32,
 }
 
 panner :: struct {
-	format_:  format,
+	format_: format,
 	channels: uint32,
-	mode:     pan_mode,
+	mode: pan_mode,
 	/* -1..1 where 0 is no pan, -1 is left side, +1 is right side. Defaults to 0. */
-	pan:      f32,
+	pan: f32,
 }
 
 /* Fader. */
 fader_config :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
 }
 
 fader :: struct {
-	config:         fader_config,
+	config: fader_config,
 	/* If volumeBeg and volumeEnd is equal to 1, no fading happens (ma_fader_process_pcm_frames() will run as a passthrough). */
-	volumeBeg:      f32,
-	volumeEnd:      f32,
+	volumeBeg: f32,
+	volumeEnd: f32,
 	/* The total length of the fade. */
 	lengthInFrames: uint64,
 	/* The current time in frames. Incremented by ma_fader_process_pcm_frames(). Signed because it'll be offset by startOffsetInFrames in set_fade_ex(). */
@@ -1167,7 +1167,7 @@ vec3f :: struct {
 }
 
 atomic_vec3f :: struct {
-	v:    vec3f,
+	v: vec3f,
 	lock: spinlock,
 }
 
@@ -1193,92 +1193,92 @@ handedness :: enum u32 {
 }
 
 spatializer_listener_config :: struct {
-	channelsOut:             uint32,
-	pChannelMapOut:          ^channel,
+	channelsOut: uint32,
+	pChannelMapOut: ^channel,
 	/* Defaults to right. Forward is -1 on the Z axis. In a left handed system, forward is +1 on the Z axis. */
-	handedness:              handedness,
+	handedness: handedness,
 	coneInnerAngleInRadians: f32,
 	coneOuterAngleInRadians: f32,
-	coneOuterGain:           f32,
-	speedOfSound:            f32,
-	worldUp:                 vec3f,
+	coneOuterGain: f32,
+	speedOfSound: f32,
+	worldUp: vec3f,
 }
 
 spatializer_listener :: struct {
-	config:    spatializer_listener_config,
+	config: spatializer_listener_config,
 	/* The absolute position of the listener. */
-	position:  atomic_vec3f,
+	position: atomic_vec3f,
 	/* The direction the listener is facing. The world up vector is config.worldUp. */
 	direction: atomic_vec3f,
-	velocity:  atomic_vec3f,
+	velocity: atomic_vec3f,
 	isEnabled: bool32,
 	/* Memory management. */
 	_ownsHeap: bool32,
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 }
 
 spatializer_config :: struct {
-	channelsIn:                   uint32,
-	channelsOut:                  uint32,
-	pChannelMapIn:                ^channel,
-	attenuationModel:             attenuation_model,
-	positioning:                  positioning,
+	channelsIn: uint32,
+	channelsOut: uint32,
+	pChannelMapIn: ^channel,
+	attenuationModel: attenuation_model,
+	positioning: positioning,
 	/* Defaults to right. Forward is -1 on the Z axis. In a left handed system, forward is +1 on the Z axis. */
-	handedness:                   handedness,
-	minGain:                      f32,
-	maxGain:                      f32,
-	minDistance:                  f32,
-	maxDistance:                  f32,
-	rolloff:                      f32,
-	coneInnerAngleInRadians:      f32,
-	coneOuterAngleInRadians:      f32,
-	coneOuterGain:                f32,
+	handedness: handedness,
+	minGain: f32,
+	maxGain: f32,
+	minDistance: f32,
+	maxDistance: f32,
+	rolloff: f32,
+	coneInnerAngleInRadians: f32,
+	coneOuterAngleInRadians: f32,
+	coneOuterGain: f32,
 	/* Set to 0 to disable doppler effect. */
-	dopplerFactor:                f32,
+	dopplerFactor: f32,
 	/* Set to 0 to disable directional attenuation. */
 	directionalAttenuationFactor: f32,
 	/* The minimal scaling factor to apply to channel gains when accounting for the direction of the sound relative to the listener. Must be in the range of 0..1. Smaller values means more aggressive directional panning, larger values means more subtle directional panning. */
 	minSpatializationChannelGain: f32,
 	/* When the gain of a channel changes during spatialization, the transition will be linearly interpolated over this number of frames. */
-	gainSmoothTimeInFrames:       uint32,
+	gainSmoothTimeInFrames: uint32,
 }
 
 spatializer :: struct {
-	channelsIn:                   uint32,
-	channelsOut:                  uint32,
-	pChannelMapIn:                ^channel,
-	attenuationModel:             attenuation_model,
-	positioning:                  positioning,
+	channelsIn: uint32,
+	channelsOut: uint32,
+	pChannelMapIn: ^channel,
+	attenuationModel: attenuation_model,
+	positioning: positioning,
 	/* Defaults to right. Forward is -1 on the Z axis. In a left handed system, forward is +1 on the Z axis. */
-	handedness:                   handedness,
-	minGain:                      f32,
-	maxGain:                      f32,
-	minDistance:                  f32,
-	maxDistance:                  f32,
-	rolloff:                      f32,
-	coneInnerAngleInRadians:      f32,
-	coneOuterAngleInRadians:      f32,
-	coneOuterGain:                f32,
+	handedness: handedness,
+	minGain: f32,
+	maxGain: f32,
+	minDistance: f32,
+	maxDistance: f32,
+	rolloff: f32,
+	coneInnerAngleInRadians: f32,
+	coneOuterAngleInRadians: f32,
+	coneOuterGain: f32,
 	/* Set to 0 to disable doppler effect. */
-	dopplerFactor:                f32,
+	dopplerFactor: f32,
 	/* Set to 0 to disable directional attenuation. */
 	directionalAttenuationFactor: f32,
 	/* When the gain of a channel changes during spatialization, the transition will be linearly interpolated over this number of frames. */
-	gainSmoothTimeInFrames:       uint32,
-	position:                     atomic_vec3f,
-	direction:                    atomic_vec3f,
+	gainSmoothTimeInFrames: uint32,
+	position: atomic_vec3f,
+	direction: atomic_vec3f,
 	/* For doppler effect. */
-	velocity:                     atomic_vec3f,
+	velocity: atomic_vec3f,
 	/* Will be updated by ma_spatializer_process_pcm_frames() and can be used by higher level functions to apply a pitch shift for doppler effect. */
-	dopplerPitch:                 f32,
+	dopplerPitch: f32,
 	minSpatializationChannelGain: f32,
 	/* For smooth gain transitions. */
-	gainer:                       gainer,
+	gainer: gainer,
 	/* An offset of _pHeap. Used by ma_spatializer_process_pcm_frames() to store new channel gains. The number of elements in this array is equal to config.channelsOut. */
-	pNewChannelGainsOut:          ^f32,
+	pNewChannelGainsOut: ^f32,
 	/* Memory management. */
-	_pHeap:                       rawptr,
-	_ownsHeap:                    bool32,
+	_pHeap: rawptr,
+	_ownsHeap: bool32,
 }
 
 /**************************************************************************************************************************************************************
@@ -1287,49 +1287,49 @@ Resampling
 
 **************************************************************************************************************************************************************/
 linear_resampler_config :: struct {
-	format_:          format,
-	channels:         uint32,
-	sampleRateIn:     uint32,
-	sampleRateOut:    uint32,
+	format_: format,
+	channels: uint32,
+	sampleRateIn: uint32,
+	sampleRateOut: uint32,
 	/* The low-pass filter order. Setting this to 0 will disable low-pass filtering. */
-	lpfOrder:         uint32,
+	lpfOrder: uint32,
 	/* 0..1. Defaults to 1. 1 = Half the sampling frequency (Nyquist Frequency), 0.5 = Quarter the sampling frequency (half Nyquest Frequency), etc. */
 	lpfNyquistFactor: f64,
 }
 
 linear_resampler :: struct {
-	config:        linear_resampler_config,
-	inAdvanceInt:  uint32,
+	config: linear_resampler_config,
+	inAdvanceInt: uint32,
 	inAdvanceFrac: uint32,
-	inTimeInt:     uint32,
-	inTimeFrac:    uint32,
+	inTimeInt: uint32,
+	inTimeFrac: uint32,
 	/* The previous input frame. */
-	x0:            struct #raw_union {
+	x0: struct #raw_union {
 		f32: ^f32,
 		s16: ^int16,
 	},
 	/* The next input frame. */
-	x1:            struct #raw_union {
+	x1: struct #raw_union {
 		f32: ^f32,
 		s16: ^int16,
 	},
-	lpf:           lpf,
+	lpf: lpf,
 	/* Memory management. */
-	_pHeap:        rawptr,
-	_ownsHeap:     bool32,
+	_pHeap: rawptr,
+	_ownsHeap: bool32,
 }
 
 resampler_config :: struct {
 	/* Must be either ma_format_f32 or ma_format_s16. */
-	format_:          format,
-	channels:         uint32,
-	sampleRateIn:     uint32,
-	sampleRateOut:    uint32,
+	format_: format,
+	channels: uint32,
+	sampleRateIn: uint32,
+	sampleRateOut: uint32,
 	/* When set to ma_resample_algorithm_custom, pBackendVTable will be used. */
-	algorithm:        resample_algorithm,
-	pBackendVTable:   ^resampling_backend_vtable,
+	algorithm: resample_algorithm,
+	pBackendVTable: ^resampling_backend_vtable,
 	pBackendUserData: rawptr,
-	linear:           struct {
+	linear: struct {
 		lpfOrder: uint32,
 	},
 }
@@ -1337,21 +1337,21 @@ resampler_config :: struct {
 resampling_backend :: distinct rawptr
 
 resampling_backend_vtable :: struct {
-	onGetHeapSize:                 proc "c" (_: rawptr, _: ^resampler_config, _: ^uint) -> result,
-	onInit:                        proc "c" (_: rawptr, _: ^resampler_config, _: rawptr, _: ^^resampling_backend) -> result,
-	onUninit:                      proc "c" (_: rawptr, _: ^resampling_backend, _: ^allocation_callbacks),
-	onProcess:                     proc "c" (_: rawptr, _: ^resampling_backend, _: rawptr, _: ^uint64, _: rawptr, _: ^uint64) -> result,
+	onGetHeapSize: proc "c" (_: rawptr, _: ^resampler_config, _: ^uint) -> result,
+	onInit: proc "c" (_: rawptr, _: ^resampler_config, _: rawptr, _: ^^resampling_backend) -> result,
+	onUninit: proc "c" (_: rawptr, _: ^resampling_backend, _: ^allocation_callbacks),
+	onProcess: proc "c" (_: rawptr, _: ^resampling_backend, _: rawptr, _: ^uint64, _: rawptr, _: ^uint64) -> result,
 	/* Optional. Rate changes will be disabled. */
-	onSetRate:                     proc "c" (_: rawptr, _: ^resampling_backend, _: uint32, _: uint32) -> result,
+	onSetRate: proc "c" (_: rawptr, _: ^resampling_backend, _: uint32, _: uint32) -> result,
 	/* Optional. Latency will be reported as 0. */
-	onGetInputLatency:             proc "c" (_: rawptr, _: ^resampling_backend) -> uint64,
+	onGetInputLatency: proc "c" (_: rawptr, _: ^resampling_backend) -> uint64,
 	/* Optional. Latency will be reported as 0. */
-	onGetOutputLatency:            proc "c" (_: rawptr, _: ^resampling_backend) -> uint64,
+	onGetOutputLatency: proc "c" (_: rawptr, _: ^resampling_backend) -> uint64,
 	/* Optional. Latency mitigation will be disabled. */
-	onGetRequiredInputFrameCount:  proc "c" (_: rawptr, _: ^resampling_backend, _: uint64, _: ^uint64) -> result,
+	onGetRequiredInputFrameCount: proc "c" (_: rawptr, _: ^resampling_backend, _: uint64, _: ^uint64) -> result,
 	/* Optional. Latency mitigation will be disabled. */
 	onGetExpectedOutputFrameCount: proc "c" (_: rawptr, _: ^resampling_backend, _: uint64, _: ^uint64) -> result,
-	onReset:                       proc "c" (_: rawptr, _: ^resampling_backend) -> result,
+	onReset: proc "c" (_: rawptr, _: ^resampling_backend) -> result,
 }
 
 resample_algorithm :: enum u32 {
@@ -1361,20 +1361,20 @@ resample_algorithm :: enum u32 {
 }
 
 resampler :: struct {
-	pBackend:         ^resampling_backend,
-	pBackendVTable:   ^resampling_backend_vtable,
+	pBackend: ^resampling_backend,
+	pBackendVTable: ^resampling_backend_vtable,
 	pBackendUserData: rawptr,
-	format_:          format,
-	channels:         uint32,
-	sampleRateIn:     uint32,
-	sampleRateOut:    uint32,
+	format_: format,
+	channels: uint32,
+	sampleRateIn: uint32,
+	sampleRateOut: uint32,
 	/* State for stock resamplers so we can avoid a malloc. For stock resamplers, pBackend will point here. */
-	state:            struct #raw_union {
+	state: struct #raw_union {
 		linear: linear_resampler,
 	},
 	/* Memory management. */
-	_pHeap:           rawptr,
-	_ownsHeap:        bool32,
+	_pHeap: rawptr,
+	_ownsHeap: bool32,
 }
 
 /**************************************************************************************************************************************************************
@@ -1406,36 +1406,36 @@ mono_expansion_mode :: enum u32 {
 }
 
 channel_converter_config :: struct {
-	format_:                         format,
-	channelsIn:                      uint32,
-	channelsOut:                     uint32,
-	pChannelMapIn:                   ^channel,
-	pChannelMapOut:                  ^channel,
-	mixingMode:                      channel_mix_mode,
+	format_: format,
+	channelsIn: uint32,
+	channelsOut: uint32,
+	pChannelMapIn: ^channel,
+	pChannelMapOut: ^channel,
+	mixingMode: channel_mix_mode,
 	/* When an output LFE channel is present, but no input LFE, set to true to set the output LFE to the average of all spatial channels (LR, FR, etc.). Ignored when an input LFE is present. */
 	calculateLFEFromSpatialChannels: bool32,
 	/* [in][out]. Only used when mixingMode is set to ma_channel_mix_mode_custom_weights. */
-	ppWeights:                       ^^f32,
+	ppWeights: ^^f32,
 }
 
 channel_converter :: struct {
-	format_:        format,
-	channelsIn:     uint32,
-	channelsOut:    uint32,
-	mixingMode:     channel_mix_mode,
+	format_: format,
+	channelsIn: uint32,
+	channelsOut: uint32,
+	mixingMode: channel_mix_mode,
 	conversionPath: channel_conversion_path,
-	pChannelMapIn:  ^channel,
+	pChannelMapIn: ^channel,
 	pChannelMapOut: ^channel,
 	/* Indexed by output channel index. */
-	pShuffleTable:  ^uint8,
+	pShuffleTable: ^uint8,
 	/* [in][out] */
-	weights:        struct #raw_union {
+	weights: struct #raw_union {
 		f32: ^^f32,
 		s16: ^^int32,
 	},
 	/* Memory management. */
-	_pHeap:         rawptr,
-	_ownsHeap:      bool32,
+	_pHeap: rawptr,
+	_ownsHeap: bool32,
 }
 
 /**************************************************************************************************************************************************************
@@ -1444,22 +1444,22 @@ Data Conversion
 
 **************************************************************************************************************************************************************/
 data_converter_config :: struct {
-	formatIn:                        format,
-	formatOut:                       format,
-	channelsIn:                      uint32,
-	channelsOut:                     uint32,
-	sampleRateIn:                    uint32,
-	sampleRateOut:                   uint32,
-	pChannelMapIn:                   ^channel,
-	pChannelMapOut:                  ^channel,
-	ditherMode:                      dither_mode,
-	channelMixMode:                  channel_mix_mode,
+	formatIn: format,
+	formatOut: format,
+	channelsIn: uint32,
+	channelsOut: uint32,
+	sampleRateIn: uint32,
+	sampleRateOut: uint32,
+	pChannelMapIn: ^channel,
+	pChannelMapOut: ^channel,
+	ditherMode: dither_mode,
+	channelMixMode: channel_mix_mode,
 	/* When an output LFE channel is present, but no input LFE, set to true to set the output LFE to the average of all spatial channels (LR, FR, etc.). Ignored when an input LFE is present. */
 	calculateLFEFromSpatialChannels: bool32,
 	/* [in][out]. Only used when mixingMode is set to ma_channel_mix_mode_custom_weights. */
-	ppChannelWeights:                ^^f32,
-	allowDynamicSampleRate:          bool32,
-	resampling:                      resampler_config,
+	ppChannelWeights: ^^f32,
+	allowDynamicSampleRate: bool32,
+	resampling: resampler_config,
 }
 
 data_converter_execution_path :: enum u32 {
@@ -1478,25 +1478,25 @@ data_converter_execution_path :: enum u32 {
 }
 
 data_converter :: struct {
-	formatIn:                format,
-	formatOut:               format,
-	channelsIn:              uint32,
-	channelsOut:             uint32,
-	sampleRateIn:            uint32,
-	sampleRateOut:           uint32,
-	ditherMode:              dither_mode,
+	formatIn: format,
+	formatOut: format,
+	channelsIn: uint32,
+	channelsOut: uint32,
+	sampleRateIn: uint32,
+	sampleRateOut: uint32,
+	ditherMode: dither_mode,
 	/* The execution path the data converter will follow when processing. */
-	executionPath:           data_converter_execution_path,
-	channelConverter:        channel_converter,
-	resampler:               resampler,
-	hasPreFormatConversion:  bool8,
+	executionPath: data_converter_execution_path,
+	channelConverter: channel_converter,
+	resampler: resampler,
+	hasPreFormatConversion: bool8,
 	hasPostFormatConversion: bool8,
-	hasChannelConverter:     bool8,
-	hasResampler:            bool8,
-	isPassthrough:           bool8,
+	hasChannelConverter: bool8,
+	hasResampler: bool8,
+	isPassthrough: bool8,
 	/* Memory management. */
-	_ownsHeap:               bool8,
-	_pHeap:                  rawptr,
+	_ownsHeap: bool8,
+	_pHeap: rawptr,
 }
 
 /************************************************************************************************************************************************************
@@ -1507,13 +1507,13 @@ Data Source
 data_source :: distinct rawptr
 
 data_source_vtable :: struct {
-	onRead:          proc "c" (_: ^data_source, _: rawptr, _: uint64, _: ^uint64) -> result,
-	onSeek:          proc "c" (_: ^data_source, _: uint64) -> result,
+	onRead: proc "c" (_: ^data_source, _: rawptr, _: uint64, _: ^uint64) -> result,
+	onSeek: proc "c" (_: ^data_source, _: uint64) -> result,
 	onGetDataFormat: proc "c" (_: ^data_source, _: ^format, _: ^uint32, _: ^uint32, _: ^channel, _: uint) -> result,
-	onGetCursor:     proc "c" (_: ^data_source, _: ^uint64) -> result,
-	onGetLength:     proc "c" (_: ^data_source, _: ^uint64) -> result,
-	onSetLooping:    proc "c" (_: ^data_source, _: bool32) -> result,
-	flags:           uint32,
+	onGetCursor: proc "c" (_: ^data_source, _: ^uint64) -> result,
+	onGetLength: proc "c" (_: ^data_source, _: ^uint64) -> result,
+	onSetLooping: proc "c" (_: ^data_source, _: bool32) -> result,
+	flags: uint32,
 }
 
 data_source_get_next_proc :: proc "c" (_: ^data_source) -> ^data_source
@@ -1523,65 +1523,65 @@ data_source_config :: struct {
 }
 
 data_source_base :: struct {
-	vtable:           ^data_source_vtable,
+	vtable: ^data_source_vtable,
 	rangeBegInFrames: uint64,
 	/* Set to -1 for unranged (default). */
 	rangeEndInFrames: uint64,
 	/* Relative to rangeBegInFrames. */
-	loopBegInFrames:  uint64,
+	loopBegInFrames: uint64,
 	/* Relative to rangeBegInFrames. Set to -1 for the end of the range. */
-	loopEndInFrames:  uint64,
+	loopEndInFrames: uint64,
 	/* When non-NULL, the data source being initialized will act as a proxy and will route all operations to pCurrent. Used in conjunction with pNext/onGetNext for seamless chaining. */
-	pCurrent:         ^data_source,
+	pCurrent: ^data_source,
 	/* When set to NULL, onGetNext will be used. */
-	pNext:            ^data_source,
+	pNext: ^data_source,
 	/* Will be used when pNext is NULL. If both are NULL, no next will be used. */
-	onGetNext:        data_source_get_next_proc,
-	isLooping:        bool32,
+	onGetNext: data_source_get_next_proc,
+	isLooping: bool32,
 }
 
 audio_buffer_ref :: struct {
-	ds:           data_source_base,
-	format_:      format,
-	channels:     uint32,
-	sampleRate:   uint32,
-	cursor:       uint64,
+	ds: data_source_base,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
+	cursor: uint64,
 	sizeInFrames: uint64,
-	pData:        rawptr,
+	pData: rawptr,
 }
 
 audio_buffer_config :: struct {
-	format_:             format,
-	channels:            uint32,
-	sampleRate:          uint32,
-	sizeInFrames:        uint64,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
+	sizeInFrames: uint64,
 	/* If set to NULL, will allocate a block of memory for you. */
-	pData:               rawptr,
+	pData: rawptr,
 	allocationCallbacks: allocation_callbacks,
 }
 
 audio_buffer :: struct {
-	ref:                 audio_buffer_ref,
+	ref: audio_buffer_ref,
 	allocationCallbacks: allocation_callbacks,
 	/* Used to control whether or not miniaudio owns the data buffer. If set to true, pData will be freed in ma_audio_buffer_uninit(). */
-	ownsData:            bool32,
+	ownsData: bool32,
 	/* For allocating a buffer with the memory located directly after the other memory of the structure. */
-	_pExtraData:         [1]uint8,
+	_pExtraData: [1]uint8,
 }
 
 paged_audio_buffer_page :: struct {
-	pNext:        ^paged_audio_buffer_page,
+	pNext: ^paged_audio_buffer_page,
 	sizeInFrames: uint64,
-	pAudioData:   [1]uint8,
+	pAudioData: [1]uint8,
 }
 
 paged_audio_buffer_data :: struct {
-	format_:  format,
+	format_: format,
 	channels: uint32,
 	/* Dummy head for the lock-free algorithm. Always has a size of 0. */
-	head:     paged_audio_buffer_page,
+	head: paged_audio_buffer_page,
 	/* Never null. Initially set to &head. */
-	pTail:    ^paged_audio_buffer_page,
+	pTail: ^paged_audio_buffer_page,
 }
 
 paged_audio_buffer_config :: struct {
@@ -1590,10 +1590,10 @@ paged_audio_buffer_config :: struct {
 }
 
 paged_audio_buffer :: struct {
-	ds:             data_source_base,
+	ds: data_source_base,
 	/* Audio data is read from here. Cannot be null. */
-	pData:          ^paged_audio_buffer_data,
-	pCurrent:       ^paged_audio_buffer_page,
+	pData: ^paged_audio_buffer_data,
+	pCurrent: ^paged_audio_buffer_page,
 	/* Relative to the current page. */
 	relativeCursor: uint64,
 	absoluteCursor: uint64,
@@ -1605,26 +1605,26 @@ Ring Buffer
 
 ************************************************************************************************************************************************************/
 rb :: struct {
-	pBuffer:                rawptr,
-	subbufferSizeInBytes:   uint32,
-	subbufferCount:         uint32,
+	pBuffer: rawptr,
+	subbufferSizeInBytes: uint32,
+	subbufferCount: uint32,
 	subbufferStrideInBytes: uint32,
 	/* Most significant bit is the loop flag. Lower 31 bits contains the actual offset in bytes. Must be used atomically. */
-	encodedReadOffset:      uint32,
+	encodedReadOffset: uint32,
 	/* Most significant bit is the loop flag. Lower 31 bits contains the actual offset in bytes. Must be used atomically. */
-	encodedWriteOffset:     uint32,
+	encodedWriteOffset: uint32,
 	/* Used to know whether or not miniaudio is responsible for free()-ing the buffer. */
-	ownsBuffer:             bool8,
+	ownsBuffer: bool8,
 	/* When set, clears the acquired write buffer before returning from ma_rb_acquire_write(). */
-	clearOnWriteAcquire:    bool8,
-	allocationCallbacks:    allocation_callbacks,
+	clearOnWriteAcquire: bool8,
+	allocationCallbacks: allocation_callbacks,
 }
 
 pcm_rb :: struct {
-	ds:         data_source_base,
-	rb:         rb,
-	format_:    format,
-	channels:   uint32,
+	ds: data_source_base,
+	rb: rb,
+	format_: format,
+	channels: uint32,
 	/* Not required for the ring buffer itself, but useful for associating the data with some sample rate, particularly for data sources. */
 	sampleRate: uint32,
 }
@@ -1658,7 +1658,7 @@ counter hits zero.
 If threading is disabled, ma_fence_wait() will spin on the counter.
 */
 fence :: struct {
-	e:       event,
+	e: event,
 	counter: uint32,
 }
 
@@ -1677,7 +1677,7 @@ Simple polling notification.
 This just sets a variable when the notification has been signalled which is then polled with ma_async_notification_poll_is_signalled()
 */
 async_notification_poll :: struct {
-	cb:        async_notification_callbacks,
+	cb: async_notification_callbacks,
 	signalled: bool32,
 }
 
@@ -1688,7 +1688,7 @@ This uses an ma_event. If threading is disabled (MA_NO_THREADING), initializatio
 */
 async_notification_event :: struct {
 	cb: async_notification_callbacks,
-	e:  event,
+	e: event,
 }
 
 /*
@@ -1719,35 +1719,35 @@ slot_allocator_group :: struct {
 
 slot_allocator :: struct {
 	/* Slots are grouped in chunks of 32. */
-	pGroups:   ^slot_allocator_group,
+	pGroups: ^slot_allocator_group,
 	/* 32 bits for reference counting for ABA mitigation. */
-	pSlots:    ^uint32,
+	pSlots: ^uint32,
 	/* Allocation count. */
-	count:     uint32,
-	capacity:  uint32,
+	count: uint32,
+	capacity: uint32,
 	/* Memory management. */
 	_ownsHeap: bool32,
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 }
 
 job :: struct {
 	/* 8 bytes. We encode the job code into the slot allocation data to save space. */
-	toc:   struct #raw_union {
-		breakup:    struct {
+	toc: struct #raw_union {
+		breakup: struct {
 			/* Job type. */
-			code:     uint16,
+			code: uint16,
 			/* Index into a ma_slot_allocator. */
-			slot:     uint16,
+			slot: uint16,
 			refcount: uint32,
 		},
 		allocation: uint64,
 	},
 	/* refcount + slot for the next item. Does not include the job code. */
-	next:  uint64,
+	next: uint64,
 	/* Execution order. Used to create a data dependency and ensure a job is executed in order. Usage is contextual depending on the job type. */
 	order: uint32,
-	data:  struct #raw_union {
-		custom:          struct {
+	data: struct #raw_union {
+		custom: struct {
 			proc_: job_proc,
 			data0: uintptr,
 			data1: uintptr,
@@ -1755,100 +1755,100 @@ job :: struct {
 		resourceManager: struct #raw_union {
 			loadDataBufferNode: struct {
 				/*ma_resource_manager**/
-				pResourceManager:  rawptr,
+				pResourceManager: rawptr,
 				/*ma_resource_manager_data_buffer_node**/
-				pDataBufferNode:   rawptr,
-				pFilePath:         ^u8,
-				pFilePathW:        ^i32,
+				pDataBufferNode: rawptr,
+				pFilePath: ^u8,
+				pFilePathW: ^i32,
 				/* Resource manager data source flags that were used when initializing the data buffer. */
-				flags:             uint32,
+				flags: uint32,
 				/* Signalled when the data buffer has been initialized and the format/channels/rate can be retrieved. */
 				pInitNotification: ^async_notification,
 				/* Signalled when the data buffer has been fully decoded. Will be passed through to MA_JOB_TYPE_RESOURCE_MANAGER_PAGE_DATA_BUFFER_NODE when decoding. */
 				pDoneNotification: ^async_notification,
 				/* Released when initialization of the decoder is complete. */
-				pInitFence:        ^fence,
+				pInitFence: ^fence,
 				/* Released if initialization of the decoder fails. Passed through to PAGE_DATA_BUFFER_NODE untouched if init is successful. */
-				pDoneFence:        ^fence,
+				pDoneFence: ^fence,
 			},
 			freeDataBufferNode: struct {
 				/*ma_resource_manager**/
-				pResourceManager:  rawptr,
+				pResourceManager: rawptr,
 				/*ma_resource_manager_data_buffer_node**/
-				pDataBufferNode:   rawptr,
+				pDataBufferNode: rawptr,
 				pDoneNotification: ^async_notification,
-				pDoneFence:        ^fence,
+				pDoneFence: ^fence,
 			},
 			pageDataBufferNode: struct {
 				/*ma_resource_manager**/
-				pResourceManager:  rawptr,
+				pResourceManager: rawptr,
 				/*ma_resource_manager_data_buffer_node**/
-				pDataBufferNode:   rawptr,
+				pDataBufferNode: rawptr,
 				/*ma_decoder**/
-				pDecoder:          rawptr,
+				pDecoder: rawptr,
 				/* Signalled when the data buffer has been fully decoded. */
 				pDoneNotification: ^async_notification,
 				/* Passed through from LOAD_DATA_BUFFER_NODE and released when the data buffer completes decoding or an error occurs. */
-				pDoneFence:        ^fence,
+				pDoneFence: ^fence,
 			},
-			loadDataBuffer:     struct {
+			loadDataBuffer: struct {
 				/*ma_resource_manager_data_buffer**/
-				pDataBuffer:             rawptr,
+				pDataBuffer: rawptr,
 				/* Signalled when the data buffer has been initialized and the format/channels/rate can be retrieved. */
-				pInitNotification:       ^async_notification,
+				pInitNotification: ^async_notification,
 				/* Signalled when the data buffer has been fully decoded. */
-				pDoneNotification:       ^async_notification,
+				pDoneNotification: ^async_notification,
 				/* Released when the data buffer has been initialized and the format/channels/rate can be retrieved. */
-				pInitFence:              ^fence,
+				pInitFence: ^fence,
 				/* Released when the data buffer has been fully decoded. */
-				pDoneFence:              ^fence,
-				rangeBegInPCMFrames:     uint64,
-				rangeEndInPCMFrames:     uint64,
+				pDoneFence: ^fence,
+				rangeBegInPCMFrames: uint64,
+				rangeEndInPCMFrames: uint64,
 				loopPointBegInPCMFrames: uint64,
 				loopPointEndInPCMFrames: uint64,
-				isLooping:               uint32,
+				isLooping: uint32,
 			},
-			freeDataBuffer:     struct {
+			freeDataBuffer: struct {
 				/*ma_resource_manager_data_buffer**/
-				pDataBuffer:       rawptr,
+				pDataBuffer: rawptr,
 				pDoneNotification: ^async_notification,
-				pDoneFence:        ^fence,
+				pDoneFence: ^fence,
 			},
-			loadDataStream:     struct {
+			loadDataStream: struct {
 				/*ma_resource_manager_data_stream**/
-				pDataStream:       rawptr,
+				pDataStream: rawptr,
 				/* Allocated when the job is posted, freed by the job thread after loading. */
-				pFilePath:         ^u8,
+				pFilePath: ^u8,
 				/* ^ As above ^. Only used if pFilePath is NULL. */
-				pFilePathW:        ^i32,
-				initialSeekPoint:  uint64,
+				pFilePathW: ^i32,
+				initialSeekPoint: uint64,
 				/* Signalled after the first two pages have been decoded and frames can be read from the stream. */
 				pInitNotification: ^async_notification,
-				pInitFence:        ^fence,
+				pInitFence: ^fence,
 			},
-			freeDataStream:     struct {
+			freeDataStream: struct {
 				/*ma_resource_manager_data_stream**/
-				pDataStream:       rawptr,
+				pDataStream: rawptr,
 				pDoneNotification: ^async_notification,
-				pDoneFence:        ^fence,
+				pDoneFence: ^fence,
 			},
-			pageDataStream:     struct {
+			pageDataStream: struct {
 				/*ma_resource_manager_data_stream**/
 				pDataStream: rawptr,
 				/* The index of the page to decode into. */
-				pageIndex:   uint32,
+				pageIndex: uint32,
 			},
-			seekDataStream:     struct {
+			seekDataStream: struct {
 				/*ma_resource_manager_data_stream**/
 				pDataStream: rawptr,
-				frameIndex:  uint64,
+				frameIndex: uint64,
 			},
 		},
-		device:          struct #raw_union {
+		device: struct #raw_union {
 			aaudio: struct #raw_union {
 				reroute: struct {
 					/*ma_device**/
-					pDevice:    rawptr,
+					pDevice: rawptr,
 					/*ma_device_type*/
 					deviceType: uint32,
 				},
@@ -1904,27 +1904,27 @@ job_queue_flags :: enum u32 {
 }
 
 job_queue_config :: struct {
-	flags:    uint32,
+	flags: uint32,
 	/* The maximum number of jobs that can fit in the queue at a time. */
 	capacity: uint32,
 }
 
 job_queue :: struct {
 	/* Flags passed in at initialization time. */
-	flags:     uint32,
+	flags: uint32,
 	/* The maximum number of jobs that can fit in the queue at a time. Set by the config. */
-	capacity:  uint32,
+	capacity: uint32,
 	/* The first item in the list. Required for removing from the top of the list. */
-	head:      uint64,
+	head: uint64,
 	/* The last item in the list. Required for appending to the end of the list. */
-	tail:      uint64,
+	tail: uint64,
 	/* Only used when MA_JOB_QUEUE_FLAG_NON_BLOCKING is unset. */
-	sem:       semaphore,
+	sem: semaphore,
 	allocator: slot_allocator,
-	pJobs:     ^job,
-	lock:      spinlock,
+	pJobs: ^job,
+	lock: spinlock,
 	/* Memory management. */
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 	_ownsHeap: bool32,
 }
 
@@ -1974,14 +1974,14 @@ ma_device_job_thread_post(). The thread will do the processing of the job.
 */
 device_job_thread_config :: struct {
 	/* Set this to true if you want to process jobs yourself. */
-	noThread:         bool32,
+	noThread: bool32,
 	jobQueueCapacity: uint32,
-	jobQueueFlags:    uint32,
+	jobQueueFlags: uint32,
 }
 
 device_job_thread :: struct {
-	thread_:    thread,
-	jobQueue:   job_queue,
+	thread_: thread,
+	jobQueue: job_queue,
 	_hasThread: bool32,
 }
 
@@ -1997,15 +1997,15 @@ device_notification_type :: enum u32 {
 
 device_notification :: struct {
 	pDevice: ^device,
-	type:    device_notification_type,
-	data:    struct #raw_union {
-		started:      struct {
+	type: device_notification_type,
+	data: struct #raw_union {
+		started: struct {
 			_unused: i32,
 		},
-		stopped:      struct {
+		stopped: struct {
 			_unused: i32,
 		},
-		rerouted:     struct {
+		rerouted: struct {
 			_unused: i32,
 		},
 		interruption: struct {
@@ -2293,39 +2293,39 @@ aaudio_allowed_capture_policy :: enum u32 {
 }
 
 timer :: struct #raw_union {
-	counter:  int64,
+	counter: int64,
 	counterD: f64,
 }
 
 device_id :: struct #raw_union {
 	/* WASAPI uses a wchar_t string for identification. */
-	wasapi:      [64]wchar_win32,
+	wasapi: [64]wchar_win32,
 	/* DirectSound uses a GUID for identification. */
-	dsound:      [16]uint8,
+	dsound: [16]uint8,
 	/* When creating a device, WinMM expects a Win32 UINT_PTR for device identification. In practice it's actually just a UINT. */
-	winmm:       uint32,
+	winmm: uint32,
 	/* ALSA uses a name string for identification. */
-	alsa:        [256]u8,
+	alsa: [256]u8,
 	/* PulseAudio uses a name string for identification. */
-	pulse:       [256]u8,
+	pulse: [256]u8,
 	/* JACK always uses default devices. */
-	jack:        i32,
+	jack: i32,
 	/* Core Audio uses a string for identification. */
-	coreaudio:   [256]u8,
+	coreaudio: [256]u8,
 	/* "snd/0", etc. */
-	sndio:       [256]u8,
+	sndio: [256]u8,
 	/* "/dev/audio", etc. */
-	audio4:      [256]u8,
+	audio4: [256]u8,
 	/* "dev/dsp0", etc. "dev/dsp" for the default device. */
-	oss:         [64]u8,
+	oss: [64]u8,
 	/* AAudio uses a 32-bit integer for identification. */
-	aaudio:      int32,
+	aaudio: int32,
 	/* OpenSL|ES uses a 32-bit unsigned integer for identification. */
-	opensl:      uint32,
+	opensl: uint32,
 	/* Web Audio always uses default devices for now, but if this changes it'll be a GUID. */
-	webaudio:    [32]u8,
+	webaudio: [32]u8,
 	/* The custom backend could be anything. Give them a few options. */
-	custom:      struct #raw_union {
+	custom: struct #raw_union {
 		i: i32,
 		s: [256]u8,
 		p: rawptr,
@@ -2335,127 +2335,127 @@ device_id :: struct #raw_union {
 }
 
 context_config :: struct {
-	pLog:                ^log,
-	threadPriority:      thread_priority,
-	threadStackSize:     uint,
-	pUserData:           rawptr,
+	pLog: ^log,
+	threadPriority: thread_priority,
+	threadStackSize: uint,
+	pUserData: rawptr,
 	allocationCallbacks: allocation_callbacks,
-	dsound:              struct {
+	dsound: struct {
 		/* HWND. Optional window handle to pass into SetCooperativeLevel(). Will default to the foreground window, and if that fails, the desktop window. */
 		hWnd: handle,
 	},
-	alsa:                struct {
+	alsa: struct {
 		useVerboseDeviceEnumeration: bool32,
 	},
-	pulse:               struct {
+	pulse: struct {
 		pApplicationName: cstring,
-		pServerName:      cstring,
+		pServerName: cstring,
 		/* Enables autospawning of the PulseAudio daemon if necessary. */
-		tryAutoSpawn:     bool32,
+		tryAutoSpawn: bool32,
 	},
-	coreaudio:           struct {
-		sessionCategory:          ios_session_category,
-		sessionCategoryOptions:   uint32,
+	coreaudio: struct {
+		sessionCategory: ios_session_category,
+		sessionCategoryOptions: uint32,
 		/* iOS only. When set to true, does not perform an explicit [[AVAudioSession sharedInstace] setActive:true] on initialization. */
-		noAudioSessionActivate:   bool32,
+		noAudioSessionActivate: bool32,
 		/* iOS only. When set to true, does not perform an explicit [[AVAudioSession sharedInstace] setActive:false] on uninitialization. */
 		noAudioSessionDeactivate: bool32,
 	},
-	jack:                struct {
-		pClientName:    cstring,
+	jack: struct {
+		pClientName: cstring,
 		tryStartServer: bool32,
 	},
-	custom:              backend_callbacks,
+	custom: backend_callbacks,
 }
 
 device_config :: struct {
-	deviceType:                device_type,
-	sampleRate:                uint32,
-	periodSizeInFrames:        uint32,
-	periodSizeInMilliseconds:  uint32,
-	periods:                   uint32,
-	performanceProfile:        performance_profile,
+	deviceType: device_type,
+	sampleRate: uint32,
+	periodSizeInFrames: uint32,
+	periodSizeInMilliseconds: uint32,
+	periods: uint32,
+	performanceProfile: performance_profile,
 	/* When set to true, the contents of the output buffer passed into the data callback will be left undefined rather than initialized to silence. */
 	noPreSilencedOutputBuffer: bool8,
 	/* When set to true, the contents of the output buffer passed into the data callback will not be clipped after returning. Only applies when the playback sample format is f32. */
-	noClip:                    bool8,
+	noClip: bool8,
 	/* Do not disable denormals when firing the data callback. */
-	noDisableDenormals:        bool8,
+	noDisableDenormals: bool8,
 	/* Disables strict fixed-sized data callbacks. Setting this to true will result in the period size being treated only as a hint to the backend. This is an optimization for those who don't need fixed sized callbacks. */
-	noFixedSizedCallback:      bool8,
-	dataCallback:              device_data_proc,
-	notificationCallback:      device_notification_proc,
-	stopCallback:              stop_proc,
-	pUserData:                 rawptr,
-	resampling:                resampler_config,
-	playback:                  struct {
-		pDeviceID:                       ^device_id,
-		format_:                         format,
-		channels:                        uint32,
-		pChannelMap:                     ^channel,
-		channelMixMode:                  channel_mix_mode,
+	noFixedSizedCallback: bool8,
+	dataCallback: device_data_proc,
+	notificationCallback: device_notification_proc,
+	stopCallback: stop_proc,
+	pUserData: rawptr,
+	resampling: resampler_config,
+	playback: struct {
+		pDeviceID: ^device_id,
+		format_: format,
+		channels: uint32,
+		pChannelMap: ^channel,
+		channelMixMode: channel_mix_mode,
 		/* When an output LFE channel is present, but no input LFE, set to true to set the output LFE to the average of all spatial channels (LR, FR, etc.). Ignored when an input LFE is present. */
 		calculateLFEFromSpatialChannels: bool32,
-		shareMode:                       share_mode,
+		shareMode: share_mode,
 	},
-	capture:                   struct {
-		pDeviceID:                       ^device_id,
-		format_:                         format,
-		channels:                        uint32,
-		pChannelMap:                     ^channel,
-		channelMixMode:                  channel_mix_mode,
+	capture: struct {
+		pDeviceID: ^device_id,
+		format_: format,
+		channels: uint32,
+		pChannelMap: ^channel,
+		channelMixMode: channel_mix_mode,
 		/* When an output LFE channel is present, but no input LFE, set to true to set the output LFE to the average of all spatial channels (LR, FR, etc.). Ignored when an input LFE is present. */
 		calculateLFEFromSpatialChannels: bool32,
-		shareMode:                       share_mode,
+		shareMode: share_mode,
 	},
-	wasapi:                    struct {
+	wasapi: struct {
 		/* When configured, uses Avrt APIs to set the thread characteristics. */
-		usage:                  wasapi_usage,
+		usage: wasapi_usage,
 		/* When set to true, disables the use of AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM. */
-		noAutoConvertSRC:       bool8,
+		noAutoConvertSRC: bool8,
 		/* When set to true, disables the use of AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY. */
-		noDefaultQualitySRC:    bool8,
+		noDefaultQualitySRC: bool8,
 		/* Disables automatic stream routing. */
-		noAutoStreamRouting:    bool8,
+		noAutoStreamRouting: bool8,
 		/* Disables WASAPI's hardware offloading feature. */
-		noHardwareOffloading:   bool8,
+		noHardwareOffloading: bool8,
 		/* The process ID to include or exclude for loopback mode. Set to 0 to capture audio from all processes. Ignored when an explicit device ID is specified. */
-		loopbackProcessID:      uint32,
+		loopbackProcessID: uint32,
 		/* When set to true, excludes the process specified by loopbackProcessID. By default, the process will be included. */
 		loopbackProcessExclude: bool8,
 	},
-	alsa:                      struct {
+	alsa: struct {
 		/* Disables MMap mode. */
-		noMMap:         bool32,
+		noMMap: bool32,
 		/* Opens the ALSA device with SND_PCM_NO_AUTO_FORMAT. */
-		noAutoFormat:   bool32,
+		noAutoFormat: bool32,
 		/* Opens the ALSA device with SND_PCM_NO_AUTO_CHANNELS. */
 		noAutoChannels: bool32,
 		/* Opens the ALSA device with SND_PCM_NO_AUTO_RESAMPLE. */
 		noAutoResample: bool32,
 	},
-	pulse:                     struct {
+	pulse: struct {
 		pStreamNamePlayback: cstring,
-		pStreamNameCapture:  cstring,
-		channelMap:          i32,
+		pStreamNameCapture: cstring,
+		channelMap: i32,
 	},
-	coreaudio:                 struct {
+	coreaudio: struct {
 		/* Desktop only. When enabled, allows changing of the sample rate at the operating system level. */
 		allowNominalSampleRateChange: bool32,
 	},
-	opensl:                    struct {
-		streamType:                     opensl_stream_type,
-		recordingPreset:                opensl_recording_preset,
+	opensl: struct {
+		streamType: opensl_stream_type,
+		recordingPreset: opensl_recording_preset,
 		enableCompatibilityWorkarounds: bool32,
 	},
-	aaudio:                    struct {
-		usage:                          aaudio_usage,
-		contentType:                    aaudio_content_type,
-		inputPreset:                    aaudio_input_preset,
-		allowedCapturePolicy:           aaudio_allowed_capture_policy,
-		noAutoStartAfterReroute:        bool32,
+	aaudio: struct {
+		usage: aaudio_usage,
+		contentType: aaudio_content_type,
+		inputPreset: aaudio_input_preset,
+		allowedCapturePolicy: aaudio_allowed_capture_policy,
+		noAutoStartAfterReroute: bool32,
 		enableCompatibilityWorkarounds: bool32,
-		allowSetBufferCapacity:         bool32,
+		allowSetBufferCapacity: bool32,
 	},
 }
 
@@ -2528,38 +2528,38 @@ If the backend supports an optimized retrieval of device information from an ini
 `onDeviceGetInfo()` callback. This is optional, in which case it will fall back to `onContextGetDeviceInfo()` which is less efficient.
 */
 backend_callbacks :: struct {
-	onContextInit:             proc "c" (_: ^context_, _: ^context_config, _: ^backend_callbacks) -> result,
-	onContextUninit:           proc "c" (_: ^context_) -> result,
+	onContextInit: proc "c" (_: ^context_, _: ^context_config, _: ^backend_callbacks) -> result,
+	onContextUninit: proc "c" (_: ^context_) -> result,
 	onContextEnumerateDevices: proc "c" (_: ^context_, _: enum_devices_callback_proc, _: rawptr) -> result,
-	onContextGetDeviceInfo:    proc "c" (_: ^context_, _: device_type, _: ^device_id, _: ^device_info) -> result,
-	onDeviceInit:              proc "c" (_: ^device, _: ^device_config, _: ^device_descriptor, _: ^device_descriptor) -> result,
-	onDeviceUninit:            proc "c" (_: ^device) -> result,
-	onDeviceStart:             proc "c" (_: ^device) -> result,
-	onDeviceStop:              proc "c" (_: ^device) -> result,
-	onDeviceRead:              proc "c" (_: ^device, _: rawptr, _: uint32, _: ^uint32) -> result,
-	onDeviceWrite:             proc "c" (_: ^device, _: rawptr, _: uint32, _: ^uint32) -> result,
-	onDeviceDataLoop:          proc "c" (_: ^device) -> result,
-	onDeviceDataLoopWakeup:    proc "c" (_: ^device) -> result,
-	onDeviceGetInfo:           proc "c" (_: ^device, _: device_type, _: ^device_info) -> result,
+	onContextGetDeviceInfo: proc "c" (_: ^context_, _: device_type, _: ^device_id, _: ^device_info) -> result,
+	onDeviceInit: proc "c" (_: ^device, _: ^device_config, _: ^device_descriptor, _: ^device_descriptor) -> result,
+	onDeviceUninit: proc "c" (_: ^device) -> result,
+	onDeviceStart: proc "c" (_: ^device) -> result,
+	onDeviceStop: proc "c" (_: ^device) -> result,
+	onDeviceRead: proc "c" (_: ^device, _: rawptr, _: uint32, _: ^uint32) -> result,
+	onDeviceWrite: proc "c" (_: ^device, _: rawptr, _: uint32, _: ^uint32) -> result,
+	onDeviceDataLoop: proc "c" (_: ^device) -> result,
+	onDeviceDataLoopWakeup: proc "c" (_: ^device) -> result,
+	onDeviceGetInfo: proc "c" (_: ^device, _: device_type, _: ^device_info) -> result,
 }
 
 device_info :: struct {
 	/* Basic info. This is the only information guaranteed to be filled in during device enumeration. */
-	id:                    device_id,
+	id: device_id,
 	/* +1 for null terminator. */
-	name:                  [256]u8,
-	isDefault:             bool32,
+	name: [256]u8,
+	isDefault: bool32,
 	nativeDataFormatCount: uint32,
 	/*ma_format_count * ma_standard_sample_rate_count * MA_MAX_CHANNELS*/
-	nativeDataFormats:     [64]struct {
+	nativeDataFormats: [64]struct {
 		/* Sample format. If set to ma_format_unknown, all sample formats are supported. */
-		format_:    format,
+		format_: format,
 		/* If set to 0, all channels are supported. */
-		channels:   uint32,
+		channels: uint32,
 		/* If set to 0, all sample rates are supported. */
 		sampleRate: uint32,
 		/* A combination of MA_DATA_FORMAT_FLAG_* flags. */
-		flags:      uint32,
+		flags: uint32,
 	},
 }
 
@@ -2589,35 +2589,35 @@ enum_devices_callback_proc :: proc "c" (_: ^context_, _: device_type, _: ^device
 Describes some basic details about a playback or capture device.
 */
 device_descriptor :: struct {
-	pDeviceID:                ^device_id,
-	shareMode:                share_mode,
-	format_:                  format,
-	channels:                 uint32,
-	sampleRate:               uint32,
-	channelMap:               [254]channel,
-	periodSizeInFrames:       uint32,
+	pDeviceID: ^device_id,
+	shareMode: share_mode,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
+	channelMap: [254]channel,
+	periodSizeInFrames: uint32,
 	periodSizeInMilliseconds: uint32,
-	periodCount:              uint32,
+	periodCount: uint32,
 }
 
 /* WASAPI specific structure for some commands which must run on a common thread due to bugs in WASAPI. */
 context_command__wasapi :: struct {
-	code:   i32,
+	code: i32,
 	/* This will be signalled when the event is complete. */
 	pEvent: ^event,
-	data:   struct #raw_union {
-		quit:               struct {
+	data: struct #raw_union {
+		quit: struct {
 			_unused: i32,
 		},
-		createAudioClient:  struct {
-			deviceType:           device_type,
-			pAudioClient:         rawptr,
+		createAudioClient: struct {
+			deviceType: device_type,
+			pAudioClient: rawptr,
 			ppAudioClientService: ^rawptr,
 			/* The result from creating the audio client service. */
-			pResult:              ^result,
+			pResult: ^result,
 		},
 		releaseAudioClient: struct {
-			pDevice:    ^device,
+			pDevice: ^device,
 			deviceType: device_type,
 		},
 	},
@@ -2653,18 +2653,18 @@ file_info :: struct {
 }
 
 vfs_callbacks :: struct {
-	onOpen:  proc "c" (_: ^vfs, _: cstring, _: uint32, _: ^vfs_file) -> result,
+	onOpen: proc "c" (_: ^vfs, _: cstring, _: uint32, _: ^vfs_file) -> result,
 	onOpenW: proc "c" (_: ^vfs, _: ^i32, _: uint32, _: ^vfs_file) -> result,
 	onClose: proc "c" (_: ^vfs, _: vfs_file) -> result,
-	onRead:  proc "c" (_: ^vfs, _: vfs_file, _: rawptr, _: uint, _: ^uint) -> result,
+	onRead: proc "c" (_: ^vfs, _: vfs_file, _: rawptr, _: uint, _: ^uint) -> result,
 	onWrite: proc "c" (_: ^vfs, _: vfs_file, _: rawptr, _: uint, _: ^uint) -> result,
-	onSeek:  proc "c" (_: ^vfs, _: vfs_file, _: int64, _: seek_origin) -> result,
-	onTell:  proc "c" (_: ^vfs, _: vfs_file, _: ^int64) -> result,
-	onInfo:  proc "c" (_: ^vfs, _: vfs_file, _: ^file_info) -> result,
+	onSeek: proc "c" (_: ^vfs, _: vfs_file, _: int64, _: seek_origin) -> result,
+	onTell: proc "c" (_: ^vfs, _: vfs_file, _: ^int64) -> result,
+	onInfo: proc "c" (_: ^vfs, _: vfs_file, _: ^file_info) -> result,
 }
 
 default_vfs :: struct {
-	cb:                  vfs_callbacks,
+	cb: vfs_callbacks,
 	/* Only used for the wchar_t version of open() on non-Windows platforms. */
 	allocationCallbacks: allocation_callbacks,
 }
@@ -2684,41 +2684,41 @@ encoding_format :: enum u32 {
 }
 
 decoder :: struct {
-	ds:                     data_source_base,
+	ds: data_source_base,
 	/* The decoding backend we'll be pulling data from. */
-	pBackend:               ^data_source,
+	pBackend: ^data_source,
 	/* The vtable for the decoding backend. This needs to be stored so we can access the onUninit() callback. */
-	pBackendVTable:         ^decoding_backend_vtable,
-	pBackendUserData:       rawptr,
-	onRead:                 decoder_read_proc,
-	onSeek:                 decoder_seek_proc,
-	onTell:                 decoder_tell_proc,
-	pUserData:              rawptr,
+	pBackendVTable: ^decoding_backend_vtable,
+	pBackendUserData: rawptr,
+	onRead: decoder_read_proc,
+	onSeek: decoder_seek_proc,
+	onTell: decoder_tell_proc,
+	pUserData: rawptr,
 	/* In output sample rate. Used for keeping track of how many frames are available for decoding. */
 	readPointerInPCMFrames: uint64,
-	outputFormat:           format,
-	outputChannels:         uint32,
-	outputSampleRate:       uint32,
+	outputFormat: format,
+	outputChannels: uint32,
+	outputSampleRate: uint32,
 	/* Data conversion is achieved by running frames through this. */
-	converter:              data_converter,
+	converter: data_converter,
 	/* In input format. Can be null if it's not needed. */
-	pInputCache:            rawptr,
+	pInputCache: rawptr,
 	/* The capacity of the input cache. */
-	inputCacheCap:          uint64,
+	inputCacheCap: uint64,
 	/* The number of frames that have been consumed in the cache. Used for determining the next valid frame. */
-	inputCacheConsumed:     uint64,
+	inputCacheConsumed: uint64,
 	/* The number of valid frames remaining in the cache. */
-	inputCacheRemaining:    uint64,
-	allocationCallbacks:    allocation_callbacks,
-	data:                   struct #raw_union {
-		vfs:    struct {
+	inputCacheRemaining: uint64,
+	allocationCallbacks: allocation_callbacks,
+	data: struct #raw_union {
+		vfs: struct {
 			pVFS: ^vfs,
 			file: vfs_file,
 		},
 		/* Only used for decoders that were opened against a block of memory. */
 		memory: struct {
-			pData:          ^uint8,
-			dataSize:       uint,
+			pData: ^uint8,
+			dataSize: uint,
 			currentReadPos: uint,
 		},
 	},
@@ -2727,27 +2727,18 @@ decoder :: struct {
 decoding_backend_config :: struct {
 	preferredFormat: format,
 	/* Set to > 0 to generate a seektable if the decoding backend supports it. */
-	seekPointCount:  uint32,
+	seekPointCount: uint32,
 }
 
 decoding_backend_vtable :: struct {
-	onInit:       proc "c" (
-		_: rawptr,
-		_: read_proc,
-		_: seek_proc,
-		_: tell_proc,
-		_: rawptr,
-		_: ^decoding_backend_config,
-		_: ^allocation_callbacks,
-		_: ^^data_source,
-	) -> result,
+	onInit: proc "c" (_: rawptr, _: read_proc, _: seek_proc, _: tell_proc, _: rawptr, _: ^decoding_backend_config, _: ^allocation_callbacks, _: ^^data_source) -> result,
 	/* Optional. */
-	onInitFile:   proc "c" (_: rawptr, _: cstring, _: ^decoding_backend_config, _: ^allocation_callbacks, _: ^^data_source) -> result,
+	onInitFile: proc "c" (_: rawptr, _: cstring, _: ^decoding_backend_config, _: ^allocation_callbacks, _: ^^data_source) -> result,
 	/* Optional. */
-	onInitFileW:  proc "c" (_: rawptr, _: ^i32, _: ^decoding_backend_config, _: ^allocation_callbacks, _: ^^data_source) -> result,
+	onInitFileW: proc "c" (_: rawptr, _: ^i32, _: ^decoding_backend_config, _: ^allocation_callbacks, _: ^^data_source) -> result,
 	/* Optional. */
 	onInitMemory: proc "c" (_: rawptr, _: rawptr, _: uint, _: ^decoding_backend_config, _: ^allocation_callbacks, _: ^^data_source) -> result,
-	onUninit:     proc "c" (_: rawptr, _: ^data_source, _: ^allocation_callbacks),
+	onUninit: proc "c" (_: rawptr, _: ^data_source, _: ^allocation_callbacks),
 }
 
 decoder_read_proc :: proc "c" (_: ^decoder, _: rawptr, _: uint, _: ^uint) -> result
@@ -2758,34 +2749,34 @@ decoder_tell_proc :: proc "c" (_: ^decoder, _: ^int64) -> result
 
 decoder_config :: struct {
 	/* Set to 0 or ma_format_unknown to use the stream's internal format. */
-	format_:                format,
+	format_: format,
 	/* Set to 0 to use the stream's internal channels. */
-	channels:               uint32,
+	channels: uint32,
 	/* Set to 0 to use the stream's internal sample rate. */
-	sampleRate:             uint32,
-	pChannelMap:            ^channel,
-	channelMixMode:         channel_mix_mode,
-	ditherMode:             dither_mode,
-	resampling:             resampler_config,
-	allocationCallbacks:    allocation_callbacks,
-	encodingFormat:         encoding_format,
+	sampleRate: uint32,
+	pChannelMap: ^channel,
+	channelMixMode: channel_mix_mode,
+	ditherMode: dither_mode,
+	resampling: resampler_config,
+	allocationCallbacks: allocation_callbacks,
+	encodingFormat: encoding_format,
 	/* When set to > 0, specifies the number of seek points to use for the generation of a seek table. Not all decoding backends support this. */
-	seekPointCount:         uint32,
+	seekPointCount: uint32,
 	ppCustomBackendVTables: ^^decoding_backend_vtable,
-	customBackendCount:     uint32,
+	customBackendCount: uint32,
 	pCustomBackendUserData: rawptr,
 }
 
 encoder :: struct {
-	config:           encoder_config,
-	onWrite:          encoder_write_proc,
-	onSeek:           encoder_seek_proc,
-	onInit:           encoder_init_proc,
-	onUninit:         encoder_uninit_proc,
+	config: encoder_config,
+	onWrite: encoder_write_proc,
+	onSeek: encoder_seek_proc,
+	onInit: encoder_init_proc,
+	onUninit: encoder_uninit_proc,
 	onWritePCMFrames: encoder_write_pcm_frames_proc,
-	pUserData:        rawptr,
+	pUserData: rawptr,
 	pInternalEncoder: rawptr,
-	data:             struct #raw_union {
+	data: struct #raw_union {
 		vfs: struct {
 			pVFS: ^vfs,
 			file: vfs_file,
@@ -2804,10 +2795,10 @@ encoder_uninit_proc :: proc "c" (_: ^encoder)
 encoder_write_pcm_frames_proc :: proc "c" (_: ^encoder, _: rawptr, _: uint64, _: ^uint64) -> result
 
 encoder_config :: struct {
-	encodingFormat:      encoding_format,
-	format_:             format,
-	channels:            uint32,
-	sampleRate:          uint32,
+	encodingFormat: encoding_format,
+	format_: format,
+	channels: uint32,
+	sampleRate: uint32,
 	allocationCallbacks: allocation_callbacks,
 }
 
@@ -2819,33 +2810,33 @@ waveform_type :: enum u32 {
 }
 
 waveform_config :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	type:       waveform_type,
-	amplitude:  f64,
-	frequency:  f64,
+	type: waveform_type,
+	amplitude: f64,
+	frequency: f64,
 }
 
 waveform :: struct {
-	ds:      data_source_base,
-	config:  waveform_config,
+	ds: data_source_base,
+	config: waveform_config,
 	advance: f64,
-	time:    f64,
+	time: f64,
 }
 
 pulsewave_config :: struct {
-	format_:    format,
-	channels:   uint32,
+	format_: format,
+	channels: uint32,
 	sampleRate: uint32,
-	dutyCycle:  f64,
-	amplitude:  f64,
-	frequency:  f64,
+	dutyCycle: f64,
+	amplitude: f64,
+	frequency: f64,
 }
 
 pulsewave :: struct {
 	waveform: waveform,
-	config:   pulsewave_config,
+	config: pulsewave_config,
 }
 
 noise_type :: enum u32 {
@@ -2855,96 +2846,96 @@ noise_type :: enum u32 {
 }
 
 noise_config :: struct {
-	format_:           format,
-	channels:          uint32,
-	type:              noise_type,
-	seed:              int32,
-	amplitude:         f64,
+	format_: format,
+	channels: uint32,
+	type: noise_type,
+	seed: int32,
+	amplitude: f64,
 	duplicateChannels: bool32,
 }
 
 noise :: struct {
-	ds:        data_source_base,
-	config:    noise_config,
-	lcg:       lcg,
-	state:     struct #raw_union {
-		pink:     struct {
-			bin:          ^^f64,
+	ds: data_source_base,
+	config: noise_config,
+	lcg: lcg,
+	state: struct #raw_union {
+		pink: struct {
+			bin: ^^f64,
 			accumulation: ^f64,
-			counter:      ^uint32,
+			counter: ^uint32,
 		},
 		brownian: struct {
 			accumulation: ^f64,
 		},
 	},
 	/* Memory management. */
-	_pHeap:    rawptr,
+	_pHeap: rawptr,
 	_ownsHeap: bool32,
 }
 
 resource_manager :: struct {
-	config:              resource_manager_config,
+	config: resource_manager_config,
 	/* The root buffer in the binary tree. */
 	pRootDataBufferNode: ^resource_manager_data_buffer_node,
 	/* For synchronizing access to the data buffer binary tree. */
-	dataBufferBSTLock:   mutex,
+	dataBufferBSTLock: mutex,
 	/* The threads for executing jobs. */
-	jobThreads:          [64]thread,
+	jobThreads: [64]thread,
 	/* Multi-consumer, multi-producer job queue for managing jobs for asynchronous decoding and streaming. */
-	jobQueue:            job_queue,
+	jobQueue: job_queue,
 	/* Only used if a custom VFS is not specified. */
-	defaultVFS:          default_vfs,
+	defaultVFS: default_vfs,
 	/* Only used if no log was specified in the config. */
-	log_:                log,
+	log_: log,
 }
 
 resource_manager_data_buffer_node :: struct {
 	/* The hashed name. This is the key. */
-	hashedName32:                 uint32,
-	refCount:                     uint32,
+	hashedName32: uint32,
+	refCount: uint32,
 	/* Result from asynchronous loading. When loading set to MA_BUSY. When fully loaded set to MA_SUCCESS. When deleting set to MA_UNAVAILABLE. */
-	result:                       result,
+	result: result,
 	/* For allocating execution orders for jobs. */
-	executionCounter:             uint32,
+	executionCounter: uint32,
 	/* For managing the order of execution for asynchronous jobs relating to this object. Incremented as jobs complete processing. */
-	executionPointer:             uint32,
+	executionPointer: uint32,
 	/* Set to true when the underlying data buffer was allocated the resource manager. Set to false if it is owned by the application (via ma_resource_manager_register_*()). */
 	isDataOwnedByResourceManager: bool32,
-	data:                         resource_manager_data_supply,
-	pParent:                      ^resource_manager_data_buffer_node,
-	pChildLo:                     ^resource_manager_data_buffer_node,
-	pChildHi:                     ^resource_manager_data_buffer_node,
+	data: resource_manager_data_supply,
+	pParent: ^resource_manager_data_buffer_node,
+	pChildLo: ^resource_manager_data_buffer_node,
+	pChildHi: ^resource_manager_data_buffer_node,
 }
 
 resource_manager_data_buffer :: struct {
 	/* Base data source. A data buffer is a data source. */
-	ds:                     data_source_base,
+	ds: data_source_base,
 	/* A pointer to the resource manager that owns this buffer. */
-	pResourceManager:       ^resource_manager,
+	pResourceManager: ^resource_manager,
 	/* The data node. This is reference counted and is what supplies the data. */
-	pNode:                  ^resource_manager_data_buffer_node,
+	pNode: ^resource_manager_data_buffer_node,
 	/* The flags that were passed used to initialize the buffer. */
-	flags:                  uint32,
+	flags: uint32,
 	/* For allocating execution orders for jobs. */
-	executionCounter:       uint32,
+	executionCounter: uint32,
 	/* For managing the order of execution for asynchronous jobs relating to this object. Incremented as jobs complete processing. */
-	executionPointer:       uint32,
+	executionPointer: uint32,
 	/* Only updated by the public API. Never written nor read from the job thread. */
-	seekTargetInPCMFrames:  uint64,
+	seekTargetInPCMFrames: uint64,
 	/* On the next read we need to seek to the frame cursor. */
 	seekToCursorOnNextRead: bool32,
 	/* Keeps track of a result of decoding. Set to MA_BUSY while the buffer is still loading. Set to MA_SUCCESS when loading is finished successfully. Otherwise set to some other code. */
-	result:                 result,
+	result: result,
 	/* Can be read and written by different threads at the same time. Must be used atomically. */
-	isLooping:              bool32,
+	isLooping: bool32,
 	/* Used for asynchronous loading to ensure we don't try to initialize the connector multiple times while waiting for the node to fully load. */
 	isConnectorInitialized: atomic_bool32,
 	/* Connects this object to the node's data supply. */
-	connector:              struct #raw_union {
+	connector: struct #raw_union {
 		/* Supply type is ma_resource_manager_data_supply_type_encoded */
-		decoder:     decoder,
+		decoder: decoder,
 		/* Supply type is ma_resource_manager_data_supply_type_decoded */
-		buffer:      audio_buffer,
+		buffer: audio_buffer,
 		/* Supply type is ma_resource_manager_data_supply_type_decoded_paged */
 		pagedBuffer: paged_audio_buffer,
 	},
@@ -2952,51 +2943,51 @@ resource_manager_data_buffer :: struct {
 
 resource_manager_data_stream :: struct {
 	/* Base data source. A data stream is a data source. */
-	ds:                     data_source_base,
+	ds: data_source_base,
 	/* A pointer to the resource manager that owns this data stream. */
-	pResourceManager:       ^resource_manager,
+	pResourceManager: ^resource_manager,
 	/* The flags that were passed used to initialize the stream. */
-	flags:                  uint32,
+	flags: uint32,
 	/* Used for filling pages with data. This is only ever accessed by the job thread. The public API should never touch this. */
-	decoder:                decoder,
+	decoder: decoder,
 	/* Required for determining whether or not the decoder should be uninitialized in MA_JOB_TYPE_RESOURCE_MANAGER_FREE_DATA_STREAM. */
-	isDecoderInitialized:   bool32,
+	isDecoderInitialized: bool32,
 	/* This is calculated when first loaded by the MA_JOB_TYPE_RESOURCE_MANAGER_LOAD_DATA_STREAM. */
 	totalLengthInPCMFrames: uint64,
 	/* The playback cursor, relative to the current page. Only ever accessed by the public API. Never accessed by the job thread. */
-	relativeCursor:         uint32,
+	relativeCursor: uint32,
 	/* The playback cursor, in absolute position starting from the start of the file. */
-	absoluteCursor:         uint64,
+	absoluteCursor: uint64,
 	/* Toggles between 0 and 1. Index 0 is the first half of pPageData. Index 1 is the second half. Only ever accessed by the public API. Never accessed by the job thread. */
-	currentPageIndex:       uint32,
+	currentPageIndex: uint32,
 	/* For allocating execution orders for jobs. */
-	executionCounter:       uint32,
+	executionCounter: uint32,
 	/* For managing the order of execution for asynchronous jobs relating to this object. Incremented as jobs complete processing. */
-	executionPointer:       uint32,
+	executionPointer: uint32,
 	/* Whether or not the stream is looping. It's important to set the looping flag at the data stream level for smooth loop transitions. */
-	isLooping:              bool32,
+	isLooping: bool32,
 	/* Buffer containing the decoded data of each page. Allocated once at initialization time. */
-	pPageData:              rawptr,
+	pPageData: rawptr,
 	/* The number of valid PCM frames in each page. Used to determine the last valid frame. */
-	pageFrameCount:         [2]uint32,
+	pageFrameCount: [2]uint32,
 	/* Result from asynchronous loading. When loading set to MA_BUSY. When initialized set to MA_SUCCESS. When deleting set to MA_UNAVAILABLE. If an error occurs when loading, set to an error code. */
-	result:                 result,
+	result: result,
 	/* Whether or not the decoder has reached the end. */
-	isDecoderAtEnd:         bool32,
+	isDecoderAtEnd: bool32,
 	/* Booleans to indicate whether or not a page is valid. Set to false by the public API, set to true by the job thread. Set to false as the pages are consumed, true when they are filled. */
-	isPageValid:            [2]bool32,
+	isPageValid: [2]bool32,
 	/* When 0, no seeking is being performed. When > 0, a seek is being performed and reading should be delayed with MA_BUSY. */
-	seekCounter:            bool32,
+	seekCounter: bool32,
 }
 
 resource_manager_data_source :: struct {
 	/* Must be the first item because we need the first item to be the data source callbacks for the buffer or stream. */
-	backend:          struct #raw_union {
+	backend: struct #raw_union {
 		buffer: resource_manager_data_buffer,
 		stream: resource_manager_data_stream,
 	},
 	/* The flags that were passed in to ma_resource_manager_data_source_init(). */
-	flags:            uint32,
+	flags: uint32,
 	/* For allocating execution orders for jobs. */
 	executionCounter: uint32,
 	/* For managing the order of execution for asynchronous jobs relating to this object. Incremented as jobs complete processing. */
@@ -3023,7 +3014,7 @@ Pipeline notifications used by the resource manager. Made up of both an async no
 */
 resource_manager_pipeline_stage_notification :: struct {
 	pNotification: ^async_notification,
-	pFence:        ^fence,
+	pFence: ^fence,
 }
 
 resource_manager_pipeline_notifications :: struct {
@@ -3041,17 +3032,17 @@ resource_manager_flags :: enum u32 {
 }
 
 resource_manager_data_source_config :: struct {
-	pFilePath:                   cstring,
-	pFilePathW:                  ^i32,
-	pNotifications:              ^resource_manager_pipeline_notifications,
+	pFilePath: cstring,
+	pFilePathW: ^i32,
+	pNotifications: ^resource_manager_pipeline_notifications,
 	initialSeekPointInPCMFrames: uint64,
-	rangeBegInPCMFrames:         uint64,
-	rangeEndInPCMFrames:         uint64,
-	loopPointBegInPCMFrames:     uint64,
-	loopPointEndInPCMFrames:     uint64,
-	flags:                       uint32,
+	rangeBegInPCMFrames: uint64,
+	rangeEndInPCMFrames: uint64,
+	loopPointBegInPCMFrames: uint64,
+	loopPointEndInPCMFrames: uint64,
+	flags: uint32,
 	/* Deprecated. Use the MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_LOOPING flag in `flags` instead. */
-	isLooping:                   bool32,
+	isLooping: bool32,
 }
 
 resource_manager_data_supply_type :: enum u32 {
@@ -3067,71 +3058,71 @@ resource_manager_data_supply_type :: enum u32 {
 
 resource_manager_data_supply :: struct {
 	/* Read and written from different threads so needs to be accessed atomically. */
-	type:    resource_manager_data_supply_type,
+	type: resource_manager_data_supply_type,
 	backend: struct #raw_union {
-		encoded:      struct {
-			pData:       rawptr,
+		encoded: struct {
+			pData: rawptr,
 			sizeInBytes: uint,
 		},
-		decoded:      struct {
-			pData:             rawptr,
-			totalFrameCount:   uint64,
+		decoded: struct {
+			pData: rawptr,
+			totalFrameCount: uint64,
 			decodedFrameCount: uint64,
-			format_:           format,
-			channels:          uint32,
-			sampleRate:        uint32,
+			format_: format,
+			channels: uint32,
+			sampleRate: uint32,
 		},
 		decodedPaged: struct {
-			data:              paged_audio_buffer_data,
+			data: paged_audio_buffer_data,
 			decodedFrameCount: uint64,
-			sampleRate:        uint32,
+			sampleRate: uint32,
 		},
 	},
 }
 
 resource_manager_config :: struct {
-	allocationCallbacks:            allocation_callbacks,
-	pLog:                           ^log,
+	allocationCallbacks: allocation_callbacks,
+	pLog: ^log,
 	/* The decoded format to use. Set to ma_format_unknown (default) to use the file's native format. */
-	decodedFormat:                  format,
+	decodedFormat: format,
 	/* The decoded channel count to use. Set to 0 (default) to use the file's native channel count. */
-	decodedChannels:                uint32,
+	decodedChannels: uint32,
 	/* the decoded sample rate to use. Set to 0 (default) to use the file's native sample rate. */
-	decodedSampleRate:              uint32,
+	decodedSampleRate: uint32,
 	/* Set to 0 if you want to self-manage your job threads. Defaults to 1. */
-	jobThreadCount:                 uint32,
-	jobThreadStackSize:             uint,
+	jobThreadCount: uint32,
+	jobThreadStackSize: uint,
 	/* The maximum number of jobs that can fit in the queue at a time. Defaults to MA_JOB_TYPE_RESOURCE_MANAGER_QUEUE_CAPACITY. Cannot be zero. */
-	jobQueueCapacity:               uint32,
-	flags:                          uint32,
+	jobQueueCapacity: uint32,
+	flags: uint32,
 	/* Can be NULL in which case defaults will be used. */
-	pVFS:                           ^vfs,
+	pVFS: ^vfs,
 	ppCustomDecodingBackendVTables: ^^decoding_backend_vtable,
-	customDecodingBackendCount:     uint32,
+	customDecodingBackendCount: uint32,
 	pCustomDecodingBackendUserData: rawptr,
-	resampling:                     resampler_config,
+	resampling: resampler_config,
 }
 
 /* For some internal memory management of ma_node_graph. */
 stack :: struct {
-	offset:      uint,
+	offset: uint,
 	sizeInBytes: uint,
-	_data:       [1]u8,
+	_data: [1]u8,
 }
 
 node_graph :: struct {
 	/* The node graph itself is a node so it can be connected as an input to different node graph. This has zero inputs and calls ma_node_graph_read_pcm_frames() to generate it's output. */
-	base:                           node_base,
+	base: node_base,
 	/* Special node that all nodes eventually connect to. Data is read from this node in ma_node_graph_read_pcm_frames(). */
-	endpoint:                       node_base,
+	endpoint: node_base,
 	/* This will be allocated when processingSizeInFrames is non-zero. This is needed because ma_node_graph_read_pcm_frames() can be called with a variable number of frames, and we may need to do some buffering in situations where the caller requests a frame count that's not a multiple of processingSizeInFrames. */
-	pProcessingCache:               ^f32,
+	pProcessingCache: ^f32,
 	processingCacheFramesRemaining: uint32,
-	processingSizeInFrames:         uint32,
+	processingSizeInFrames: uint32,
 	/* Read and written by multiple threads. */
-	isReading:                      bool32,
+	isReading: bool32,
 	/* Modified only by the audio thread. */
-	pPreMixStack:                   ^stack,
+	pPreMixStack: ^stack,
 }
 
 node :: distinct rawptr
@@ -3163,7 +3154,7 @@ node_vtable :: struct {
 	    On output, set `pFrameCountOut` to the number of PCM frames that were actually output and set
 	    `pFrameCountIn` to the number of input frames that were consumed.
 	    */
-	onProcess:                    proc "c" (_: ^node, _: ^^f32, _: ^uint32, _: ^^f32, _: ^uint32),
+	onProcess: proc "c" (_: ^node, _: ^^f32, _: ^uint32, _: ^^f32, _: ^uint32),
 	/*
 	    A callback for retrieving the number of input frames that are required to output the
 	    specified number of output frames. You would only want to implement this when the node performs
@@ -3176,105 +3167,105 @@ node_vtable :: struct {
 	    The number of input buses. This is how many sub-buffers will be contained in the `ppFramesIn`
 	    parameters of the callbacks above.
 	    */
-	inputBusCount:                uint8,
+	inputBusCount: uint8,
 	/*
 	    The number of output buses. This is how many sub-buffers will be contained in the `ppFramesOut`
 	    parameters of the callbacks above.
 	    */
-	outputBusCount:               uint8,
+	outputBusCount: uint8,
 	/*
 	    Flags describing characteristics of the node. This is currently just a placeholder for some
 	    ideas for later on.
 	    */
-	flags:                        uint32,
+	flags: uint32,
 }
 
 node_config :: struct {
 	/* Should never be null. Initialization of the node will fail if so. */
-	vtable:          ^node_vtable,
+	vtable: ^node_vtable,
 	/* Defaults to ma_node_state_started. */
-	initialState:    node_state,
+	initialState: node_state,
 	/* Only used if the vtable specifies an input bus count of `MA_NODE_BUS_COUNT_UNKNOWN`, otherwise must be set to `MA_NODE_BUS_COUNT_UNKNOWN` (default). */
-	inputBusCount:   uint32,
+	inputBusCount: uint32,
 	/* Only used if the vtable specifies an output bus count of `MA_NODE_BUS_COUNT_UNKNOWN`, otherwise  be set to `MA_NODE_BUS_COUNT_UNKNOWN` (default). */
-	outputBusCount:  uint32,
+	outputBusCount: uint32,
 	/* The number of elements are determined by the input bus count as determined by the vtable, or `inputBusCount` if the vtable specifies `MA_NODE_BUS_COUNT_UNKNOWN`. */
-	pInputChannels:  ^uint32,
+	pInputChannels: ^uint32,
 	/* The number of elements are determined by the output bus count as determined by the vtable, or `outputBusCount` if the vtable specifies `MA_NODE_BUS_COUNT_UNKNOWN`. */
 	pOutputChannels: ^uint32,
 }
 
 node_output_bus :: struct {
 	/* The node that owns this output bus. The input node. Will be null for dummy head and tail nodes. */
-	pNode:                  ^node,
+	pNode: ^node,
 	/* The index of the output bus on pNode that this output bus represents. */
-	outputBusIndex:         uint8,
+	outputBusIndex: uint8,
 	/* The number of channels in the audio stream for this bus. */
-	channels:               uint8,
+	channels: uint8,
 	/* The index of the input bus on the input. Required for detaching. Will only be used within the spinlock so does not need to be atomic. */
 	inputNodeInputBusIndex: uint8,
 	/* Some state flags for tracking the read state of the output buffer. A combination of MA_NODE_OUTPUT_BUS_FLAG_*. */
-	flags:                  uint32,
+	flags: uint32,
 	/* Reference count for some thread-safety when detaching. */
-	refCount:               uint32,
+	refCount: uint32,
 	/* This is used to prevent iteration of nodes that are in the middle of being detached. Used for thread safety. */
-	isAttached:             bool32,
+	isAttached: bool32,
 	/* Unfortunate lock, but significantly simplifies the implementation. Required for thread-safe attaching and detaching. */
-	lock:                   spinlock,
+	lock: spinlock,
 	/* Linear. */
-	volume:                 f32,
+	volume: f32,
 	/* If null, it's the tail node or detached. */
-	pNext:                  ^node_output_bus,
+	pNext: ^node_output_bus,
 	/* If null, it's the head node or detached. */
-	pPrev:                  ^node_output_bus,
+	pPrev: ^node_output_bus,
 	/* The node that this output bus is attached to. Required for detaching. */
-	pInputNode:             ^node,
+	pInputNode: ^node,
 }
 
 node_input_bus :: struct {
 	/* Dummy head node for simplifying some lock-free thread-safety stuff. */
-	head:        node_output_bus,
+	head: node_output_bus,
 	/* This is used to determine whether or not the input bus is finding the next node in the list. Used for thread safety when detaching output buses. */
 	nextCounter: uint32,
 	/* Unfortunate lock, but significantly simplifies the implementation. Required for thread-safe attaching and detaching. */
-	lock:        spinlock,
+	lock: spinlock,
 	/* The number of channels in the audio stream for this bus. */
-	channels:    uint8,
+	channels: uint8,
 }
 
 node_base :: struct {
 	/* The graph this node belongs to. */
-	pNodeGraph:                  ^node_graph,
-	vtable:                      ^node_vtable,
-	inputBusCount:               uint32,
-	outputBusCount:              uint32,
-	pInputBuses:                 ^node_input_bus,
-	pOutputBuses:                ^node_output_bus,
+	pNodeGraph: ^node_graph,
+	vtable: ^node_vtable,
+	inputBusCount: uint32,
+	outputBusCount: uint32,
+	pInputBuses: ^node_input_bus,
+	pOutputBuses: ^node_output_bus,
 	/* Allocated on the heap. Fixed size. Needs to be stored on the heap because reading from output buses is done in separate function calls. */
-	pCachedData:                 ^f32,
+	pCachedData: ^f32,
 	/* The capacity of the input data cache in frames, per bus. */
 	cachedDataCapInFramesPerBus: uint16,
 	/* These variables are read and written only from the audio thread. */
-	cachedFrameCountOut:         uint16,
-	cachedFrameCountIn:          uint16,
-	consumedFrameCountIn:        uint16,
+	cachedFrameCountOut: uint16,
+	cachedFrameCountIn: uint16,
+	consumedFrameCountIn: uint16,
 	/* When set to stopped, nothing will be read, regardless of the times in stateTimes. */
-	state:                       node_state,
+	state: node_state,
 	/* Indexed by ma_node_state. Specifies the time based on the global clock that a node should be considered to be in the relevant state. */
-	stateTimes:                  [2]uint64,
+	stateTimes: [2]uint64,
 	/* The node's local clock. This is just a running sum of the number of output frames that have been processed. Can be modified by any thread with `ma_node_set_time()`. */
-	localTime:                   uint64,
+	localTime: uint64,
 	/* Memory management. */
-	_inputBuses:                 [2]node_input_bus,
-	_outputBuses:                [2]node_output_bus,
+	_inputBuses: [2]node_input_bus,
+	_outputBuses: [2]node_output_bus,
 	/* A heap allocation for internal use only. pInputBuses and/or pOutputBuses will point to this if the bus count exceeds MA_MAX_NODE_LOCAL_BUS_COUNT. */
-	_pHeap:                      rawptr,
+	_pHeap: rawptr,
 	/* If set to true, the node owns the heap allocation and _pHeap will be freed in ma_node_uninit(). */
-	_ownsHeap:                   bool32,
+	_ownsHeap: bool32,
 }
 
 node_graph_config :: struct {
-	channels:               uint32,
+	channels: uint32,
 	/* This is the preferred processing size for node processing callbacks unless overridden by a node itself. Can be 0 in which case it will be based on the frame count passed into ma_node_graph_read_pcm_frames(), but will not be well defined. */
 	processingSizeInFrames: uint32,
 	/* Defaults to 512KB per channel. Reducing this will save memory, but the depth of your node graph will be more restricted. */
@@ -3283,19 +3274,19 @@ node_graph_config :: struct {
 
 /* Data source node. 0 input buses, 1 output bus. Used for reading from a data source. */
 data_source_node_config :: struct {
-	nodeConfig:  node_config,
+	nodeConfig: node_config,
 	pDataSource: ^data_source,
 }
 
 data_source_node :: struct {
-	base:        node_base,
+	base: node_base,
 	pDataSource: ^data_source,
 }
 
 /* Splitter Node. 1 input, many outputs. Used for splitting/copying a stream so it can be as input into two separate output nodes. */
 splitter_node_config :: struct {
-	nodeConfig:     node_config,
-	channels:       uint32,
+	nodeConfig: node_config,
+	channels: uint32,
 	outputBusCount: uint32,
 }
 
@@ -3308,12 +3299,12 @@ Biquad Node
 */
 biquad_node_config :: struct {
 	nodeConfig: node_config,
-	biquad:     biquad_config,
+	biquad: biquad_config,
 }
 
 biquad_node :: struct {
 	baseNode: node_base,
-	biquad:   biquad,
+	biquad: biquad,
 }
 
 /*
@@ -3321,12 +3312,12 @@ Low Pass Filter Node
 */
 lpf_node_config :: struct {
 	nodeConfig: node_config,
-	lpf:        lpf_config,
+	lpf: lpf_config,
 }
 
 lpf_node :: struct {
 	baseNode: node_base,
-	lpf:      lpf,
+	lpf: lpf,
 }
 
 /*
@@ -3334,12 +3325,12 @@ High Pass Filter Node
 */
 hpf_node_config :: struct {
 	nodeConfig: node_config,
-	hpf:        hpf_config,
+	hpf: hpf_config,
 }
 
 hpf_node :: struct {
 	baseNode: node_base,
-	hpf:      hpf,
+	hpf: hpf,
 }
 
 /*
@@ -3347,12 +3338,12 @@ Band Pass Filter Node
 */
 bpf_node_config :: struct {
 	nodeConfig: node_config,
-	bpf:        bpf_config,
+	bpf: bpf_config,
 }
 
 bpf_node :: struct {
 	baseNode: node_base,
-	bpf:      bpf,
+	bpf: bpf,
 }
 
 /*
@@ -3360,12 +3351,12 @@ Notching Filter Node
 */
 notch_node_config :: struct {
 	nodeConfig: node_config,
-	notch:      notch_config,
+	notch: notch_config,
 }
 
 notch_node :: struct {
 	baseNode: node_base,
-	notch:    notch2,
+	notch: notch2,
 }
 
 /*
@@ -3373,12 +3364,12 @@ Peaking Filter Node
 */
 peak_node_config :: struct {
 	nodeConfig: node_config,
-	peak:       peak_config,
+	peak: peak_config,
 }
 
 peak_node :: struct {
 	baseNode: node_base,
-	peak:     peak2,
+	peak: peak2,
 }
 
 /*
@@ -3386,12 +3377,12 @@ Low Shelf Filter Node
 */
 loshelf_node_config :: struct {
 	nodeConfig: node_config,
-	loshelf:    loshelf_config,
+	loshelf: loshelf_config,
 }
 
 loshelf_node :: struct {
 	baseNode: node_base,
-	loshelf:  loshelf2,
+	loshelf: loshelf2,
 }
 
 /*
@@ -3399,67 +3390,67 @@ High Shelf Filter Node
 */
 hishelf_node_config :: struct {
 	nodeConfig: node_config,
-	hishelf:    hishelf_config,
+	hishelf: hishelf_config,
 }
 
 hishelf_node :: struct {
 	baseNode: node_base,
-	hishelf:  hishelf2,
+	hishelf: hishelf2,
 }
 
 delay_node_config :: struct {
 	nodeConfig: node_config,
-	delay:      delay_config,
+	delay: delay_config,
 }
 
 delay_node :: struct {
 	baseNode: node_base,
-	delay:    delay,
+	delay: delay,
 }
 
 engine :: struct {
 	/* An engine is a node graph. It should be able to be plugged into any ma_node_graph API (with a cast) which means this must be the first member of this struct. */
-	nodeGraph:                          node_graph,
-	pResourceManager:                   ^resource_manager,
+	nodeGraph: node_graph,
+	pResourceManager: ^resource_manager,
 	/* Optionally set via the config, otherwise allocated by the engine in ma_engine_init(). */
-	pDevice:                            ^device,
-	pLog:                               ^log,
-	sampleRate:                         uint32,
-	listenerCount:                      uint32,
-	listeners:                          [4]spatializer_listener,
-	allocationCallbacks:                allocation_callbacks,
-	ownsResourceManager:                bool8,
-	ownsDevice:                         bool8,
+	pDevice: ^device,
+	pLog: ^log,
+	sampleRate: uint32,
+	listenerCount: uint32,
+	listeners: [4]spatializer_listener,
+	allocationCallbacks: allocation_callbacks,
+	ownsResourceManager: bool8,
+	ownsDevice: bool8,
 	/* For synchronizing access to the inlined sound list. */
-	inlinedSoundLock:                   spinlock,
+	inlinedSoundLock: spinlock,
 	/* The first inlined sound. Inlined sounds are tracked in a linked list. */
-	pInlinedSoundHead:                  ^sound_inlined,
+	pInlinedSoundHead: ^sound_inlined,
 	/* The total number of allocated inlined sound objects. Used for debugging. */
-	inlinedSoundCount:                  uint32,
+	inlinedSoundCount: uint32,
 	/* The number of frames to interpolate the gain of spatialized sounds across. */
-	gainSmoothTimeInFrames:             uint32,
+	gainSmoothTimeInFrames: uint32,
 	defaultVolumeSmoothTimeInPCMFrames: uint32,
-	monoExpansionMode:                  mono_expansion_mode,
-	onProcess:                          engine_process_proc,
-	pProcessUserData:                   rawptr,
-	pitchResamplingConfig:              resampler_config,
+	monoExpansionMode: mono_expansion_mode,
+	onProcess: engine_process_proc,
+	pProcessUserData: rawptr,
+	pitchResamplingConfig: resampler_config,
 }
 
 sound :: struct {
 	/* Must be the first member for compatibility with the ma_node API. */
-	engineNode:                     engine_node,
-	pDataSource:                    ^data_source,
+	engineNode: engine_node,
+	pDataSource: ^data_source,
 	/* The PCM frame index to seek to in the mixing thread. Set to (~(ma_uint64)0) to not perform any seeking. */
-	seekTarget:                     uint64,
-	atEnd:                          bool32,
-	endCallback:                    sound_end_proc,
-	pEndCallbackUserData:           rawptr,
+	seekTarget: uint64,
+	atEnd: bool32,
+	endCallback: sound_end_proc,
+	pEndCallbackUserData: rawptr,
 	/* Will be null if pDataSource is null. */
-	pProcessingCache:               ^f32,
+	pProcessingCache: ^f32,
 	processingCacheFramesRemaining: uint32,
-	processingCacheCap:             uint32,
-	ownsDataSource:                 bool8,
-	pResourceManagerDataSource:     ^resource_manager_data_source,
+	processingCacheCap: uint32,
+	ownsDataSource: bool8,
+	pResourceManagerDataSource: ^resource_manager_data_source,
 }
 
 /* Sound flags. */
@@ -3490,65 +3481,65 @@ engine_node_type :: enum u32 {
 }
 
 engine_node_config :: struct {
-	pEngine:                     ^engine,
-	type:                        engine_node_type,
-	channelsIn:                  uint32,
-	channelsOut:                 uint32,
+	pEngine: ^engine,
+	type: engine_node_type,
+	channelsIn: uint32,
+	channelsOut: uint32,
 	/* Only used when the type is set to ma_engine_node_type_sound. */
-	sampleRate:                  uint32,
+	sampleRate: uint32,
 	/* The number of frames to smooth over volume changes. Defaults to 0 in which case no smoothing is used. */
 	volumeSmoothTimeInPCMFrames: uint32,
-	monoExpansionMode:           mono_expansion_mode,
+	monoExpansionMode: mono_expansion_mode,
 	/* Pitching can be explicitly disabled with MA_SOUND_FLAG_NO_PITCH to optimize processing. */
-	isPitchDisabled:             bool8,
+	isPitchDisabled: bool8,
 	/* Spatialization can be explicitly disabled with MA_SOUND_FLAG_NO_SPATIALIZATION. */
-	isSpatializationDisabled:    bool8,
+	isSpatializationDisabled: bool8,
 	/* The index of the listener this node should always use for spatialization. If set to MA_LISTENER_INDEX_CLOSEST the engine will use the closest listener. */
-	pinnedListenerIndex:         uint8,
-	resampling:                  resampler_config,
+	pinnedListenerIndex: uint8,
+	resampling: resampler_config,
 }
 
 /* Base node object for both ma_sound and ma_sound_group. */
 engine_node :: struct {
 	/* Must be the first member for compatibility with the ma_node API. */
-	baseNode:                    node_base,
+	baseNode: node_base,
 	/* A pointer to the engine. Set based on the value from the config. */
-	pEngine:                     ^engine,
+	pEngine: ^engine,
 	/* The sample rate of the input data. For sounds backed by a data source, this will be the data source's sample rate. Otherwise it'll be the engine's sample rate. */
-	sampleRate:                  uint32,
+	sampleRate: uint32,
 	volumeSmoothTimeInPCMFrames: uint32,
-	monoExpansionMode:           mono_expansion_mode,
-	fader:                       fader,
+	monoExpansionMode: mono_expansion_mode,
+	fader: fader,
 	/* For pitch shift. */
-	resampler:                   resampler,
-	spatializer:                 spatializer,
-	panner:                      panner,
+	resampler: resampler,
+	spatializer: spatializer,
+	panner: panner,
 	/* This will only be used if volumeSmoothTimeInPCMFrames is > 0. */
-	volumeGainer:                gainer,
+	volumeGainer: gainer,
 	/* Defaults to 1. */
-	volume:                      atomic_float,
-	pitch:                       f32,
+	volume: atomic_float,
+	pitch: f32,
 	/* For determining whether or not the resampler needs to be updated to reflect the new pitch. The resampler will be updated on the mixing thread. */
-	oldPitch:                    f32,
+	oldPitch: f32,
 	/* For determining whether or not the resampler needs to be updated to take a new doppler pitch into account. */
-	oldDopplerPitch:             f32,
+	oldDopplerPitch: f32,
 	/* When set to true, pitching will be disabled which will allow the resampler to be bypassed to save some computation. */
-	isPitchDisabled:             bool32,
+	isPitchDisabled: bool32,
 	/* Set to false by default. When set to false, will not have spatialisation applied. */
-	isSpatializationDisabled:    bool32,
+	isSpatializationDisabled: bool32,
 	/* The index of the listener this node should always use for spatialization. If set to MA_LISTENER_INDEX_CLOSEST the engine will use the closest listener. */
-	pinnedListenerIndex:         uint32,
-	fadeSettings:                struct {
-		volumeBeg:                  atomic_float,
-		volumeEnd:                  atomic_float,
+	pinnedListenerIndex: uint32,
+	fadeSettings: struct {
+		volumeBeg: atomic_float,
+		volumeEnd: atomic_float,
 		/* <-- Defaults to (~(ma_uint64)0) which is used to indicate that no fade should be applied. */
-		fadeLengthInFrames:         atomic_uint64,
+		fadeLengthInFrames: atomic_uint64,
 		/* <-- The time to start the fade. */
 		absoluteGlobalTimeInFrames: atomic_uint64,
 	},
 	/* Memory management. */
-	_ownsHeap:                   bool8,
-	_pHeap:                      rawptr,
+	_ownsHeap: bool8,
+	_pHeap: rawptr,
 }
 
 /* Callback for when a sound reaches the end. */
@@ -3556,40 +3547,40 @@ sound_end_proc :: proc "c" (_: rawptr, _: ^sound)
 
 sound_config :: struct {
 	/* Set this to load from the resource manager. */
-	pFilePath:                      cstring,
+	pFilePath: cstring,
 	/* Set this to load from the resource manager. */
-	pFilePathW:                     ^i32,
+	pFilePathW: ^i32,
 	/* Set this to load from an existing data source. */
-	pDataSource:                    ^data_source,
+	pDataSource: ^data_source,
 	/* If set, the sound will be attached to an input of this node. This can be set to a ma_sound. If set to NULL, the sound will be attached directly to the endpoint unless MA_SOUND_FLAG_NO_DEFAULT_ATTACHMENT is set in `flags`. */
-	pInitialAttachment:             ^node,
+	pInitialAttachment: ^node,
 	/* The index of the input bus of pInitialAttachment to attach the sound to. */
 	initialAttachmentInputBusIndex: uint32,
 	/* Ignored if using a data source as input (the data source's channel count will be used always). Otherwise, setting to 0 will cause the engine's channel count to be used. */
-	channelsIn:                     uint32,
+	channelsIn: uint32,
 	/* Set this to 0 (default) to use the engine's channel count. Set to MA_SOUND_SOURCE_CHANNEL_COUNT to use the data source's channel count (only used if using a data source as input). */
-	channelsOut:                    uint32,
+	channelsOut: uint32,
 	/* Controls how the mono channel should be expanded to other channels when spatialization is disabled on a sound. */
-	monoExpansionMode:              mono_expansion_mode,
+	monoExpansionMode: mono_expansion_mode,
 	/* A combination of MA_SOUND_FLAG_* flags. */
-	flags:                          uint32,
+	flags: uint32,
 	/* The number of frames to smooth over volume changes. Defaults to 0 in which case no smoothing is used. */
-	volumeSmoothTimeInPCMFrames:    uint32,
+	volumeSmoothTimeInPCMFrames: uint32,
 	/* Initializes the sound such that it's seeked to this location by default. */
-	initialSeekPointInPCMFrames:    uint64,
-	rangeBegInPCMFrames:            uint64,
-	rangeEndInPCMFrames:            uint64,
-	loopPointBegInPCMFrames:        uint64,
-	loopPointEndInPCMFrames:        uint64,
+	initialSeekPointInPCMFrames: uint64,
+	rangeBegInPCMFrames: uint64,
+	rangeEndInPCMFrames: uint64,
+	loopPointBegInPCMFrames: uint64,
+	loopPointEndInPCMFrames: uint64,
 	/* Fired when the sound reaches the end. Will be fired from the audio thread. Do not restart, uninitialize or otherwise change the state of the sound from here. Instead fire an event or set a variable to indicate to a different thread to change the start of the sound. Will not be fired in response to a scheduled stop with ma_sound_set_stop_time_*(). */
-	endCallback:                    sound_end_proc,
-	pEndCallbackUserData:           rawptr,
-	pitchResampling:                resampler_config,
-	initNotifications:              resource_manager_pipeline_notifications,
+	endCallback: sound_end_proc,
+	pEndCallbackUserData: rawptr,
+	pitchResampling: resampler_config,
+	initNotifications: resource_manager_pipeline_notifications,
 	/* Deprecated. Use initNotifications instead. Released when the resource manager has finished decoding the entire sound. Not used with streams. */
-	pDoneFence:                     ^fence,
+	pDoneFence: ^fence,
 	/* Deprecated. Use the MA_SOUND_FLAG_LOOPING flag in `flags` instead. */
-	isLooping:                      bool32,
+	isLooping: bool32,
 }
 
 sound_inlined :: struct {
@@ -3607,52 +3598,52 @@ engine_process_proc :: proc "c" (_: rawptr, _: ^f32, _: uint64)
 
 engine_config :: struct {
 	/* Can be null in which case a resource manager will be created for you. */
-	pResourceManager:                   ^resource_manager,
-	pContext:                           ^context_,
+	pResourceManager: ^resource_manager,
+	pContext: ^context_,
 	/* If set, the caller is responsible for calling ma_engine_data_callback() in the device's data callback. */
-	pDevice:                            ^device,
+	pDevice: ^device,
 	/* The ID of the playback device to use with the default listener. */
-	pPlaybackDeviceID:                  ^device_id,
+	pPlaybackDeviceID: ^device_id,
 	/* Can be null. Can be used to provide a custom device data callback. */
-	dataCallback:                       device_data_proc,
-	notificationCallback:               device_notification_proc,
+	dataCallback: device_data_proc,
+	notificationCallback: device_notification_proc,
 	/* When set to NULL, will use the context's log. */
-	pLog:                               ^log,
+	pLog: ^log,
 	/* Must be between 1 and MA_ENGINE_MAX_LISTENERS. */
-	listenerCount:                      uint32,
+	listenerCount: uint32,
 	/* The number of channels to use when mixing and spatializing. When set to 0, will use the native channel count of the device. */
-	channels:                           uint32,
+	channels: uint32,
 	/* The sample rate. When set to 0 will use the native sample rate of the device. */
-	sampleRate:                         uint32,
+	sampleRate: uint32,
 	/* If set to something other than 0, updates will always be exactly this size. The underlying device may be a different size, but from the perspective of the mixer that won't matter.*/
-	periodSizeInFrames:                 uint32,
+	periodSizeInFrames: uint32,
 	/* Used if periodSizeInFrames is unset. */
-	periodSizeInMilliseconds:           uint32,
+	periodSizeInMilliseconds: uint32,
 	/* The number of frames to interpolate the gain of spatialized sounds across. If set to 0, will use gainSmoothTimeInMilliseconds. */
-	gainSmoothTimeInFrames:             uint32,
+	gainSmoothTimeInFrames: uint32,
 	/* When set to 0, gainSmoothTimeInFrames will be used. If both are set to 0, a default value will be used. */
-	gainSmoothTimeInMilliseconds:       uint32,
+	gainSmoothTimeInMilliseconds: uint32,
 	/* Defaults to 0. Controls the default amount of smoothing to apply to volume changes to sounds. High values means more smoothing at the expense of high latency (will take longer to reach the new volume). */
 	defaultVolumeSmoothTimeInPCMFrames: uint32,
 	/* A stack is used for internal processing in the node graph. This allows you to configure the size of this stack. Smaller values will reduce the maximum depth of your node graph. You should rarely need to modify this. */
-	preMixStackSizeInBytes:             uint32,
-	allocationCallbacks:                allocation_callbacks,
+	preMixStackSizeInBytes: uint32,
+	allocationCallbacks: allocation_callbacks,
 	/* When set to true, requires an explicit call to ma_engine_start(). This is false by default, meaning the engine will be started automatically in ma_engine_init(). */
-	noAutoStart:                        bool32,
+	noAutoStart: bool32,
 	/* When set to true, don't create a default device. ma_engine_read_pcm_frames() can be called manually to read data. */
-	noDevice:                           bool32,
+	noDevice: bool32,
 	/* Controls how the mono channel should be expanded to other channels when spatialization is disabled on a sound. */
-	monoExpansionMode:                  mono_expansion_mode,
+	monoExpansionMode: mono_expansion_mode,
 	/* A pointer to a pre-allocated VFS object to use with the resource manager. This is ignored if pResourceManager is not NULL. */
-	pResourceManagerVFS:                ^vfs,
+	pResourceManagerVFS: ^vfs,
 	/* Fired at the end of each call to ma_engine_read_pcm_frames(). For engine's that manage their own internal device (the default configuration), this will be fired from the audio thread, and you do not need to call ma_engine_read_pcm_frames() manually in order to trigger this. */
-	onProcess:                          engine_process_proc,
+	onProcess: engine_process_proc,
 	/* User data that's passed into onProcess. */
-	pProcessUserData:                   rawptr,
+	pProcessUserData: rawptr,
 	/* The resampling config to use with the resource manager. */
-	resourceManagerResampling:          resampler_config,
+	resourceManagerResampling: resampler_config,
 	/* The resampling config for the pitch and Doppler effects. You will typically want this to be a fast resampler. For high quality stuff, it's recommended that you pre-resample. */
-	pitchResampling:                    resampler_config,
+	pitchResampling: resampler_config,
 }
 
 pthread_mutex_t :: distinct rawptr

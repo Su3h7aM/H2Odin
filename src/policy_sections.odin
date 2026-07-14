@@ -44,7 +44,7 @@ policy_read_diagnostics :: proc(policy: ^Policy) -> bool {
 		return true
 	}
 	if field_type != c.int(lua.Type.TABLE) {
-		user_error("h2odin: config: diagnostics must be a table of category → \"warn\"|\"error\"")
+		user_error("h2odin: config: diagnostics must be a table of category → \"info\"|\"hint\"|\"warn\"|\"error\"")
 		lua.pop(L, 1)
 		return false
 	}
@@ -62,7 +62,8 @@ policy_read_diagnostics :: proc(policy: ^Policy) -> bool {
 	return true
 }
 
-// Table is at `index`. Keys must be known category names; values "warn"/"error".
+// Table is at `index`. Keys must be known category names; values are severity
+// names: "info", "hint", "warn"/"warning", or "error".
 // Returns a local-overrides shape (Some only for keys that were present).
 policy_parse_diag_severity_table :: proc(L: ^lua.State, index: c.int, path: string) -> (out: Diag_Local_Overrides, ok: bool) {
 	idx := lua.absindex(L, index)
@@ -82,14 +83,14 @@ policy_parse_diag_severity_table :: proc(L: ^lua.State, index: c.int, path: stri
 			return {}, false
 		}
 		if lua.type(L, -1) != .STRING {
-			user_errorf("h2odin: config: %s[%q] must be \"warn\" or \"error\"", path, key)
+			user_errorf("h2odin: config: %s[%q] must be \"info\", \"hint\", \"warn\", or \"error\"", path, key)
 			lua.pop(L, 2)
 			return {}, false
 		}
 		sev_name := string(lua.tostring(L, -1))
 		sev, sev_ok := diag_severity_from_name(sev_name)
 		if !sev_ok {
-			user_errorf("h2odin: config: %s[%q] must be \"warn\" or \"error\", got %q", path, key, sev_name)
+			user_errorf("h2odin: config: %s[%q] must be \"info\", \"hint\", \"warn\", or \"error\", got %q", path, key, sev_name)
 			lua.pop(L, 2)
 			return {}, false
 		}

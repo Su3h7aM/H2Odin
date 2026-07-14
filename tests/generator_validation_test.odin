@@ -39,7 +39,7 @@ test_symbol_collision_package_scope_exits_error :: proc(t: ^testing.T) {
 	testing.expect(t, exit_code != 0)
 	// Output is still written (fail closed after emit).
 	expect_contains(t, stdout, "Open :: proc")
-	expect_contains(t, stderr, "error[symbol_collision]:")
+	expect_contains(t, stderr, "error[symbol_collision]")
 	expect_contains(t, stderr, `package-scope name "Open"`)
 }
 
@@ -61,7 +61,7 @@ test_field_shadow_exits_error :: proc(t: ^testing.T) {
 	}
 	testing.expect(t, exit_code != 0)
 	expect_contains(t, stdout, "format ::")
-	expect_contains(t, stderr, "error[symbol_collision]:")
+	expect_contains(t, stderr, "error[symbol_collision]")
 	expect_contains(t, stderr, "shadows type")
 	expect_contains(t, stderr, "format")
 }
@@ -84,7 +84,7 @@ test_param_shadow_exits_error :: proc(t: ^testing.T) {
 	}
 	testing.expect(t, exit_code != 0)
 	expect_contains(t, stdout, "formadd :: proc")
-	expect_contains(t, stderr, "error[symbol_collision]:")
+	expect_contains(t, stderr, "error[symbol_collision]")
 	expect_contains(t, stderr, "parameter")
 	expect_contains(t, stderr, "httppost")
 }
@@ -127,5 +127,5 @@ return config
 		return
 	}
 	expect_contains(t, stdout, "Open :: proc")
-	expect_contains(t, stderr, "warning[symbol_collision]:")
+	expect_contains(t, stderr, "warning[symbol_collision]")
 }

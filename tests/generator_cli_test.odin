@@ -76,7 +76,9 @@ test_verbose_diagnostics_include_guidance :: proc(t: ^testing.T) {
 	}
 
 	expect_contains(t, stdout, "fill :: proc")
-	expect_contains(t, stderr, "warning[pointer_lowering_guess]:")
+	expect_contains(t, stderr, "warning[pointer_lowering_guess]")
+	// Verbose expands every site and prints shared guidance once.
+	expect_contains(t, stderr, `function "fill" parameter "out"`)
 	expect_contains(t, stderr, "cause:")
 	expect_contains(t, stderr, "fix:")
 	expect_contains(t, stderr, "procs.params")

@@ -139,10 +139,12 @@ test_diagnostics_report_lists_guessed_pointer_lowerings :: proc(t: ^testing.T) {
 
 	// Bindings on stdout via -destination:stdout; the report is a single stderr block.
 	expect_contains(t, stdout, "fill :: proc")
-	expect_contains(t, stderr, "non-certain")
-	expect_contains(t, stderr, "warning[pointer_lowering_guess]:")
-	expect_contains(t, stderr, `guessed pointer lowering in function "fill" parameter "out": defaulted to ^T`)
-	expect_contains(t, stderr, `guessed pointer lowering in function "make_row" return type: defaulted to ^T`)
+	// Default is summary-first: count + shared explanation, not N site lines.
+	expect_contains(t, stderr, "warning")
+	expect_contains(t, stderr, "pointer_lowering_guess")
+	expect_contains(t, stderr, "×")
+	expect_contains(t, stderr, "defaulted")
+	expect_contains(t, stderr, "fix:")
 	// Proven lowerings (void*, const char*, function pointers) must not appear.
 	expect_not_contains(t, stderr, `function "on_event"`)
 	expect_not_contains(t, stderr, `function "log_fmt"`)
@@ -159,10 +161,12 @@ test_diagnostics_report_lists_unknown_size_extern_arrays :: proc(t: ^testing.T) 
 	}
 
 	expect_contains(t, stdout, "version:")
-	expect_contains(t, stderr, "non-certain")
-	expect_contains(t, stderr, "warning[incomplete_extern_array]:")
-	expect_contains(t, stderr, `extern array "version" has unknown size; emitted as [0]T`)
-	expect_contains(t, stderr, `extern array "values" has unknown size; emitted as [0]T`)
+	expect_contains(t, stderr, "warning")
+	expect_contains(t, stderr, "incomplete_extern_array")
+	// Multi-site group is summarized in default mode (cause/fix, not each site).
+	expect_contains(t, stderr, "×")
+	expect_contains(t, stderr, "no known size")
+	expect_contains(t, stderr, "fix:")
 	// Known bounds are certain — no note for them.
 	expect_not_contains(t, stderr, "known_values")
 }
@@ -178,8 +182,8 @@ test_quiet_suppresses_diagnostics_report :: proc(t: ^testing.T) {
 	}
 
 	expect_contains(t, stdout, "fill :: proc")
-	expect_not_contains(t, stderr, "non-certain")
 	expect_not_contains(t, stderr, "pointer_lowering_guess")
+	expect_not_contains(t, stderr, "warning")
 }
 
 @(test)
@@ -195,7 +199,8 @@ test_diagnostics_error_severity_exits_nonzero_after_emit :: proc(t: ^testing.T) 
 
 	testing.expect(t, exit_code != 0)
 	expect_contains(t, stdout, "fill :: proc")
-	expect_contains(t, stderr, "error[pointer_lowering_guess]:")
+	// Same-category errors are grouped; tag may include a count suffix.
+	expect_contains(t, stderr, "error[pointer_lowering_guess]")
 	expect_contains(t, stderr, `guessed pointer lowering in function "fill" parameter "out": defaulted to ^T`)
 }
 

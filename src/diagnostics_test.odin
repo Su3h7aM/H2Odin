@@ -129,6 +129,47 @@ test_diag_resolve_severity_default_warn_and_local_override :: proc(t: ^testing.T
 		local_severity = Diag_Severity.Warn,
 	}
 	testing.expect_value(t, diag_resolve_severity(d_local, &policy), Diag_Severity.Warn)
+
+	// Config may lower a category to hint (report-only signal).
+	policy.diag_severity[.Pointer_Lowering_Guess] = .Hint
+	testing.expect_value(t, diag_resolve_severity(d_global, &policy), Diag_Severity.Hint)
+}
+
+@(test)
+test_diag_severity_name_roundtrip :: proc(t: ^testing.T) {
+	for s in Diag_Severity {
+		name := diag_severity_name(s)
+		back, ok := diag_severity_from_name(name)
+		testing.expectf(t, ok, "severity %v name %q should round-trip", s, name)
+		testing.expect_value(t, back, s)
+	}
+	// Aliases accepted by config.
+	w, w_ok := diag_severity_from_name("warn")
+	testing.expect(t, w_ok)
+	testing.expect_value(t, w, Diag_Severity.Warn)
+	_, bad := diag_severity_from_name("critical")
+	testing.expect(t, !bad)
+}
+
+@(test)
+test_diag_severity_visibility_quiet_default_verbose :: proc(t: ^testing.T) {
+	// quiet → errors only
+	testing.expect(t, diag_severity_visible(.Error, true, false))
+	testing.expect(t, !diag_severity_visible(.Warn, true, false))
+	testing.expect(t, !diag_severity_visible(.Hint, true, false))
+	testing.expect(t, !diag_severity_visible(.Info, true, false))
+
+	// default → hint + warning + error (not info)
+	testing.expect(t, diag_severity_visible(.Error, false, false))
+	testing.expect(t, diag_severity_visible(.Warn, false, false))
+	testing.expect(t, diag_severity_visible(.Hint, false, false))
+	testing.expect(t, !diag_severity_visible(.Info, false, false))
+
+	// verbose → everything
+	testing.expect(t, diag_severity_visible(.Error, false, true))
+	testing.expect(t, diag_severity_visible(.Warn, false, true))
+	testing.expect(t, diag_severity_visible(.Hint, false, true))
+	testing.expect(t, diag_severity_visible(.Info, false, true))
 }
 
 @(test)

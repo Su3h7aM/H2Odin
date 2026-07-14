@@ -5,12 +5,22 @@ import "core:strings"
 
 // Diagnostics are the generator's honesty report: every heuristic and
 // fallback that is not certain lands here with a *named category* and a
-// *severity*. Config can raise a category to error; the default posture is
-// warn so runs still produce usable output.
+// *severity*. Config can raise or lower a category; the default posture for
+// most categories is warn so runs still produce usable output.
+//
+// Levels (lowest → highest signal):
+//   info    — stage progress / provenance (verbose-mode material)
+//   hint    — pattern detected; configure to act (never changes output)
+//   warning — suspicious; user should review
+//   error   — generation failure for exit status (output may still exist)
+//
+// Visibility: quiet → errors only; default → hint+warning+error; verbose → all.
 
 Diag_Severity :: enum u8 {
-	Warn, // zero value — default posture
+	Warn, // zero value — default posture for most categories
 	Error,
+	Info,
+	Hint,
 }
 
 // Closed set of diagnostic categories. Lua keys use the snake_case name
@@ -142,6 +152,10 @@ diag_category_from_name :: proc(name: string) -> (Diag_Category, bool) {
 
 diag_severity_name :: proc(s: Diag_Severity) -> string {
 	switch s {
+	case .Info:
+		return "info"
+	case .Hint:
+		return "hint"
 	case .Warn:
 		return "warning"
 	case .Error:
@@ -152,6 +166,10 @@ diag_severity_name :: proc(s: Diag_Severity) -> string {
 
 diag_severity_from_name :: proc(name: string) -> (Diag_Severity, bool) {
 	switch name {
+	case "info":
+		return .Info, true
+	case "hint":
+		return .Hint, true
 	case "warn", "warning":
 		return .Warn, true
 	case "error":
@@ -169,6 +187,20 @@ diag_resolve_severity :: proc(d: Diagnostic, policy: ^Policy) -> Diag_Severity {
 		return policy.diag_severity[d.category]
 	}
 	return .Warn
+}
+
+// Whether a resolved severity is printed for this run's quiet/verbose flags.
+// quiet → errors only; default → hint+warning+error; verbose → everything.
+diag_severity_visible :: proc(sev: Diag_Severity, quiet: bool, verbose: bool) -> bool {
+	switch sev {
+	case .Error:
+		return true
+	case .Warn, .Hint:
+		return !quiet
+	case .Info:
+		return verbose && !quiet
+	}
+	return false
 }
 
 // Local override map on a constructor (bit_set, macro group, …). Only
@@ -202,64 +234,191 @@ ir_diag_with_local :: proc(ir: ^IR, local: Diag_Local_Overrides, category: Diag_
 	ir_diag(ir, category, format, ..args)
 }
 
-// Print the end-of-run report on stderr. Quiet when empty or when `quiet` is
-// set (process-level -quiet still fails the run on error severities). When
-// `verbose` is set, each entry is followed by probable cause and config fix
-// guidance. Returns false when any diagnostic resolved to error (caller
-// should exit non-zero after still having emitted output).
+// Default report is summary-first: one block per (severity, category) with a
+// count and a single explanation. Individual site messages are listed only
+// for one-off diagnostics, for errors (capped), or under -verbose.
+//
+// Visibility: quiet → errors only; default → hint+warning+error;
+// verbose → all levels, every site, and cause/fix guidance.
+// Exit status is tied only to error severity (including escalations).
+
+// Errors expand sites by default — they fail the run and need locations.
+DIAG_DEFAULT_ERROR_EXPAND_MAX :: 5
+
+// Print the end-of-run report on stderr.
 report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false, verbose := false) -> bool {
 	n := len(ir.diagnostics)
 	if n == 0 {
 		return true
 	}
 
-	n_warn := 0
-	n_err := 0
 	severities := make([]Diag_Severity, n, context.temp_allocator)
+	n_info, n_hint, n_warn, n_err := 0, 0, 0, 0
+	n_visible := 0
 	for d, i in ir.diagnostics {
 		sev := diag_resolve_severity(d, policy)
 		severities[i] = sev
-		if sev == .Error {
-			n_err += 1
-		} else {
+		switch sev {
+		case .Info:
+			n_info += 1
+		case .Hint:
+			n_hint += 1
+		case .Warn:
 			n_warn += 1
+		case .Error:
+			n_err += 1
+		}
+		if diag_severity_visible(sev, quiet, verbose) {
+			n_visible += 1
 		}
 	}
 
-	if !quiet {
-		// Header: keep "non-certain" for the all-warn case so existing e2e
-		// strings still match; mention errors when present.
-		if n_err == 0 {
-			label := "decision" if n == 1 else "decisions"
-			user_errorf("h2odin: %d non-certain %s:", n, label)
-		} else {
-			user_errorf(
-				"h2odin: %d diagnostic%s (%d warning%s, %d error%s):",
-				n,
-				"" if n == 1 else "s",
-				n_warn,
-				"" if n_warn == 1 else "s",
-				n_err,
-				"" if n_err == 1 else "s",
-			)
-		}
+	if n_visible > 0 {
+		report_diagnostics_header(n_info, n_hint, n_warn, n_err, quiet, verbose)
 
-		for d, i in ir.diagnostics {
-			sev := severities[i]
-			user_errorf("  - %s[%s]: %s", diag_severity_name(sev), diag_category_name(d.category), d.message)
-			if verbose {
-				cause, fix := diag_verbose_guidance(d.category)
-				if cause != "" {
-					user_errorf("      cause: %s", cause)
-				}
-				if fix != "" {
-					user_errorf("      fix:   %s", fix)
+		collapsed_any := false
+		severity_order := [?]Diag_Severity{.Error, .Warn, .Hint, .Info}
+		for sev in severity_order {
+			if !diag_severity_visible(sev, quiet, verbose) {
+				continue
+			}
+			for cat in Diag_Category {
+				if report_diagnostics_group(ir, severities, sev, cat, verbose) {
+					collapsed_any = true
 				}
 			}
+		}
+		if collapsed_any && !verbose {
+			user_error("  (use -verbose to list every site)")
 		}
 	}
 
 	return n_err == 0
+}
+
+// One clean summary line: "h2odin: 194 warnings" or "h2odin: 2 errors, 3 warnings".
+report_diagnostics_header :: proc(n_info, n_hint, n_warn, n_err: int, quiet: bool, verbose: bool) {
+	parts: [4]string
+	part_count := 0
+	// Most urgent first in the header.
+	if n_err > 0 {
+		parts[part_count] = fmt.tprintf("%d error%s", n_err, "" if n_err == 1 else "s")
+		part_count += 1
+	}
+	if !quiet && n_warn > 0 {
+		parts[part_count] = fmt.tprintf("%d warning%s", n_warn, "" if n_warn == 1 else "s")
+		part_count += 1
+	}
+	if !quiet && n_hint > 0 {
+		parts[part_count] = fmt.tprintf("%d hint%s", n_hint, "" if n_hint == 1 else "s")
+		part_count += 1
+	}
+	if verbose && !quiet && n_info > 0 {
+		parts[part_count] = fmt.tprintf("%d info", n_info)
+		part_count += 1
+	}
+
+	if part_count == 0 {
+		return
+	}
+	summary: string
+	switch part_count {
+	case 1:
+		summary = parts[0]
+	case 2:
+		summary = fmt.tprintf("%s, %s", parts[0], parts[1])
+	case 3:
+		summary = fmt.tprintf("%s, %s, %s", parts[0], parts[1], parts[2])
+	case 4:
+		summary = fmt.tprintf("%s, %s, %s, %s", parts[0], parts[1], parts[2], parts[3])
+	}
+	user_errorf("h2odin: %s", summary)
+}
+
+// Print one (severity, category) group. Returns true when site details were
+// collapsed (so the caller can print a single -verbose tip).
+report_diagnostics_group :: proc(ir: ^IR, severities: []Diag_Severity, sev: Diag_Severity, cat: Diag_Category, verbose: bool) -> (collapsed: bool) {
+	indices: [dynamic]int
+	indices.allocator = context.temp_allocator
+	for d, i in ir.diagnostics {
+		if severities[i] == sev && d.category == cat {
+			append(&indices, i)
+		}
+	}
+	count := len(indices)
+	if count == 0 {
+		return false
+	}
+
+	sev_name := diag_severity_name(sev)
+	cat_name := diag_category_name(cat)
+
+	// One-off: keep a single readable line (message already carries the site).
+	if count == 1 {
+		user_errorf("  %s[%s]: %s", sev_name, cat_name, ir.diagnostics[indices[0]].message)
+		if verbose {
+			report_diagnostics_guidance(cat)
+		}
+		return false
+	}
+
+	// Multi: title with count, then either sites or one shared explanation.
+	user_errorf("  %s[%s]  ×%d", sev_name, cat_name, count)
+	expand_limit := diag_group_expand_limit(sev, count, verbose)
+
+	if expand_limit > 0 {
+		limit := min(count, expand_limit)
+		for j in 0 ..< limit {
+			user_errorf("    %s", ir.diagnostics[indices[j]].message)
+		}
+		if limit < count {
+			user_errorf("    … and %d more", count - limit)
+			collapsed = true
+		}
+		if verbose {
+			report_diagnostics_guidance(cat)
+		}
+		return collapsed
+	}
+
+	// Summary mode: one explanation for the whole group, not N near-copies.
+	cause, fix := diag_verbose_guidance(cat)
+	if cause != "" {
+		user_errorf("    %s", cause)
+	} else {
+		// Reserved categories without guidance: one sample site.
+		user_errorf("    %s", ir.diagnostics[indices[0]].message)
+		user_errorf("    … and %d more", count - 1)
+	}
+	if fix != "" {
+		user_errorf("    fix: %s", fix)
+	}
+	return true
+}
+
+// How many site messages to print for a multi-member group.
+// 0 means summary-only (shared cause/fix, no per-site lines).
+// count == 1 is handled by the caller before this is used.
+diag_group_expand_limit :: proc(sev: Diag_Severity, count: int, verbose: bool) -> int {
+	if verbose {
+		return count
+	}
+	if sev == .Error {
+		// Failures need locations; cap so a flood still stays scannable.
+		return min(count, DIAG_DEFAULT_ERROR_EXPAND_MAX)
+	}
+	// Warn/hint multi-groups: one shared explanation, never N near-copies.
+	return 0
+}
+
+report_diagnostics_guidance :: proc(cat: Diag_Category) {
+	cause, fix := diag_verbose_guidance(cat)
+	if cause != "" {
+		user_errorf("    cause: %s", cause)
+	}
+	if fix != "" {
+		user_errorf("    fix:   %s", fix)
+	}
 }
 
 // Probable cause and Lua-config resolution for a category. Empty strings
@@ -267,8 +426,8 @@ report_diagnostics :: proc(ir: ^IR, policy: ^Policy, quiet := false, verbose := 
 diag_verbose_guidance :: proc(c: Diag_Category) -> (cause: string, fix: string) {
 	switch c {
 	case .Pointer_Lowering_Guess:
-		return "C does not distinguish single pointers, arrays, and out-params; H2Odin defaulted this site to ^T.",
-			"Set procs.params[\"Proc.param\"] = { type = \"…\" } (or procs.param / procs.results callbacks) to the intended spelling, or use types.overrides / types.map for named types."
+		return "C does not distinguish single pointers, arrays, and out-params; defaulted to ^T.",
+			"Set procs.params / structs.fields { pointer = \"multi\" } or an explicit type spelling (callbacks: procs.param / structs.field)."
 	case .Unresolved_Idiomatic_Leaf:
 		return "Idiomatic mode could not prove a native Odin leaf type for this C type on the current target.",
 			"Keep type_mode = \"abi\", or map the C type via types.map / types.overrides to an explicit Odin spelling."
@@ -297,8 +456,8 @@ diag_verbose_guidance :: proc(c: Diag_Category) -> (cause: string, fix: string) 
 		return "A flag value does not fit the measured C enum integer width used as the bit_set backing type.",
 			"Exclude oversized flags, or do not convert this enum to a bit_set."
 	case .Incomplete_Extern_Array:
-		return "An extern array has no known size in the header; H2Odin emitted [0]T as a conservative placeholder.",
-			"If the real bound is known, override the variable type via a types/symbols policy when available, or patch the binding after generation."
+		return "An extern array has no known size in the header; emitted as [0]T.",
+			"Override the variable type when the bound is known, or patch the binding after generation."
 	case .Opaque_Record_Complete:
 		return "types.opaque forced handle style on a complete (sized) record; collapsing it would change layout, so emission stayed faithful.",
 			"Remove the types.opaque entry for that name, or set types.opaque[\"Name\"] = false if you only meant incomplete tags."
