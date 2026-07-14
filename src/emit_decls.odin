@@ -25,7 +25,7 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comm
 }
 
 write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, emit_comments: bool, imports: ^Emit_Imports) {
-	bit_field_layout, bit_fields_ok := prove_record_bit_field_layout(record, ir, context.temp_allocator)
+	bit_field_layout, bit_fields_ok := prove_record_bit_field_layout(record, ir)
 	if !record.is_complete || record.has_unrepresentable_fields || !bit_fields_ok {
 		// No layout to preserve (forward-declared), or a layout the IR
 		// cannot represent yet — an opaque body is the honest fallback;

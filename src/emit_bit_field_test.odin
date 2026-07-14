@@ -4,6 +4,37 @@ import vmem "core:mem/virtual"
 import "core:testing"
 
 @(test)
+test_bit_field_emission_plan_only_reports_live_records :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	unrepresentable_record := Record_Decl {
+		name        = "Filtered_Out",
+		size        = 8,
+		alignment   = 8,
+		is_complete = true,
+		is_union    = true,
+		fields      = {{name = "flag", is_bitfield = true, bit_width = 1, bit_offset = 0}},
+	}
+	_ = ir_create_record(&ir, unrepresentable_record)
+	unrepresentable_record.name = "Emitted"
+	_ = ir_add_record(&ir, unrepresentable_record)
+
+	plan := plan_bit_field_emission(&ir)
+	testing.expect_value(t, len(plan.opaque_records), 2)
+	testing.expect(t, !plan.opaque_records[0])
+	testing.expect(t, plan.opaque_records[1])
+	testing.expect_value(t, len(plan.diagnostics), 1)
+}
+
+@(test)
 test_bit_field_layout_proves_cx_index_options_shape :: proc(t: ^testing.T) {
 	record := Record_Decl {
 		name      = "CXIndexOptions",
@@ -22,7 +53,7 @@ test_bit_field_layout_proves_cx_index_options_shape :: proc(t: ^testing.T) {
 		},
 	}
 
-	layout, ok := prove_record_bit_field_layout(record, allocator = context.temp_allocator)
+	layout, ok := prove_record_bit_field_layout(record)
 	testing.expect(t, ok)
 	testing.expect_value(t, len(layout.runs), 1)
 	if len(layout.runs) == 1 {
@@ -41,7 +72,7 @@ test_bit_field_layout_preserves_measured_internal_gaps :: proc(t: ^testing.T) {
 		fields    = {{name = "a", is_bitfield = true, bit_width = 1, bit_offset = 0}, {name = "b", is_bitfield = true, bit_width = 2, bit_offset = 3}},
 	}
 
-	layout, ok := prove_record_bit_field_layout(record, allocator = context.temp_allocator)
+	layout, ok := prove_record_bit_field_layout(record)
 	testing.expect(t, ok)
 	testing.expect_value(t, len(layout.runs), 1)
 	if len(layout.runs) == 1 {
@@ -58,7 +89,7 @@ test_bit_field_layout_fails_closed_for_union_and_non_power_of_two_span :: proc(t
 		is_union  = true,
 		fields    = {{name = "pointer", bit_offset = 0, size = 8, alignment = 8}, {name = "flag", is_bitfield = true, bit_width = 1, bit_offset = 0}},
 	}
-	_, union_ok := prove_record_bit_field_layout(union_record, allocator = context.temp_allocator)
+	_, union_ok := prove_record_bit_field_layout(union_record)
 	testing.expect(t, !union_ok)
 
 	non_power_span := Record_Decl {
@@ -68,7 +99,7 @@ test_bit_field_layout_fails_closed_for_union_and_non_power_of_two_span :: proc(t
 		is_packed = true,
 		fields    = {{name = "flag", is_bitfield = true, bit_width = 1, bit_offset = 0}},
 	}
-	_, span_ok := prove_record_bit_field_layout(non_power_span, allocator = context.temp_allocator)
+	_, span_ok := prove_record_bit_field_layout(non_power_span)
 	testing.expect(t, !span_ok)
 }
 
@@ -81,7 +112,7 @@ test_bit_field_free_record_needs_no_layout_rewrite :: proc(t: ^testing.T) {
 		fields    = {{name = "x", bit_offset = 0, size = 4, alignment = 4}, {name = "y", bit_offset = 32, size = 1, alignment = 1}},
 	}
 
-	layout, ok := prove_record_bit_field_layout(record, allocator = context.temp_allocator)
+	layout, ok := prove_record_bit_field_layout(record)
 	testing.expect(t, ok)
 	testing.expect_value(t, len(layout.runs), 0)
 }
@@ -111,6 +142,6 @@ test_bit_field_layout_rejects_user_authored_adjacent_field_type :: proc(t: ^test
 		},
 	}
 
-	_, ok := prove_record_bit_field_layout(record, &ir, context.temp_allocator)
+	_, ok := prove_record_bit_field_layout(record, &ir)
 	testing.expect(t, !ok)
 }

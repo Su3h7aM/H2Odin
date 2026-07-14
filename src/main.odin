@@ -78,7 +78,7 @@ generate_bindings :: proc(command_line: Command_Line_Options) -> bool {
 
 	plan := plan_outputs(&ir, &policy) or_return
 	emit_options := resolve_emit_options(&policy, input_headers[0]) or_return
-	bit_field_plan := plan_bit_field_emission(&ir, context.temp_allocator)
+	bit_field_plan := plan_bit_field_emission(&ir)
 	for diagnostic in bit_field_plan.diagnostics {
 		append(&ir.diagnostics, diagnostic)
 	}

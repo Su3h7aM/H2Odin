@@ -12,10 +12,15 @@ Bit_Field_Run_Layout :: struct {
 	backing_bits:        int,
 }
 
+// Scratch proof result consumed immediately while serializing one record.
+// Runs use context.temp_allocator and need no individual cleanup.
 Record_Bit_Field_Layout :: struct {
 	runs: [dynamic]Bit_Field_Run_Layout,
 }
 
+// Scratch plan consumed before Emission. The slices use context.temp_allocator;
+// diagnostic messages use the generation allocator because main copies them
+// into IR.diagnostics.
 Bit_Field_Emit_Plan :: struct {
 	opaque_records: []bool, // indexed by IR.records
 	diagnostics:    []Diagnostic,
@@ -30,8 +35,8 @@ record_has_bit_fields :: proc(record: Record_Decl) -> bool {
 	return false
 }
 
-bit_field_backing_bits :: proc(span: i64) -> (int, bool) {
-	switch span {
+bit_field_backing_bits :: proc(span_bits: i64) -> (int, bool) {
+	switch span_bits {
 	case 8:
 		return 8, true
 	case 16:
@@ -48,9 +53,9 @@ bit_field_backing_bits :: proc(span: i64) -> (int, bool) {
 // type Extraction measured. User-authored spellings and type-map rewrites are
 // deliberately unprovable here: configuration may request them, but it may
 // not silently invalidate an automatically emitted bit-field record.
-emitted_native_layout_for_bit_fields :: proc(ir: ^IR, handle: Type_Handle) -> (size: int, alignment: int, known: bool, ok: bool) {
-	info := ir_type(ir, handle)
-	switch variant in info.variant {
+emitted_native_layout_for_bit_fields :: proc(ir: ^IR, type_handle: Type_Handle) -> (size: int, alignment: int, known: bool, ok: bool) {
+	type_info := ir_type(ir, type_handle)
+	switch variant in type_info.variant {
 	case Type_Builtin, Type_Std, Type_Lowered_Pointer:
 		return 0, 0, false, true
 	case Type_Idiomatic_Leaf:
@@ -94,13 +99,15 @@ field_layout_is_preserved_for_bit_fields :: proc(ir: ^IR, field: Field) -> bool 
 	return !known || (size == field.size && alignment == field.alignment)
 }
 
-// Prove the complete emitted struct layout arithmetically. Ordinary fields
+// Prove the complete emitted struct layout arithmetically. The returned proof
+// is temporary and remains valid until context.temp_allocator is cleared.
+// Ordinary fields
 // are checked against libclang's measured offsets as anchors; each bit-field
 // run consumes the measured whole-byte span up to the next ordinary field or
 // record end. Any gap inside that span becomes an anonymous reserved member.
 // Odin bit_field order is defined LSB-first, so targets with another byte
 // order fail closed instead of assuming C's target-specific convention.
-prove_record_bit_field_layout :: proc(record: Record_Decl, ir: ^IR = nil, allocator := context.allocator) -> (Record_Bit_Field_Layout, bool) {
+prove_record_bit_field_layout :: proc(record: Record_Decl, ir: ^IR = nil) -> (Record_Bit_Field_Layout, bool) {
 	layout: Record_Bit_Field_Layout
 	if !record_has_bit_fields(record) {
 		return layout, true
@@ -112,7 +119,7 @@ prove_record_bit_field_layout :: proc(record: Record_Decl, ir: ^IR = nil, alloca
 		return layout, false
 	}
 
-	layout.runs = make([dynamic]Bit_Field_Run_Layout, allocator)
+	layout.runs = make([dynamic]Bit_Field_Run_Layout, context.temp_allocator)
 	current_byte := 0
 	struct_alignment := 1
 	field_index := 0
@@ -139,15 +146,15 @@ prove_record_bit_field_layout :: proc(record: Record_Decl, ir: ^IR = nil, alloca
 			continue
 		}
 
-		first := field_index
+		first_field_index := field_index
 		for field_index < len(record.fields) && record.fields[field_index].is_bitfield {
 			field_index += 1
 		}
-		one_past_last := field_index
-		first_bit := record.fields[first].bit_offset
+		one_past_last_field := field_index
+		first_bit := record.fields[first_field_index].bit_offset
 		boundary_bit := i64(record.size * 8)
-		if one_past_last < len(record.fields) {
-			boundary_bit = record.fields[one_past_last].bit_offset
+		if one_past_last_field < len(record.fields) {
+			boundary_bit = record.fields[one_past_last_field].bit_offset
 		}
 		if first_bit < 0 || first_bit % 8 != 0 || boundary_bit <= first_bit {
 			return layout, false
@@ -158,8 +165,8 @@ prove_record_bit_field_layout :: proc(record: Record_Decl, ir: ^IR = nil, alloca
 			return layout, false
 		}
 		cursor_bit := first_bit
-		for i in first ..< one_past_last {
-			member := record.fields[i]
+		for member_index in first_field_index ..< one_past_last_field {
+			member := record.fields[member_index]
 			if member.bit_width <= 0 || member.bit_offset < cursor_bit {
 				return layout, false
 			}
@@ -181,7 +188,7 @@ prove_record_bit_field_layout :: proc(record: Record_Decl, ir: ^IR = nil, alloca
 		}
 		current_byte += backing_bytes
 		struct_alignment = max(struct_alignment, field_alignment)
-		append(&layout.runs, Bit_Field_Run_Layout{first_field = first, one_past_last_field = one_past_last, backing_bits = backing_bits})
+		append(&layout.runs, Bit_Field_Run_Layout{first_field = first_field_index, one_past_last_field = one_past_last_field, backing_bits = backing_bits})
 	}
 
 	if record.align > 0 {
@@ -196,18 +203,23 @@ prove_record_bit_field_layout :: proc(record: Record_Decl, ir: ^IR = nil, alloca
 // Prepare the emission-only fallback view without mutating the semantic IR.
 // Main uses opaque_records to suppress diagnostics for fields that will not
 // be serialized; write_record_body independently consumes the same proof.
-plan_bit_field_emission :: proc(ir: ^IR, allocator := context.allocator) -> Bit_Field_Emit_Plan {
-	opaque_records := make([]bool, len(ir.records), allocator)
-	diagnostics := make([dynamic]Diagnostic, allocator)
-	for record, i in ir.records {
+plan_bit_field_emission :: proc(ir: ^IR) -> Bit_Field_Emit_Plan {
+	opaque_records := make([]bool, len(ir.records), context.temp_allocator)
+	diagnostics := make([dynamic]Diagnostic, context.temp_allocator)
+	for declaration in ir.order {
+		if declaration.kind != .Record {
+			continue
+		}
+		record_index := int(declaration.index)
+		record := ir.records[record_index]
 		if !record.is_complete || record.has_unrepresentable_fields || !record_has_bit_fields(record) {
 			continue
 		}
-		_, ok := prove_record_bit_field_layout(record, ir, context.temp_allocator)
-		if ok {
+		_, layout_reproducible := prove_record_bit_field_layout(record, ir)
+		if layout_reproducible {
 			continue
 		}
-		opaque_records[i] = true
+		opaque_records[record_index] = true
 		append(
 			&diagnostics,
 			Diagnostic {
@@ -229,8 +241,8 @@ write_bit_field_run :: proc(b: ^strings.Builder, fields: []Field, run: Bit_Field
 	fmt.sbprintf(b, "using _: bit_field u%d", run.backing_bits)
 	strings.write_string(b, " {\n")
 	cursor_bit := fields[run.first_field].bit_offset
-	for i in run.first_field ..< run.one_past_last_field {
-		field := fields[i]
+	for field_index in run.first_field ..< run.one_past_last_field {
+		field := fields[field_index]
 		if field.bit_offset > cursor_bit {
 			write_reserved_bit_field(b, run.backing_bits, field.bit_offset - cursor_bit, indent + 1)
 		}
