@@ -179,7 +179,7 @@ policy_enum_member_remove :: proc(policy: ^Policy, enum_name, member_name: strin
 	return bool(lua.toboolean(L, -1))
 }
 
-// structs.field(field) → nil | { type?, tag? }
+// structs.field(field) → nil | { type?, tag?, pointer? }
 policy_struct_field_action :: proc(policy: ^Policy, struct_name, field_name, type_spelling: string) -> (action: Member_Action, decided: bool) {
 	if !policy.has_struct_field {
 		return {}, false
@@ -198,7 +198,7 @@ policy_struct_field_action :: proc(policy: ^Policy, struct_name, field_name, typ
 		os.exit(1)
 	}
 	defer lua.pop(L, 2)
-	return policy_read_member_action_result(L, "structs.field", field_name, allow_tag = true, allow_default = false)
+	return policy_read_member_action_result(L, "structs.field", field_name, allow_tag = true, allow_default = false, allow_pointer = true)
 }
 
 // procs.param(param) → nil | { type?, default? }

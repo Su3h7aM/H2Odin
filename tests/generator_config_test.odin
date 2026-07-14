@@ -360,9 +360,10 @@ test_member_policies_and_link_prefix_shape_output :: proc(t: ^testing.T) {
 	}
 
 	expect_contains(t, stdout, `@(link_prefix = "rl_")`)
-	// structs.fields: tag + type spelling
+	// structs.fields: tag + type spelling + multipointer
 	expect_contains(t, stdout, "name: [32]c.char `fmt:\"s,0\"`")
 	expect_contains(t, stdout, "parent: i32")
+	expect_contains(t, stdout, "vertices: [^]c.float")
 	// structs.align
 	expect_contains(t, stdout, "Mesh :: struct #align(16)")
 	// structs.field callback

@@ -108,9 +108,12 @@ Member_Action :: struct {
 	type:    string,
 	tag:     string, // structs only
 	default: string, // procs only
-	// procs only: "" | "multi" — foreign multipointer [^]T (ABI-identical).
+	// structs.fields / procs.params: "" | "multi" — foreign multipointer [^]T
+	// (ABI-identical to ^T). Soft-ignored when the lowered type is not a
+	// single data pointer.
 	pointer: string,
 	// procs only, idiomatic mode: emit #by_ptr (call-borrowed non-null).
+	// Has no field meaning and is rejected on structs.fields.
 	by_ptr:  bool,
 }
 

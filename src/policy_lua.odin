@@ -125,6 +125,10 @@ policy_member_action_map :: proc(
 	defer lua.pop(L, 1)
 
 	result = make(map[string]Member_Action)
+	owned := true
+	defer if owned {
+		policy_free_member_action_map(&result)
+	}
 	lua.pushnil(L)
 	for lua.next(L, -2) != 0 {
 		if lua.type(L, -2) != .STRING {
@@ -135,6 +139,7 @@ policy_member_action_map :: proc(
 		map_key := strings.clone(string(lua.tostring(L, -2)))
 		if !lua.istable(L, -1) {
 			user_errorf("h2odin: config: %s.%s[%q] must be a table", parent_name, key, map_key)
+			delete(map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
@@ -153,12 +158,14 @@ policy_member_action_map :: proc(
 			append(&allowed, "by_ptr")
 		}
 		if !policy_reject_unknown_subkeys(L, fmt.tprintf("%s.%s[]", parent_name, key), allowed[:]) {
+			delete(map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
 		action: Member_Action
 		type_s, type_ok := policy_optional_string_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "type")
 		if !type_ok {
+			delete(map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
@@ -166,6 +173,8 @@ policy_member_action_map :: proc(
 		if allow_tag {
 			tag_s, tag_ok := policy_optional_string_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "tag")
 			if !tag_ok {
+				delete(map_key)
+				delete(action.type)
 				lua.pop(L, 2)
 				return nil, false
 			}
@@ -174,6 +183,9 @@ policy_member_action_map :: proc(
 		if allow_default {
 			def_s, def_ok := policy_optional_string_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "default")
 			if !def_ok {
+				delete(map_key)
+				delete(action.type)
+				delete(action.tag)
 				lua.pop(L, 2)
 				return nil, false
 			}
@@ -182,11 +194,20 @@ policy_member_action_map :: proc(
 		if allow_pointer {
 			ptr_s, ptr_ok := policy_optional_string_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "pointer")
 			if !ptr_ok {
+				delete(map_key)
+				delete(action.type)
+				delete(action.tag)
+				delete(action.default)
 				lua.pop(L, 2)
 				return nil, false
 			}
 			if ptr_s != "" && ptr_s != "multi" {
 				user_errorf("h2odin: config: %s.%s[%q].pointer must be \"multi\" (got %q)", parent_name, key, map_key, ptr_s)
+				delete(map_key)
+				delete(action.type)
+				delete(action.tag)
+				delete(action.default)
+				delete(ptr_s)
 				lua.pop(L, 2)
 				return nil, false
 			}
@@ -195,6 +216,11 @@ policy_member_action_map :: proc(
 		if allow_by_ptr {
 			by, by_ok := policy_optional_bool_field(L, fmt.tprintf("%s.%s[]", parent_name, key), "by_ptr")
 			if !by_ok {
+				delete(map_key)
+				delete(action.type)
+				delete(action.tag)
+				delete(action.default)
+				delete(action.pointer)
 				lua.pop(L, 2)
 				return nil, false
 			}
@@ -202,12 +228,14 @@ policy_member_action_map :: proc(
 		}
 		if action.type == "" && action.tag == "" && action.default == "" && action.pointer == "" && !action.by_ptr {
 			user_errorf("h2odin: config: %s.%s[%q] must set at least one of type/tag/default/pointer/by_ptr", parent_name, key, map_key)
+			delete(map_key)
 			lua.pop(L, 2)
 			return nil, false
 		}
 		result[map_key] = action
 		lua.pop(L, 1)
 	}
+	owned = false
 	return result, true
 }
 

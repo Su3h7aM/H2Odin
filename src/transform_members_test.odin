@@ -63,6 +63,102 @@ test_declarative_member_adjustments_update_matching_declarations :: proc(t: ^tes
 }
 
 @(test)
+test_field_pointer_multi_rewrites_single_data_pointer :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	float_type := ir_builtin_type(&ir, .Float)
+	pointer_type := ir_add_type(
+		&ir,
+		Type_Info{variant = Type_Lowered_Pointer{pointee = float_type, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}},
+	)
+	_ = ir_add_record(&ir, Record_Decl{name = "Mesh", is_complete = true, fields = {{name = "vertices", type = pointer_type}}})
+
+	policy := Policy {
+		struct_fields = make(map[string]Member_Action),
+	}
+	policy.struct_fields["Mesh.vertices"] = Member_Action {
+		pointer = "multi",
+	}
+	apply_struct_adjustments(&ir, &policy)
+
+	lowered := ir.types[int(pointer_type)].variant.(Type_Lowered_Pointer)
+	testing.expect_value(t, lowered.kind, Pointer_Lowering_Kind.Multi)
+	testing.expect_value(t, lowered.confidence, Pointer_Lowering_Confidence.Proven)
+	testing.expect_value(t, lowered.reason, Pointer_Lowering_Reason.Configured_Multi)
+	testing.expect_value(t, ir.records[0].fields[0].type_spelling, "")
+}
+
+@(test)
+test_field_pointer_multi_ignored_when_type_spelling_set :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	float_type := ir_builtin_type(&ir, .Float)
+	pointer_type := ir_add_type(
+		&ir,
+		Type_Info{variant = Type_Lowered_Pointer{pointee = float_type, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}},
+	)
+	_ = ir_add_record(&ir, Record_Decl{name = "Mesh", is_complete = true, fields = {{name = "vertices", type = pointer_type}}})
+
+	policy := Policy {
+		struct_fields = make(map[string]Member_Action),
+	}
+	// Explicit type spelling is authoritative; multi does not rewrite.
+	policy.struct_fields["Mesh.vertices"] = Member_Action {
+		type    = "^f32",
+		pointer = "multi",
+	}
+	apply_struct_adjustments(&ir, &policy)
+
+	lowered := ir.types[int(pointer_type)].variant.(Type_Lowered_Pointer)
+	testing.expect_value(t, lowered.kind, Pointer_Lowering_Kind.Single)
+	testing.expect_value(t, ir.records[0].fields[0].type_spelling, "^f32")
+}
+
+@(test)
+test_field_pointer_multi_soft_ignores_non_pointer :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	integer_type := ir_builtin_type(&ir, .Int)
+	_ = ir_add_record(&ir, Record_Decl{name = "Mesh", is_complete = true, fields = {{name = "vertexCount", type = integer_type}}})
+
+	policy := Policy {
+		struct_fields = make(map[string]Member_Action),
+	}
+	policy.struct_fields["Mesh.vertexCount"] = Member_Action {
+		pointer = "multi",
+	}
+	apply_struct_adjustments(&ir, &policy)
+
+	// Non-pointer field: unchanged type, soft diagnostic recorded.
+	testing.expect_value(t, ir.records[0].fields[0].type, integer_type)
+	testing.expect(t, len(ir.diagnostics) > 0)
+}
+
+@(test)
 test_require_results_non_void_mode_marks_only_non_void_returns :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)

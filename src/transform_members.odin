@@ -47,7 +47,7 @@ apply_struct_adjustments :: proc(ir: ^IR, policy: ^Policy) {
 				}
 			}
 			if has_action {
-				apply_field_action(&field, action)
+				apply_field_action(ir, &field, action)
 			}
 		}
 	}
@@ -85,12 +85,26 @@ refine_member_action :: proc(base, refinement: Member_Action) -> Member_Action {
 	return result
 }
 
-apply_field_action :: proc(field: ^Field, action: Member_Action) {
+apply_field_action :: proc(ir: ^IR, field: ^Field, action: Member_Action) {
 	if action.type != "" {
 		field.type_spelling = action.type
 	}
 	if action.tag != "" {
 		field.tag = action.tag
+	}
+	// pointer = "multi" rewrites the lowered type when the user did not
+	// supply a full type spelling (that spelling is authoritative). Same
+	// semantics as procs.params; by_ptr stays parameter-only.
+	if action.pointer == "multi" && field.type_spelling == "" {
+		if !force_multi_pointer(ir, field.type, .Configured_Multi) {
+			// Soft: leave ^T (or other lowering) and note why multi failed.
+			ir_diag(
+				ir,
+				.Pointer_Lowering_Guess,
+				"structs.fields pointer = \"multi\" ignored for field %q: type is not a single data pointer",
+				field.name if field.name != "" else "_",
+			)
+		}
 	}
 }
 

@@ -1026,7 +1026,7 @@ policy_read_structs :: proc(policy: ^Policy) -> bool {
 		return false
 	}
 
-	fields, fields_ok := policy_member_action_map(L, "structs", "fields", allow_tag = true, allow_default = false)
+	fields, fields_ok := policy_member_action_map(L, "structs", "fields", allow_tag = true, allow_default = false, allow_pointer = true)
 	if !fields_ok {
 		return false
 	}

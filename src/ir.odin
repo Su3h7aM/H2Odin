@@ -163,7 +163,7 @@ Pointer_Lowering_Reason :: enum {
 	Function_Pointer,
 	Single_Pointer_Default,
 	Array_Param_Decay, // C array parameter form decayed to pointer (Extraction fact)
-	Configured_Multi, // procs.params pointer = "multi"
+	Configured_Multi, // procs.params / structs.fields pointer = "multi"
 }
 
 Type_Lowered_Pointer :: struct {

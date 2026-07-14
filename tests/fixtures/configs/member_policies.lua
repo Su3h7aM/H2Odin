@@ -8,6 +8,8 @@ config.foreign.link_prefix = "rl_"
 config.structs.fields = {
   ["BoneInfo.name"] = { tag = 'fmt:"s,0"' },
   ["BoneInfo.parent"] = { type = "i32" },
+  -- Same multipointer selection as procs.params; ABI-identical ^T → [^]T.
+  ["Mesh.vertices"] = { pointer = "multi" },
 }
 config.structs.align = { Mesh = 16 }
 

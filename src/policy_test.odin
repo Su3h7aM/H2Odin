@@ -152,7 +152,10 @@ config.output_folder = "out"
 config.preprocess.include_paths = { "include" }
 config.preprocess.defines = { FEAT = "1" }
 config.foreign.link_prefix = "lib_"
-config.structs.fields = { ["Bone.name"] = { tag = 'fmt:"s,0"' } }
+config.structs.fields = {
+  ["Bone.name"] = { tag = 'fmt:"s,0"' },
+  ["Mesh.vertices"] = { pointer = "multi" },
+}
 config.structs.align = { Mesh = 16 }
 config.procs.params = { ["foo.x"] = { type = "i32", default = "0" } }
 config.procs.results = { foo = { type = "c.int" } }
@@ -178,6 +181,7 @@ return config
 	testing.expect_value(t, policy.defines["FEAT"], "1")
 	testing.expect_value(t, policy.foreign_link_prefix, "lib_")
 	testing.expect_value(t, policy.struct_fields["Bone.name"].tag, `fmt:"s,0"`)
+	testing.expect_value(t, policy.struct_fields["Mesh.vertices"].pointer, "multi")
 	testing.expect_value(t, policy.struct_align["Mesh"], 16)
 	testing.expect_value(t, policy.proc_params["foo.x"].type, "i32")
 	testing.expect_value(t, policy.proc_params["foo.x"].default, "0")
@@ -186,6 +190,27 @@ return config
 	testing.expect(t, policy.footer_per_header)
 	testing.expect_value(t, policy.output_layout, Output_Layout.Merged)
 	testing.expect(t, !policy.emit_comments)
+}
+
+@(test)
+test_policy_load_rejects_by_ptr_on_struct_fields :: proc(t: ^testing.T) {
+	path, path_ok := write_test_config(
+		t,
+		"struct-fields-by-ptr",
+		`local h2o = require "h2odin"
+local config = h2o.config()
+config.inputs = { "a.h" }
+config.structs.fields = { ["Mesh.vertices"] = { by_ptr = true } }
+return config
+`,
+	)
+	if !path_ok {
+		return
+	}
+	policy, ok := policy_load(path)
+	defer policy_destroy(&policy)
+	defer delete_policy_test_data(&policy)
+	testing.expect(t, !ok)
 }
 
 @(test)
