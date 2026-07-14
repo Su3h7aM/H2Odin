@@ -78,7 +78,7 @@ write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, ind
 			fmt.sbprintf(b, "%s: ", field.name)
 		}
 		if field.type_spelling != "" {
-			note_import_for_spelling(imports, field.type_spelling)
+			note_imports_for_odin_expression(imports, field.type_spelling)
 			strings.write_string(b, field.type_spelling)
 		} else {
 			write_type(b, ir, field.type, indent + 1, emit_comments, imports)
@@ -392,7 +392,7 @@ emit_function :: proc(b: ^strings.Builder, ir: ^IR, function: Func_Decl, emit_co
 	strings.write_string(b, ")")
 	if function.return_type_spelling != "" {
 		strings.write_string(b, " -> ")
-		note_import_for_spelling(imports, function.return_type_spelling)
+		note_imports_for_odin_expression(imports, function.return_type_spelling)
 		strings.write_string(b, function.return_type_spelling)
 	} else if !type_is_void(ir, function.return_type) {
 		strings.write_string(b, " -> ")

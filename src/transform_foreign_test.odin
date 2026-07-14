@@ -180,9 +180,9 @@ test_windows_compound_spelling_corpus_names :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_note_import_for_spelling_tracks_win32 :: proc(t: ^testing.T) {
+test_note_imports_for_odin_expression_tracks_win32 :: proc(t: ^testing.T) {
 	imports: Emit_Imports
-	note_import_for_spelling(&imports, "win32.sockaddr")
+	note_imports_for_odin_expression(&imports, "win32.sockaddr")
 	testing.expect(t, imports.win32)
 	testing.expect(t, !imports.posix)
 

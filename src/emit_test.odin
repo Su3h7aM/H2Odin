@@ -145,3 +145,36 @@ test_emit_does_not_import_packages_named_only_inside_type_metadata :: proc(t: ^t
 	testing.expect(t, !strings.contains(content, "import \"core:sys/posix\""))
 	testing.expect(t, !strings.contains(content, "import win32 \"core:sys/windows\""))
 }
+
+@(test)
+test_emit_preserves_parameter_defaults_and_their_imports :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	void_type := ir_builtin_type(&ir, .Void)
+	integer_type := ir_builtin_type(&ir, .Int)
+	pointer_type := ir_add_type(&ir, Type_Info{variant = Type_Lowered_Pointer{pointee = integer_type, kind = .Single}})
+	ir_add_func(
+		&ir,
+		Func_Decl{name = "open_file", return_type = void_type, params = {{name = "mode", type = pointer_type, by_ptr = true, default = "posix.O_RDONLY"}}},
+	)
+	wrapper := ir_add_wrapper(&ir, Wrapper_Decl{name = "Open_File", target = 0})
+	ir_add_wrapper_to_order(&ir, wrapper)
+
+	plan := Output_Plan {
+		units = {{filename = "example.odin", stem = "example", decls = ir.order[:]}},
+	}
+	result := emit(&ir, plan, Emit_Options{package_name = "example", foreign_lib = "example"})
+	content := result.files[0].content
+
+	testing.expect(t, strings.contains(content, "import \"core:sys/posix\""))
+	testing.expect(t, strings.contains(content, "open_file :: proc(#by_ptr mode: c.int = posix.O_RDONLY)"))
+	testing.expect(t, strings.contains(content, "Open_File :: proc(#by_ptr mode: c.int = posix.O_RDONLY)"))
+}

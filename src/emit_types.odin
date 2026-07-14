@@ -3,52 +3,57 @@ package h2odin
 import "core:fmt"
 import "core:strings"
 
-write_params :: proc(b: ^strings.Builder, ir: ^IR, params: []Param, is_variadic: bool, emit_comments: bool, imports: ^Emit_Imports) {
-	for param, i in params {
-		if i > 0 {
+write_params :: proc(b: ^strings.Builder, ir: ^IR, parameters: []Param, is_variadic: bool, emit_comments: bool, imports: ^Emit_Imports) {
+	for parameter, parameter_index in parameters {
+		if parameter_index > 0 {
 			strings.write_string(b, ", ")
 		}
-		if param.by_ptr {
-			// #by_ptr name: T — peels one single-pointer level (idiomatic only).
-			strings.write_string(b, "#by_ptr ")
-			if param.name != "" {
-				fmt.sbprintf(b, "%s: ", param.name)
-			} else {
-				strings.write_string(b, "_: ")
-			}
-			if lowered, ok := ir_type(ir, param.type).variant.(Type_Lowered_Pointer); ok {
-				write_type(b, ir, lowered.pointee, 1, emit_comments, imports)
-			} else {
-				// Should not reach emission; fall back to full type.
-				write_type(b, ir, param.type, 1, emit_comments, imports)
-			}
-		} else if param.name != "" {
-			fmt.sbprintf(b, "%s: ", param.name)
-			if param.type_spelling != "" {
-				note_import_for_spelling(imports, param.type_spelling)
-				strings.write_string(b, param.type_spelling)
-			} else {
-				write_type(b, ir, param.type, 1, emit_comments, imports)
-			}
-		} else {
-			strings.write_string(b, "_: ")
-			if param.type_spelling != "" {
-				note_import_for_spelling(imports, param.type_spelling)
-				strings.write_string(b, param.type_spelling)
-			} else {
-				write_type(b, ir, param.type, 1, emit_comments, imports)
-			}
-		}
-		if param.default != "" {
-			fmt.sbprintf(b, " = %s", param.default)
-		}
+		write_parameter(b, ir, parameter, 1, emit_comments, imports)
 	}
 	if is_variadic {
-		if len(params) > 0 {
+		if len(parameters) > 0 {
 			strings.write_string(b, ", ")
 		}
 		strings.write_string(b, "#c_vararg _: ..any")
 	}
+}
+
+// write_parameter serializes the shared public shape used by faithful foreign
+// declarations and ordinary wrapper parameters.
+write_parameter :: proc(b: ^strings.Builder, ir: ^IR, parameter: Param, indent: int, emit_comments: bool, imports: ^Emit_Imports) {
+	if parameter.by_ptr {
+		strings.write_string(b, "#by_ptr ")
+	}
+	if parameter.name != "" {
+		fmt.sbprintf(b, "%s: ", parameter.name)
+	} else {
+		strings.write_string(b, "_: ")
+	}
+
+	if parameter.by_ptr {
+		// #by_ptr peels one single-pointer level (idiomatic only).
+		if lowered_pointer, is_lowered_pointer := ir_type(ir, parameter.type).variant.(Type_Lowered_Pointer); is_lowered_pointer {
+			write_type(b, ir, lowered_pointer.pointee, indent, emit_comments, imports)
+		} else {
+			// Should not reach emission; fall back to the full type.
+			write_type(b, ir, parameter.type, indent, emit_comments, imports)
+		}
+	} else {
+		write_parameter_type(b, ir, parameter, indent, emit_comments, imports)
+	}
+	if parameter.default != "" {
+		note_imports_for_odin_expression(imports, parameter.default)
+		fmt.sbprintf(b, " = %s", parameter.default)
+	}
+}
+
+write_parameter_type :: proc(b: ^strings.Builder, ir: ^IR, parameter: Param, indent: int, emit_comments: bool, imports: ^Emit_Imports) {
+	if parameter.type_spelling != "" {
+		note_imports_for_odin_expression(imports, parameter.type_spelling)
+		strings.write_string(b, parameter.type_spelling)
+		return
+	}
+	write_type(b, ir, parameter.type, indent, emit_comments, imports)
 }
 
 type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
@@ -89,7 +94,7 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 	case Type_Idiomatic_Leaf:
 		// Proven substitution, config override, or platform mapping.
 		// Track package imports for qualified spellings (posix.T).
-		note_import_for_spelling(imports, variant.spelling)
+		note_imports_for_odin_expression(imports, variant.spelling)
 		strings.write_string(b, variant.spelling)
 
 	case Type_Pointer:
@@ -175,41 +180,38 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 	}
 }
 
-// Record package imports required by an explicit type spelling: the built-in
-// POSIX/libc map and config spellings both use the qualified `pkg.T` form
-// Any caller that writes a spelling straight into the output —
-// including field/param type_spelling overrides from policy — must call this.
-note_import_for_spelling :: proc(imports: ^Emit_Imports, spelling: string) {
-	if type_spelling_uses_package(spelling, "c") {
+// Record package imports required by Odin source written directly into the
+// output, including policy-selected type spellings and parameter defaults.
+note_imports_for_odin_expression :: proc(imports: ^Emit_Imports, expression: string) {
+	if odin_expression_uses_package(expression, "c") {
 		imports.core_c = true
 	}
-	if type_spelling_uses_package(spelling, "posix") {
+	if odin_expression_uses_package(expression, "posix") {
 		imports.posix = true
 	}
-	if type_spelling_uses_package(spelling, "libc") {
+	if odin_expression_uses_package(expression, "libc") {
 		imports.libc = true
 	}
-	if type_spelling_uses_package(spelling, "win32") {
+	if odin_expression_uses_package(expression, "win32") {
 		imports.win32 = true
 	}
 }
 
-// type_spelling_uses_package finds a package selector anywhere inside an Odin
-// type expression without mistaking a longer identifier or selector chain for
-// the package name.
-type_spelling_uses_package :: proc(spelling, package_name: string) -> bool {
+// odin_expression_uses_package finds a package selector without mistaking a
+// longer identifier, selector chain, or quoted text for the package name.
+odin_expression_uses_package :: proc(expression, package_name: string) -> bool {
 	start := 0
-	for start < len(spelling) {
-		character := spelling[start]
+	for start < len(expression) {
+		character := expression[start]
 		if character == '"' || character == '\'' || character == '`' {
 			quote := character
 			start += 1
-			for start < len(spelling) {
-				if quote != '`' && spelling[start] == '\\' {
+			for start < len(expression) {
+				if quote != '`' && expression[start] == '\\' {
 					start += 2
 					continue
 				}
-				if spelling[start] == quote {
+				if expression[start] == quote {
 					start += 1
 					break
 				}
@@ -219,21 +221,21 @@ type_spelling_uses_package :: proc(spelling, package_name: string) -> bool {
 		}
 
 		dot_index := start + len(package_name)
-		if dot_index + 1 >= len(spelling) {
+		if dot_index + 1 >= len(expression) {
 			break
 		}
-		if spelling[start:dot_index] != package_name || spelling[dot_index] != '.' {
+		if expression[start:dot_index] != package_name || expression[dot_index] != '.' {
 			start += 1
 			continue
 		}
 		if start > 0 {
-			preceding := spelling[start - 1]
+			preceding := expression[start - 1]
 			if is_ascii_alpha(preceding) || is_ascii_digit(preceding) || preceding == '_' || preceding == '.' {
 				start += 1
 				continue
 			}
 		}
-		member_start := spelling[dot_index + 1]
+		member_start := expression[dot_index + 1]
 		if !is_ascii_alpha(member_start) && member_start != '_' {
 			start += 1
 			continue
@@ -241,15 +243,6 @@ type_spelling_uses_package :: proc(spelling, package_name: string) -> bool {
 		return true
 	}
 	return false
-}
-
-// Params may carry an explicit type_spelling from policy; track its imports.
-note_param_spelling_imports :: proc(imports: ^Emit_Imports, params: []Param) {
-	for p in params {
-		if p.type_spelling != "" {
-			note_import_for_spelling(imports, p.type_spelling)
-		}
-	}
 }
 
 // Human label for diagnostics and tests (not the Odin spelling).

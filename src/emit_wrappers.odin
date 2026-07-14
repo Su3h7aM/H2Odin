@@ -46,7 +46,7 @@ emit_wrapper :: proc(b: ^strings.Builder, ir: ^IR, w: Wrapper_Decl, emit_comment
 			strings.write_string(b, ", ")
 		}
 		first_param = false
-		write_one_param(b, ir, fn.params[i], emit_comments, imports)
+		write_parameter(b, ir, fn.params[i], 0, emit_comments, imports)
 	}
 	if fn.is_variadic {
 		// Should not plan wrappers for variadic; defensive.
@@ -66,7 +66,7 @@ emit_wrapper :: proc(b: ^strings.Builder, ir: ^IR, w: Wrapper_Decl, emit_comment
 	} else if n_results == 1 && has_c_ret && len(w.out_params) == 0 {
 		strings.write_string(b, " -> ")
 		if fn.return_type_spelling != "" {
-			note_import_for_spelling(imports, fn.return_type_spelling)
+			note_imports_for_odin_expression(imports, fn.return_type_spelling)
 			strings.write_string(b, fn.return_type_spelling)
 		} else {
 			write_type(b, ir, fn.return_type, 0, emit_comments, imports)
@@ -86,7 +86,7 @@ emit_wrapper :: proc(b: ^strings.Builder, ir: ^IR, w: Wrapper_Decl, emit_comment
 			}
 			strings.write_string(b, "res: ")
 			if fn.return_type_spelling != "" {
-				note_import_for_spelling(imports, fn.return_type_spelling)
+				note_imports_for_odin_expression(imports, fn.return_type_spelling)
 				strings.write_string(b, fn.return_type_spelling)
 			} else {
 				write_type(b, ir, fn.return_type, 0, emit_comments, imports)
@@ -133,7 +133,7 @@ emit_wrapper :: proc(b: ^strings.Builder, ir: ^IR, w: Wrapper_Decl, emit_comment
 				if sl.count_index == i {
 					// Plain cast to the foreign count type (validated at plan time).
 					strings.write_string(b, "(")
-					write_param_type_only(b, ir, fn.params[i], emit_comments, imports)
+					write_parameter_type(b, ir, fn.params[i], 0, emit_comments, imports)
 					fmt.sbprintf(b, ")(len(%s))", sl.public_name)
 					break
 				}
@@ -149,52 +149,17 @@ emit_wrapper :: proc(b: ^strings.Builder, ir: ^IR, w: Wrapper_Decl, emit_comment
 	strings.write_string(b, "}\n\n")
 }
 
-write_one_param :: proc(b: ^strings.Builder, ir: ^IR, param: Param, emit_comments: bool, imports: ^Emit_Imports) {
-	if param.by_ptr {
-		strings.write_string(b, "#by_ptr ")
-		if param.name != "" {
-			fmt.sbprintf(b, "%s: ", param.name)
-		} else {
-			strings.write_string(b, "_: ")
-		}
-		if lowered, ok := ir_type(ir, param.type).variant.(Type_Lowered_Pointer); ok {
-			write_type(b, ir, lowered.pointee, 0, emit_comments, imports)
-		} else {
-			write_type(b, ir, param.type, 0, emit_comments, imports)
-		}
-		return
-	}
-	if param.name != "" {
-		fmt.sbprintf(b, "%s: ", param.name)
-	} else {
-		strings.write_string(b, "_: ")
-	}
-	write_param_type_only(b, ir, param, emit_comments, imports)
-	if param.default != "" {
-		fmt.sbprintf(b, " = %s", param.default)
-	}
-}
-
-write_param_type_only :: proc(b: ^strings.Builder, ir: ^IR, param: Param, emit_comments: bool, imports: ^Emit_Imports) {
-	if param.type_spelling != "" {
-		note_import_for_spelling(imports, param.type_spelling)
-		strings.write_string(b, param.type_spelling)
-		return
-	}
-	write_type(b, ir, param.type, 0, emit_comments, imports)
-}
-
 // Result type for an out-param: peel one single-pointer level.
 write_peeled_pointer_type :: proc(b: ^strings.Builder, ir: ^IR, param: Param, emit_comments: bool, imports: ^Emit_Imports) {
 	if param.type_spelling != "" {
 		// "^T" → "T", "^^T" → "^T", "[^]T" should not appear for out-params.
 		s := param.type_spelling
 		if strings.has_prefix(s, "^") {
-			note_import_for_spelling(imports, s[1:])
+			note_imports_for_odin_expression(imports, s[1:])
 			strings.write_string(b, s[1:])
 			return
 		}
-		note_import_for_spelling(imports, s)
+		note_imports_for_odin_expression(imports, s)
 		strings.write_string(b, s)
 		return
 	}
@@ -211,16 +176,16 @@ write_wrapper_slice_elem_type :: proc(b: ^strings.Builder, ir: ^IR, param: Param
 	if param.type_spelling != "" {
 		s := param.type_spelling
 		if strings.has_prefix(s, "[^]") {
-			note_import_for_spelling(imports, s[3:])
+			note_imports_for_odin_expression(imports, s[3:])
 			strings.write_string(b, s[3:])
 			return
 		}
 		if strings.has_prefix(s, "^") {
-			note_import_for_spelling(imports, s[1:])
+			note_imports_for_odin_expression(imports, s[1:])
 			strings.write_string(b, s[1:])
 			return
 		}
-		note_import_for_spelling(imports, s)
+		note_imports_for_odin_expression(imports, s)
 		strings.write_string(b, s)
 		return
 	}
