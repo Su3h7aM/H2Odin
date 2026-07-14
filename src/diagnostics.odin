@@ -39,6 +39,8 @@ Diag_Category :: enum u8 {
 	Unsupported_Calling_Conv,
 	// procs.wrappers plan rejected at generation time.
 	Wrapper_Plan_Failed,
+	// An unlisted project header is reachable from more than one root.
+	Header_Ownership_Conflict,
 }
 
 Diagnostic :: struct {
@@ -88,6 +90,8 @@ diag_category_name :: proc(c: Diag_Category) -> string {
 		return "unsupported_calling_conv"
 	case .Wrapper_Plan_Failed:
 		return "wrapper_plan_failed"
+	case .Header_Ownership_Conflict:
+		return "header_ownership_conflict"
 	}
 	return "unknown"
 }
@@ -130,6 +134,8 @@ diag_category_from_name :: proc(name: string) -> (Diag_Category, bool) {
 		return .Unsupported_Calling_Conv, true
 	case "wrapper_plan_failed":
 		return .Wrapper_Plan_Failed, true
+	case "header_ownership_conflict":
+		return .Header_Ownership_Conflict, true
 	}
 	return {}, false
 }
@@ -314,6 +320,9 @@ diag_verbose_guidance :: proc(c: Diag_Category) -> (cause: string, fix: string) 
 	case .Wrapper_Plan_Failed:
 		return "procs.wrappers named a conversion that cannot be applied from the header/IR facts.",
 			"Fix out_params/slices names and types, or remove the wrapper entry. Validations run at generation time — not in the emitted body."
+	case .Header_Ownership_Conflict:
+		return "An unlisted project header was reached from multiple configured roots without another root between them.",
+			"List the shared header in config.inputs to give it its own unit, reorder inputs to select the first owner, or set diagnostics.header_ownership_conflict = \"error\"."
 	}
 	return "", ""
 }

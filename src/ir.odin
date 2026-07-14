@@ -26,6 +26,14 @@ Decl_Handle :: distinct u32
 // are 1-based. Extraction records provenance; Transformation places decls.
 Input_Header_Handle :: distinct u32
 
+// One file reach reported by libclang for a root translation unit. The chain
+// is ordered from the immediate includer outward. Extraction copies these raw
+// provenance facts; Transformation derives ownership from them.
+Header_Reach :: struct {
+	path:            string,
+	inclusion_chain: []string,
+}
+
 // The C builtin types the IR knows.
 Builtin_Kind :: enum {
 	Void,
@@ -249,6 +257,14 @@ Decl_Ref :: struct {
 	index: u32,
 }
 
+// A source occurrence of a declaration with a stable USR. A declaration may
+// appear in multiple headers; retaining every occurrence prevents TU visit
+// order from deciding its eventual output home.
+Decl_Occurrence :: struct {
+	decl: Decl_Ref,
+	path: string,
+}
+
 // Configuration-independent parameter relationships discovered by Analysis.
 // The boolean distinguishes no relationship from a valid index of zero.
 Param_Facts :: struct {
@@ -289,6 +305,8 @@ Func_Decl :: struct {
 	// procs.require_results: callers must use/acknowledge results (Odin attr).
 	require_results:      bool,
 	doc:                  string,
+	// Definition/declaration file copied from libclang by Extraction.
+	source_path:          string,
 	// Configured input header that owns this declaration for output placement.
 	home:                 Input_Header_Handle,
 }
@@ -338,11 +356,15 @@ Record_Decl :: struct {
 	// ours to claim; Transformation maps it, stubs it, or
 	// diagnoses it. Distinct from `home`, which is about output placement.
 	is_foreign:                 bool,
+	// Non-system declaration outside every owned root subtree. Set only by
+	// Transformation after it applies the roots + fold model.
+	is_unowned:                 bool,
 	// C deprecation fact.
 	deprecated:                 bool,
 	deprecated_message:         string,
 	doc:                        string,
-	// Definition site wins over an earlier placeholder's home (see fill_record).
+	source_path:                string,
+	// Transformation derives home from source_path and header_reaches.
 	home:                       Input_Header_Handle,
 }
 
@@ -358,11 +380,13 @@ Enum_Decl :: struct {
 	members:            []Enum_Member,
 	is_typedef_named:   bool,
 	is_foreign:         bool, // declared in a system header (see Record_Decl)
+	is_unowned:         bool, // project declaration outside owned roots
 	// C deprecation fact.
 	deprecated:         bool,
 	deprecated_message: string,
 	doc:                string,
-	// Definition site wins over an earlier placeholder's home (see fill_enum).
+	source_path:        string,
+	// Transformation derives home from source_path and header_reaches.
 	home:               Input_Header_Handle,
 }
 
@@ -375,10 +399,12 @@ Typedef_Decl :: struct {
 	// the failure into the generated code.
 	is_unresolvable:    bool,
 	is_foreign:         bool, // declared in a system header (see Record_Decl)
+	is_unowned:         bool, // project declaration outside owned roots
 	// C deprecation fact.
 	deprecated:         bool,
 	deprecated_message: string,
 	doc:                string,
+	source_path:        string,
 	home:               Input_Header_Handle,
 }
 
@@ -391,6 +417,7 @@ Var_Decl :: struct {
 	deprecated:         bool,
 	deprecated_message: string,
 	doc:                string,
+	source_path:        string,
 	home:               Input_Header_Handle,
 }
 
@@ -418,6 +445,7 @@ Macro_Decl :: struct {
 	deprecated:         bool,
 	deprecated_message: string,
 	doc:                string,
+	source_path:        string,
 	home:               Input_Header_Handle,
 }
 
@@ -466,21 +494,24 @@ Wrapper_Decl :: struct {
 // index over live declarations; removing an item from it does not invalidate
 // pool handles.
 IR :: struct {
-	types:         [dynamic]Type_Info,
-	funcs:         [dynamic]Func_Decl,
-	records:       [dynamic]Record_Decl,
-	enums:         [dynamic]Enum_Decl,
-	typedefs:      [dynamic]Typedef_Decl,
-	vars:          [dynamic]Var_Decl,
-	macros:        [dynamic]Macro_Decl,
-	bit_sets:      [dynamic]Bit_Set_Decl,
-	wrappers:      [dynamic]Wrapper_Decl,
-	order:         [dynamic]Decl_Ref,
+	types:            [dynamic]Type_Info,
+	funcs:            [dynamic]Func_Decl,
+	records:          [dynamic]Record_Decl,
+	enums:            [dynamic]Enum_Decl,
+	typedefs:         [dynamic]Typedef_Decl,
+	vars:             [dynamic]Var_Decl,
+	macros:           [dynamic]Macro_Decl,
+	bit_sets:         [dynamic]Bit_Set_Decl,
+	wrappers:         [dynamic]Wrapper_Decl,
+	order:            [dynamic]Decl_Ref,
 
 	// Configured input headers in config.inputs order. Slot 0 is empty so a
 	// zero Input_Header_Handle means "no home". Paths are as passed to
 	// extract (resolved absolute or relative); matching uses normalize_source_path.
-	input_headers: [dynamic]string,
+	input_headers:    [dynamic]string,
+	// Raw per-TU inclusion stacks in config.inputs traversal order.
+	header_reaches:   [dynamic]Header_Reach,
+	decl_occurrences: [dynamic]Decl_Occurrence,
 
 	// Non-certain decisions and honesty notes collected during the run.
 	// Messages are arena-owned; main prints them as a single report on
@@ -488,10 +519,10 @@ IR :: struct {
 	// -destination:stdout). Each entry carries a named category; severity
 	// is resolved at report time from policy (and any local constructor
 	// override stored on the entry).
-	diagnostics:   [dynamic]Diagnostic,
+	diagnostics:      [dynamic]Diagnostic,
 
 	// Interning table for the pre-seeded, unqualified builtin types.
-	builtins:      [Builtin_Kind]Type_Handle,
+	builtins:         [Builtin_Kind]Type_Handle,
 }
 
 // -------------------------------------------------------------- Helpers
@@ -511,8 +542,8 @@ ir_init :: proc(ir: ^IR) {
 }
 
 // Register config.inputs paths on the IR and return a normalized-path → handle
-// map for Extraction's location checks. Paths are stored as given (for stems);
-// allocator owns only the returned lookup map and its normalized keys.
+// convenience map. Paths are stored as given for output stems; allocator owns
+// only the returned lookup map and its normalized keys.
 ir_register_input_headers :: proc(ir: ^IR, header_paths: []string, allocator := context.allocator) -> map[string]Input_Header_Handle {
 	files := make(map[string]Input_Header_Handle, allocator)
 	for path in header_paths {

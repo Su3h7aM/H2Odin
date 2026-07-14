@@ -21,7 +21,7 @@ import lua "vendor:lua/5.4"
 //
 // File layout:
 //   policy.odin           — Policy, load/destroy, top-level orchestration
-//   policy_sandbox.odin   — sandboxed VM, require, path_is_under
+//   policy_sandbox.odin   — sandboxed VM and restricted require
 //   policy_helpers.odin   — Odin→Lua helper shims (h2o.str / naming / macro views)
 //   policy_lua.odin       — generic Lua↔Odin marshalling
 //   policy_sections.odin  — per-section config readers
@@ -136,7 +136,8 @@ Wrapper_Rule :: struct {
 
 // config.output.layout — closed enum; unknown strings fail config loading.
 Output_Layout :: enum {
-	Merged, // one Odin file (default; preserves pre-M14 behavior)
+	Auto, // one root: merged; multiple roots: one unit per root
+	Merged, // explicit one-file override
 	Per_Header, // one Odin file per config.inputs header
 }
 
@@ -176,7 +177,7 @@ Policy :: struct {
 
 	// Output layout.
 	output_folder:        string,
-	output_layout:        Output_Layout, // config.output.layout; default .Merged
+	output_layout:        Output_Layout, // config.output.layout; default .Auto
 	procedures_at_end:    bool, // default true when output section absent
 	footer_per_header:    bool,
 	emit_comments:        bool, // config.comments; default true

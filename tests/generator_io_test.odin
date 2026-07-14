@@ -60,6 +60,123 @@ test_unlisted_project_header_typedef_is_ours :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_single_root_folds_unlisted_project_header :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/roots_fold.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "Folded_Id :: c.int")
+	expect_contains(t, stdout, "from_folded_leaf :: proc")
+	expect_contains(t, stdout, "from_root :: proc")
+}
+
+@(test)
+test_project_header_outside_root_subtree_stays_unowned :: proc(t: ^testing.T) {
+	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/roots_external.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	expect_contains(t, stdout, "use_external_id :: proc(id: c.int)")
+	expect_not_contains(t, stdout, "External_Id ::")
+	expect_not_contains(t, stdout, "from_external_header :: proc")
+}
+
+@(test)
+test_multiple_roots_default_to_one_output_unit_each :: proc(t: ^testing.T) {
+	out_dir := "/tmp/h2odin-roots-auto-layout"
+	_ = os.remove_all(out_dir)
+
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/roots_auto_layout.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	a_data, a_err := os.read_entire_file("/tmp/h2odin-roots-auto-layout/multi_header_a.odin", context.allocator)
+	defer delete(a_data)
+	testing.expect(t, a_err == nil)
+	expect_contains(t, a_data, "from_first_header :: proc")
+	expect_not_contains(t, a_data, "from_second_header")
+
+	b_data, b_err := os.read_entire_file("/tmp/h2odin-roots-auto-layout/multi_header_b.odin", context.allocator)
+	defer delete(b_data)
+	testing.expect(t, b_err == nil)
+	expect_contains(t, b_data, "from_second_header :: proc")
+	expect_not_contains(t, b_data, "from_first_header")
+}
+
+@(test)
+test_included_root_keeps_its_unit_and_owns_its_folded_headers :: proc(t: ^testing.T) {
+	out_dir := "/tmp/h2odin-roots-nested"
+	_ = os.remove_all(out_dir)
+
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/roots_nested.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	a_data, a_err := os.read_entire_file("/tmp/h2odin-roots-nested/a.odin", context.allocator)
+	defer delete(a_data)
+	testing.expect(t, a_err == nil)
+	expect_contains(t, a_data, "from_nested_root_a :: proc")
+	expect_not_contains(t, a_data, "from_nested_root_b")
+	expect_not_contains(t, a_data, "from_nested_b_leaf")
+
+	b_data, b_err := os.read_entire_file("/tmp/h2odin-roots-nested/b.odin", context.allocator)
+	defer delete(b_data)
+	testing.expect(t, b_err == nil)
+	expect_contains(t, b_data, "from_nested_root_b :: proc")
+	expect_contains(t, b_data, "from_nested_b_leaf :: proc")
+}
+
+@(test)
+test_diamond_header_uses_first_root_and_reports_diagnostic :: proc(t: ^testing.T) {
+	out_dir := "/tmp/h2odin-roots-diamond"
+	_ = os.remove_all(out_dir)
+
+	cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/roots_diamond.lua"}
+	stdout, stderr, ok := run_h2odin(t, cmd[:])
+	defer delete(stdout)
+	defer delete(stderr)
+	if !ok {
+		return
+	}
+
+	a_data, a_err := os.read_entire_file("/tmp/h2odin-roots-diamond/a.odin", context.allocator)
+	defer delete(a_data)
+	testing.expect(t, a_err == nil)
+	expect_contains(t, a_data, "from_diamond_shared :: proc")
+
+	b_data, b_err := os.read_entire_file("/tmp/h2odin-roots-diamond/b.odin", context.allocator)
+	defer delete(b_data)
+	testing.expect(t, b_err == nil)
+	expect_not_contains(t, b_data, "from_diamond_shared")
+	expect_contains(t, stderr, "warning[header_ownership_conflict]")
+
+	error_cmd := [?]string{"build/h2odin", "-config:tests/fixtures/configs/roots_diamond_error.lua"}
+	_, error_stderr, code, failure_ok := run_h2odin_expect_failure(t, error_cmd[:])
+	defer delete(error_stderr)
+	if !failure_ok {
+		return
+	}
+	testing.expect(t, code != 0)
+	expect_contains(t, error_stderr, "error[header_ownership_conflict]")
+}
+
+@(test)
 test_preprocess_include_paths_and_defines_reach_clang :: proc(t: ^testing.T) {
 	cmd := [?]string{"build/h2odin", "-destination:stdout", "-config:tests/fixtures/configs/preprocess_options.lua"}
 	stdout, stderr, ok := run_h2odin(t, cmd[:])
@@ -447,18 +564,19 @@ return config
 }
 
 @(test)
-test_per_header_layout_requires_output_folder :: proc(t: ^testing.T) {
+test_multiple_output_units_reject_stdout :: proc(t: ^testing.T) {
 	cwd, cwd_err := os.get_working_directory(context.allocator)
 	testing.expect(t, cwd_err == nil)
 	defer delete(cwd)
 
-	header := strings.concatenate({cwd, "/tests/fixtures/per_header_a.h"})
-	defer delete(header)
+	header_a := strings.concatenate({cwd, "/tests/fixtures/per_header_a.h"})
+	defer delete(header_a)
+	header_b := strings.concatenate({cwd, "/tests/fixtures/per_header_b.h"})
+	defer delete(header_b)
 	cfg := strings.concatenate(
 		{`local h2o = require "h2odin"
 local config = h2o.config()
-config.inputs = { "`, header, `" }
-config.output.layout = "per_header"
+config.inputs = { "`, header_a, `", "`, header_b, `" }
 return config
 `},
 	)
@@ -473,7 +591,8 @@ return config
 		return
 	}
 	testing.expect(t, code != 0)
-	expect_contains(t, stderr, "output_folder")
+	expect_contains(t, stderr, "requires a single output unit")
+	expect_contains(t, stderr, "output.layout = \"merged\"")
 }
 
 @(test)

@@ -102,15 +102,6 @@ Mem_Methods :: struct {
 	p_app_data: rawptr,
 }
 
-Builtin_Va_List :: [1]Va_List_Tag
-
-Va_List_Tag :: struct {
-	gp_offset:         u32,
-	fp_offset:         u32,
-	overflow_arg_area: rawptr,
-	reg_save_area:     rawptr,
-}
-
 Stmt :: distinct rawptr
 
 Value :: distinct rawptr
@@ -856,6 +847,8 @@ Conflict_Action :: enum i32 {
 	Replace  = 5,
 }
 
+Va_List_Tag :: distinct rawptr
+
 @(link_prefix = "sqlite3_")
 foreign lib {
 	sqlite3_version: [0]u8
@@ -891,9 +884,9 @@ foreign lib {
 	get_table :: proc(db: Sqlite3, zSql: cstring, pazResult: ^^^u8, pnRow: ^i32, pnColumn: ^i32, pzErrmsg: ^^u8) -> i32 ---
 	free_table :: proc(result: ^^u8) ---
 	mprintf :: proc(_: cstring, #c_vararg _: ..any) -> ^u8 ---
-	vmprintf :: proc(_: cstring, _: Builtin_Va_List) -> ^u8 ---
+	vmprintf :: proc(_: cstring, _: [1]Va_List_Tag) -> ^u8 ---
 	snprintf :: proc(_: i32, _: ^u8, _: cstring, #c_vararg _: ..any) -> ^u8 ---
-	vsnprintf :: proc(_: i32, _: ^u8, _: cstring, _: Builtin_Va_List) -> ^u8 ---
+	vsnprintf :: proc(_: i32, _: ^u8, _: cstring, _: [1]Va_List_Tag) -> ^u8 ---
 	malloc :: proc(_: i32) -> rawptr ---
 	malloc64 :: proc(_: u64) -> rawptr ---
 	realloc :: proc(_: rawptr, _: i32) -> rawptr ---
@@ -1105,7 +1098,7 @@ foreign lib {
 	str_finish :: proc(_: Str) -> ^u8 ---
 	str_free :: proc(_: Str) ---
 	str_appendf :: proc(_: Str, zFormat: cstring, #c_vararg _: ..any) ---
-	str_vappendf :: proc(_: Str, zFormat: cstring, _: Builtin_Va_List) ---
+	str_vappendf :: proc(_: Str, zFormat: cstring, _: [1]Va_List_Tag) ---
 	str_append :: proc(_: Str, zIn: cstring, N: i32) ---
 	str_appendall :: proc(_: Str, zIn: cstring) ---
 	str_appendchar :: proc(_: Str, N: i32, C: u8) ---

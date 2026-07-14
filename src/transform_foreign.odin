@@ -2,8 +2,9 @@ package h2odin
 
 import "core:strings"
 
-// Foreign types — those a system header declares, not the library's own
-// headers — are captured pool-only by Extraction. Transformation then either:
+// External types — system declarations plus project declarations outside the
+// owned root subtrees — are retained in the type graph but not emitted as
+// complete local declarations. Transformation then either:
 //
 //   1. Maps a known system type to its Odin defining package:
 //      POSIX names to core:sys/posix (sockaddr → posix.sockaddr), ISO C
@@ -120,7 +121,7 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 	for i in 0 ..< len(ir.records) {
 		handle := Decl_Handle(i)
 		rec := &ir.records[i]
-		if !rec.is_foreign || rec.name == "" {
+		if !(rec.is_foreign || rec.is_unowned) || rec.name == "" {
 			continue
 		}
 		if !uses.record_referenced[i] {
@@ -133,10 +134,12 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 		}
 
 		// Preferred path: known platform type → its Odin defining package.
-		if spelling, mapped := platform_spelling(ir, policy, rec.name, 0); mapped {
-			rewrite_record_refs_to_spelling(ir, handle, spelling, .Platform_Type)
-			// Leave out of order — no local stub; use sites name posix.T.
-			continue
+		if rec.is_foreign {
+			if spelling, mapped := platform_spelling(ir, policy, rec.name, 0); mapped {
+				rewrite_record_refs_to_spelling(ir, handle, spelling, .Platform_Type)
+				// Leave out of order — no local stub; use sites name posix.T.
+				continue
+			}
 		}
 
 		// Incomplete stub: name only, no system fields.
@@ -147,12 +150,13 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 			rec.home = uses.record_home[i]
 		}
 		if uses.record_by_value[i] {
+			origin := "a system header" if rec.is_foreign else "an unowned project header"
 			ir_diag(
 				ir,
 				.Unresolved_Type,
-				"record %q is defined in a system header but used by value; emitted as incomplete struct {{}} (layout unavailable). Map it with types.map (e.g. to posix.%s) or add its header to config.inputs",
+				"record %q is defined in %s but used by value; emitted as incomplete struct {{}} (layout unavailable). Map it with types.map or add its header to config.inputs",
 				rec.name,
-				rec.name,
+				origin,
 			)
 		}
 		ir_promote_record(ir, handle)
@@ -161,7 +165,7 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 	for i in 0 ..< len(ir.enums) {
 		handle := Decl_Handle(i)
 		enm := &ir.enums[i]
-		if !enm.is_foreign || enm.name == "" {
+		if !(enm.is_foreign || enm.is_unowned) || enm.name == "" {
 			continue
 		}
 		if !uses.enum_referenced[i] {
@@ -170,19 +174,23 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 		if _, named := configured_type_spelling(policy, enm.name); named {
 			continue // config spells the use sites; emit no stub
 		}
-		if spelling, mapped := platform_spelling(ir, policy, enm.name, 0); mapped {
-			rewrite_enum_refs_to_spelling(ir, handle, spelling, .Platform_Type)
-			continue
+		if enm.is_foreign {
+			if spelling, mapped := platform_spelling(ir, policy, enm.name, 0); mapped {
+				rewrite_enum_refs_to_spelling(ir, handle, spelling, .Platform_Type)
+				continue
+			}
 		}
 		enm.members = nil
 		if uses.enum_home[i] != 0 {
 			enm.home = uses.enum_home[i]
 		}
+		origin := "a system header" if enm.is_foreign else "an unowned project header"
 		ir_diag(
 			ir,
 			.Unresolved_Type,
-			"enum %q is defined in a system header; type name is retained without members. Map it with types.map or add its header to config.inputs",
+			"enum %q is defined in %s; type name is retained without members. Map it with types.map or add its header to config.inputs",
 			enm.name,
+			origin,
 		)
 		ir_promote_enum(ir, handle)
 	}
@@ -190,8 +198,8 @@ apply_foreign_types :: proc(ir: ^IR, policy: ^Policy) {
 	resolve_foreign_typedefs(ir, policy)
 }
 
-// Every reference to a foreign typedef (one a system header declares) must
-// resolve here — the declaration is pool-only, so a
+// Every reference to an external typedef must resolve here — the declaration
+// is pool-only or removed from ordering, so a
 // surviving reference would name a type this package never emits. Two
 // outcomes, in precedence order:
 //
@@ -206,7 +214,7 @@ resolve_foreign_typedefs :: proc(ir: ^IR, policy: ^Policy) {
 	for i in 0 ..< len(ir.typedefs) {
 		handle := Decl_Handle(i)
 		td := ir.typedefs[i]
-		if !td.is_foreign || td.name == "" || td.is_unresolvable {
+		if !(td.is_foreign || td.is_unowned) || td.name == "" || td.is_unresolvable {
 			continue
 		}
 		// Config first. A foreign typedef is never
@@ -216,9 +224,11 @@ resolve_foreign_typedefs :: proc(ir: ^IR, policy: ^Policy) {
 			rewrite_typedef_refs_to_spelling(ir, handle, spelling, .Config_Override)
 			continue
 		}
-		if spelling, mapped := platform_spelling(ir, policy, td.name, td.aliased); mapped {
-			rewrite_typedef_refs_to_spelling(ir, handle, spelling, .Platform_Type)
-			continue
+		if td.is_foreign {
+			if spelling, mapped := platform_spelling(ir, policy, td.name, td.aliased); mapped {
+				rewrite_typedef_refs_to_spelling(ir, handle, spelling, .Platform_Type)
+				continue
+			}
 		}
 		peel_typedef_refs(ir, handle)
 	}

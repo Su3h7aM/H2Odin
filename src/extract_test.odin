@@ -332,7 +332,7 @@ test_extract_records_deprecation_from_attributes :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
+test_extract_records_source_provenance_before_ownership :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)
 	testing.expect_value(t, err, nil)
@@ -352,8 +352,24 @@ test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
 		return
 	}
 
-	// Two real input headers after the empty sentinel slot.
+	// Two real input roots after the empty sentinel slot. Extraction records
+	// source paths and raw reaches; homes remain a Transformation decision.
 	testing.expect_value(t, len(ir.input_headers), 3)
+	testing.expect(t, len(ir.header_reaches) >= 2)
+	a_path := normalize_source_path(a, context.temp_allocator)
+	b_path := normalize_source_path(b, context.temp_allocator)
+	for func in ir.funcs {
+		if func.name == "use_sibling_id" {
+			testing.expect_value(t, func.source_path, a_path)
+			testing.expect_value(t, func.home, Input_Header_Handle(0))
+		}
+		if func.name == "make_sibling_id" {
+			testing.expect_value(t, func.source_path, b_path)
+			testing.expect_value(t, func.home, Input_Header_Handle(0))
+		}
+	}
+
+	assign_header_ownership(&ir)
 	home_a := Input_Header_Handle(1)
 	home_b := Input_Header_Handle(2)
 
@@ -378,7 +394,7 @@ test_extract_records_home_header_per_input :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing.T) {
+test_extract_captures_unlisted_project_header_provenance :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)
 	testing.expect_value(t, err, nil)
@@ -390,11 +406,8 @@ test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing
 
 	ir: IR
 	ir_init(&ir)
-	// Hidden_Id lives in a project header that config.inputs does not list —
-	// the umbrella-header pattern (Box3D lists only box3d.h and reaches
-	// types.h through it). Ownership is "not a system header", not "listed in
-	// config.inputs": the typedef is ours, so it keeps its name and is
-	// emitted. Only system-header declarations are foreign.
+	// Hidden_Id lives in a non-system header reached by the root. Extraction
+	// captures it and its source path without deciding its output home.
 	ok := extract({"tests/fixtures/transitive_typedef_main.h"}, &ir)
 	testing.expect(t, ok)
 	if !ok {
@@ -408,6 +421,8 @@ test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing
 		}
 		found = true
 		testing.expect(t, !td.is_foreign)
+		testing.expect(t, td.source_path != "")
+		testing.expect_value(t, td.home, Input_Header_Handle(0))
 		in_order := false
 		for ref in ir.order {
 			if ref.kind == .Typedef && ref.index == u32(i) {
@@ -417,6 +432,13 @@ test_extract_owns_declarations_from_unlisted_project_headers :: proc(t: ^testing
 		testing.expect(t, in_order)
 	}
 	testing.expect(t, found)
+
+	assign_header_ownership(&ir)
+	for td in ir.typedefs {
+		if td.name == "Hidden_Id" {
+			testing.expect_value(t, td.home, Input_Header_Handle(1))
+		}
+	}
 }
 
 @(test)

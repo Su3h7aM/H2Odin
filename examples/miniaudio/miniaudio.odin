@@ -790,15 +790,6 @@ log :: struct {
 	lock:                mutex,
 }
 
-__builtin_va_list :: [1]__va_list_tag
-
-__va_list_tag :: struct {
-	gp_offset:         u32,
-	fp_offset:         u32,
-	overflow_arg_area: rawptr,
-	reg_save_area:     rawptr,
-}
-
 /**************************************************************************************************************************************************************
 
 Biquad Filtering
@@ -3668,6 +3659,8 @@ pthread_mutex_t :: distinct rawptr
 
 pthread_cond_t :: distinct rawptr
 
+__va_list_tag :: distinct rawptr
+
 @(link_prefix = "ma_")
 foreign lib {
 	/*
@@ -3684,7 +3677,7 @@ foreign lib {
 	log_register_callback :: proc(pLog: ^log, callback: log_callback) -> result ---
 	log_unregister_callback :: proc(pLog: ^log, callback: log_callback) -> result ---
 	log_post :: proc(pLog: ^log, level: uint32, pMessage: cstring) -> result ---
-	log_postv :: proc(pLog: ^log, level: uint32, pFormat: cstring, args: __builtin_va_list) -> result ---
+	log_postv :: proc(pLog: ^log, level: uint32, pFormat: cstring, args: [1]__va_list_tag) -> result ---
 	log_postf :: proc(pLog: ^log, level: uint32, pFormat: cstring, #c_vararg _: ..any) -> result ---
 	biquad_config_init :: proc(format: format, channels: uint32, b0: f64, b1: f64, b2: f64, a0: f64, a1: f64, a2: f64) -> biquad_config ---
 	biquad_get_heap_size :: proc(pConfig: ^biquad_config, pHeapSizeInBytes: ^uint) -> result ---

@@ -4,7 +4,6 @@ import "base:runtime"
 import "core:c"
 import "core:fmt"
 import "core:os"
-import "core:path/filepath"
 import "core:strings"
 
 import clang "vendored:libclang"
@@ -29,13 +28,6 @@ Extract_State :: struct {
 	// here so a sibling input included from another input is not emitted
 	// twice when both appear as config.inputs.
 	decl_map:         map[string]Decl_Ref,
-
-	// Absolute, cleaned paths of every header in config.inputs → home handle.
-	// A declaration is "ours" when its source file is in this map — not merely
-	// when it is the current TU's main file. That keeps typedef names declared
-	// in a sibling input (clang-c/CXString.h used from Index.h) instead of
-	// peeling them to the underlying type at use sites.
-	input_files:      map[string]Input_Header_Handle,
 }
 
 // Preprocess knobs passed into libclang as -I / -D. Paths and define values
@@ -88,8 +80,8 @@ extract :: proc(header_paths: []string, ir: ^IR, preprocess: Extract_Preprocess 
 		caller_context = context,
 		ir             = ir,
 		decl_map       = make(map[string]Decl_Ref, context.temp_allocator),
-		input_files    = ir_register_input_headers(ir, header_paths, context.temp_allocator),
 	}
+	delete(ir_register_input_headers(ir, header_paths, context.temp_allocator))
 
 	resource_dir, resource_source := resolve_clang_resource_dir(preprocess.resource_dir, preprocess.clang_executable)
 	if provenance != nil {
@@ -152,64 +144,44 @@ extract_header :: proc(clang_index: clang.Index, state: ^Extract_State, header_p
 
 	state.translation_unit = translation_unit
 	defer state.translation_unit = nil
+	collect_header_reaches(state)
 	clang.visit_children(clang.get_translation_unit_cursor(translation_unit), visit_top_level, clang.Client_Data(rawptr(state)))
 	return true
 }
 
-// Absolute + cleaned form used as the input-set key. Falls back to a cleaned
-// relative path when abs is unavailable so matching still works in tests that
-// open headers by a stable relative spelling.
-normalize_source_path :: proc(path: string, allocator := context.allocator) -> string {
+// Copy libclang's raw inclusion stacks into the IR. Ownership is a
+// configuration-dependent decision made later by Transformation.
+collect_header_reaches :: proc(state: ^Extract_State) {
+	clang.get_inclusions(state.translation_unit, visit_inclusion, clang.Client_Data(rawptr(state)))
+}
+
+visit_inclusion :: proc "c" (file: clang.File, inclusion_stack: ^clang.Source_Location, include_len: u32, client_data: clang.Client_Data) {
+	state := cast(^Extract_State)rawptr(client_data)
+	context = state.caller_context
+
+	path := source_file_path(file)
 	if path == "" {
-		return ""
+		return
 	}
-	if absolute_path, path_error := filepath.abs(path, allocator); path_error == nil {
-		if cleaned_path, clean_error := filepath.clean(absolute_path, allocator); clean_error == nil {
-			return cleaned_path
-		}
-		return absolute_path
+	chain := make([]string, int(include_len))
+	stack := cast([^]clang.Source_Location)inclusion_stack
+	for i in 0 ..< int(include_len) {
+		chain[i] = location_source_path(stack[i])
 	}
-	if cleaned_path, clean_error := filepath.clean(path, allocator); clean_error == nil {
-		return cleaned_path
-	}
-	return path
+	append(&state.ir.header_reaches, Header_Reach{path = path, inclusion_chain = chain})
 }
 
-// True when the source location sits in a file listed in config.inputs.
-location_is_ours :: proc(state: ^Extract_State, location: clang.Source_Location) -> bool {
-	return location_home(state, location) != 0
-}
-
-// Input-header handle for a source location, or 0 when not a configured input.
-location_home :: proc(state: ^Extract_State, location: clang.Source_Location) -> Input_Header_Handle {
-	path := location_source_path(location, context.temp_allocator)
-	if path == "" {
-		return 0
-	}
-	home, found := state.input_files[path]
-	if !found {
-		return 0
-	}
-	return home
-}
-
-// Home for a cursor's primary source location.
-cursor_home :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Input_Header_Handle {
-	return location_home(state, clang.get_cursor_location(cursor))
-}
-
-// Is this declaration the system's rather than the library's? clang knows: a
-// header reached through the system search path (<sys/socket.h>, <time.h>) is
-// flagged, while the library's own headers — including the ones an umbrella
-// input pulls in via -I but config.inputs never lists — are not.
-//
-// This is the ownership fact, and it is not the same question as `home`. Home
-// answers "which configured input places this declaration in the output", so
-// a project header reached transitively has no home yet is still ours to emit.
-// Foreignness answers "is this someone else's declaration", which is what
-// decides whether H2Odin may claim its layout.
+// Foreignness is clang's system-header fact. Compiler-internal declarations
+// with no source file (for example __builtin_va_list) are foreign as well.
+// Output ownership is separate and is assigned by Transformation from copied
+// inclusion provenance.
 cursor_is_foreign :: proc(cursor: clang.Cursor) -> bool {
-	return clang.location_is_in_system_header(clang.get_cursor_location(cursor)) != 0
+	location := clang.get_cursor_location(cursor)
+	return clang.location_is_in_system_header(location) != 0 || location_source_path(location, context.temp_allocator) == ""
+}
+
+cursor_source_path :: proc(cursor: clang.Cursor) -> string {
+	return location_source_path(clang.get_cursor_location(cursor))
 }
 
 // Path clang reports for a source location, normalized like input_files keys.
@@ -219,6 +191,10 @@ location_source_path :: proc(location: clang.Source_Location, allocator := conte
 	if file == nil {
 		return ""
 	}
+	return source_file_path(file, allocator)
+}
+
+source_file_path :: proc(file: clang.File, allocator := context.allocator) -> string {
 	// Prefer the real path so an include found via -I matches the absolute
 	// path we stored for that same header in config.inputs.
 	if real := clone_clang_string_with(clang.file_try_get_real_path_name(file), allocator); real != "" {
@@ -312,10 +288,9 @@ visit_top_level :: proc "c" (cursor: clang.Cursor, _: clang.Cursor, client_data:
 	state := cast(^Extract_State)rawptr(client_data)
 	context = state.caller_context
 
-	// Bind declarations from any config.inputs header, not only the current
-	// TU's main file. Sibling inputs included from another input (clang-c)
-	// are still "ours"; system headers and unlisted includes are not.
-	if !location_is_ours(state, clang.get_cursor_location(cursor)) {
+	// System declarations enter the pools only when a project declaration's
+	// type graph references them; never bind them as top-level API symbols.
+	if cursor_is_foreign(cursor) {
 		return .Continue
 	}
 

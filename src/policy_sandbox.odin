@@ -265,29 +265,3 @@ policy_config_loader :: proc "c" (L: ^lua.State) -> c.int {
 	}
 	return 1
 }
-
-// True when path is root or a descendant. Uses a separator boundary so
-// "/tmp/cfg" does not match "/tmp/cfg_evil/x". No allocation.
-//
-// Roots that already end with a separator (including filesystem root "/")
-// are treated as directory prefixes: every path that continues after that
-// prefix is under the root. Without this, root "/" rejects all descendants
-// because the "boundary" character is the first path component byte.
-path_is_under :: proc(path, root: string) -> bool {
-	if path == root {
-		return true
-	}
-	if len(root) == 0 || len(path) <= len(root) {
-		return false
-	}
-	// Root already a directory prefix (POSIX "/", Windows "C:\", trailing sep).
-	last := root[len(root) - 1]
-	if last == '/' || last == '\\' {
-		return strings.has_prefix(path, root)
-	}
-	if !strings.has_prefix(path, root) {
-		return false
-	}
-	sep := path[len(root)]
-	return sep == '/' || sep == '\\'
-}

@@ -68,7 +68,7 @@ against the checked-in package and regenerates it in place.
 
 - **Common case:** pass a project directory. H2Odin loads `H2Odin.lua` from that directory; headers, type mode, naming, output path, and other policy live there (`config.inputs`, `config.type_mode`, `config.output_folder`, …).
 - **`-config:path`:** explicit Lua config path when you cannot use the default filename (naming conflicts, shared configs, fixtures).
-- **Bindings** are written under `config.output_folder` by default (relative paths resolve against the config directory). Missing `output_folder` is an error — not a silent fallback to stdout. Use `-destination:stdout` / `-d:stdout` when you want a single merged unit on stdout.
+- **Bindings** are written under `config.output_folder` by default (relative paths resolve against the config directory). Missing `output_folder` is an error — not a silent fallback to stdout. Use `-destination:stdout` / `-d:stdout` for one output unit; multiple roots require `output.layout = "merged"` on stdout.
 - **Diagnostics** (warnings and errors) go to stderr only. `-quiet` / `-q` suppresses them (error severities still fail the run). `-verbose` / `-v` adds probable cause and Lua-config fix guidance for each issue.
 - `-help` / `-h` prints usage.
 
@@ -91,6 +91,13 @@ odin check examples/sqlite3 -no-entry-point -collection:vendored=$(pwd)/vendored
 ## Configuration
 
 Configuration is a Lua program that **`require "h2odin"`**, builds a sectioned object with **`h2o.config()`**, and **returns** it. Common cases are plain data; hard cases are callbacks that return a decision, or `nil` to accept the default.
+
+`config.inputs` lists the public headers you want as Odin units. Everything a
+root includes that is not another listed public header is folded into that
+root, provided it is a non-system header under at least one configured root's
+directory subtree.
+One root produces one file; multiple roots produce one file per root. Set
+`output.layout = "merged"` only when you explicitly want one combined file.
 
 ```lua
 local h2o = require "h2odin"
@@ -119,13 +126,13 @@ return config
 | Path | Role |
 |------|------|
 | `package` / `type_mode` | package name; ABI vs idiomatic leaves |
-| `inputs` / `preprocess.*` | multi-header inputs; `-I` / `-D` |
+| `inputs` / `preprocess.*` | public header roots; `-I` / `-D` |
 | `foreign.import_lib` / `link_prefix` | system library; C symbol prefix |
 | `naming.strip_prefixes` | drop a C prefix by kind (`proc` / `type` / `const`) |
 | `naming.override` | rename callback |
 | `types.map` / `types.overrides` | type spellings (refs only vs also drop the decl) |
 | `structs.*` / `procs.*` | field tags/align; param/result spellings and defaults |
-| `output.*` / `output_folder` | `layout` (`merged`/`per_header`), footers |
+| `output.*` / `output_folder` | optional `layout` override (`merged`/`per_header`), footers |
 | `symbols.remove.where` | **true drops** a top-level declaration |
 | `diagnostics` | per-category severity (`warn` / `error`) |
 
