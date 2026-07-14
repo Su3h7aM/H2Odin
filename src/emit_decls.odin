@@ -3,6 +3,13 @@ package h2odin
 import "core:fmt"
 import "core:strings"
 
+// record_body_emits_fields reports whether a record body will expose its
+// fields. The caller supplies emission-only layout fallback because it is
+// intentionally not stored in the IR.
+record_body_emits_fields :: proc(record: Record_Decl, layout_fallback := false) -> bool {
+	return record.is_complete && !record.emit_as_handle && !record.has_unrepresentable_fields && !layout_fallback
+}
+
 emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	if record.name == "" {
 		// Anonymous records are spelled inline where they are used (a field,
@@ -25,11 +32,14 @@ emit_record :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, emit_comm
 }
 
 write_record_body :: proc(b: ^strings.Builder, ir: ^IR, record: Record_Decl, indent: int, emit_comments: bool, imports: ^Emit_Imports) {
+	if !record_body_emits_fields(record) {
+		strings.write_string(b, "struct {}")
+		return
+	}
 	bit_field_layout, bit_fields_ok := prove_record_bit_field_layout(record, ir)
-	if !record.is_complete || record.has_unrepresentable_fields || !bit_fields_ok {
-		// No layout to preserve (forward-declared), or a layout the IR
-		// cannot represent yet — an opaque body is the honest fallback;
-		// pointers to it stay fully usable.
+	if !bit_fields_ok {
+		// The measured bit-field layout cannot be represented faithfully;
+		// an opaque body keeps pointers usable without inventing an ABI.
 		strings.write_string(b, "struct {}")
 		return
 	}

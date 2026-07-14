@@ -202,7 +202,7 @@ report_pointer_lowering_guesses :: proc(ir: ^IR, opaque_records: []bool = nil) {
 		case .Record:
 			decl := ir.records[ref.index]
 			emission_fallback := len(opaque_records) == len(ir.records) && opaque_records[ref.index]
-			if !decl.is_complete || decl.has_unrepresentable_fields || emission_fallback {
+			if !record_body_emits_fields(decl, emission_fallback) {
 				continue
 			}
 			for field in decl.fields {

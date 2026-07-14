@@ -129,3 +129,40 @@ test_report_unsupported_calling_conventions :: proc(t: ^testing.T) {
 	testing.expect(t, !strings.contains(ir.diagnostics[0].message, "dead_vec"))
 	testing.expect(t, !strings.contains(ir.diagnostics[1].message, "dead_vec"))
 }
+
+@(test)
+test_unsupported_calling_conventions_only_report_emitted_types :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	void_type := ir_builtin_type(&ir, .Void)
+	unsupported_proc := ir_add_type(&ir, Type_Info{variant = Type_Proc{return_type = void_type, calling_conv = .Vectorcall}})
+	ir_add_record(
+		&ir,
+		Record_Decl{name = "Opaque", is_complete = true, has_unrepresentable_fields = true, fields = {{name = "callback", type = unsupported_proc}}},
+	)
+	ir_add_record(
+		&ir,
+		Record_Decl {
+			name = "Opaque_Bit_Fields",
+			size = 8,
+			alignment = 8,
+			is_complete = true,
+			is_union = true,
+			fields = {{name = "callback", type = unsupported_proc, size = 8, alignment = 8}, {name = "flag", is_bitfield = true, bit_width = 1}},
+		},
+	)
+	ir_add_typedef(&ir, Typedef_Decl{name = "Unresolvable", aliased = unsupported_proc, is_unresolvable = true})
+
+	bit_field_plan := plan_bit_field_emission(&ir)
+	testing.expect(t, bit_field_plan.opaque_records[1])
+	report_unsupported_calling_conventions(&ir, bit_field_plan.opaque_records)
+
+	testing.expect_value(t, len(ir.diagnostics), 0)
+}

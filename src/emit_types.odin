@@ -267,56 +267,62 @@ write_proc_type_prefix :: proc(b: ^strings.Builder, cc: Calling_Conv) {
 // procedure types still reachable from live declarations. Symbols dropped by
 // filter_declarations stay in the pools but are not in `ir.order`, so they
 // must not fail the run. Defaults to error severity (policy_set_defaults).
-report_unsupported_calling_conventions :: proc(ir: ^IR) {
+report_unsupported_calling_conventions :: proc(ir: ^IR, opaque_records: []bool = nil) {
 	for ref in ir.order {
 		if ref.kind != .Func {
 			continue
 		}
-		func := ir.funcs[ref.index]
-		if _, ok := calling_conv_odin_spelling(func.calling_conv); ok {
+		declaration := ir.funcs[ref.index]
+		if _, supported := calling_conv_odin_spelling(declaration.calling_conv); supported {
 			continue
 		}
 		ir_diag(
 			ir,
 			.Unsupported_Calling_Conv,
 			"function %q uses calling convention %s which has no Odin spelling",
-			func.name,
-			calling_conv_label(func.calling_conv),
+			declaration.name,
+			calling_conv_label(declaration.calling_conv),
 		)
 	}
 
-	// Procedure types that appear in emitted signatures / typedefs. Walk types
-	// referenced from live decls rather than the whole pool (which retains
-	// types only used by removed symbols).
+	// Walk types referenced from live declarations rather than the entire pool,
+	// which retains types used only by filtered symbols.
 	seen_types := make(map[Type_Handle]bool, context.temp_allocator)
 	for ref in ir.order {
 		switch ref.kind {
 		case .Invalid, .Macro, .Bit_Set, .Wrapper:
 		case .Func:
-			func := ir.funcs[ref.index]
-			report_unsupported_calling_conv_in_type(ir, func.return_type, &seen_types)
-			for p in func.params {
-				report_unsupported_calling_conv_in_type(ir, p.type, &seen_types)
+			declaration := ir.funcs[ref.index]
+			report_unsupported_calling_conv_in_type(ir, declaration.return_type, &seen_types)
+			for parameter in declaration.params {
+				report_unsupported_calling_conv_in_type(ir, parameter.type, &seen_types)
 			}
 		case .Var:
 			report_unsupported_calling_conv_in_type(ir, ir.vars[ref.index].type, &seen_types)
 		case .Typedef:
-			report_unsupported_calling_conv_in_type(ir, ir.typedefs[ref.index].aliased, &seen_types)
+			typedef := ir.typedefs[ref.index]
+			if !typedef.is_unresolvable {
+				report_unsupported_calling_conv_in_type(ir, typedef.aliased, &seen_types)
+			}
 		case .Record:
 			record := ir.records[ref.index]
-			for f in record.fields {
-				report_unsupported_calling_conv_in_type(ir, f.type, &seen_types)
+			emission_fallback := len(opaque_records) == len(ir.records) && opaque_records[ref.index]
+			if !record_body_emits_fields(record, emission_fallback) {
+				continue
+			}
+			for field in record.fields {
+				report_unsupported_calling_conv_in_type(ir, field.type, &seen_types)
 			}
 		case .Enum:
 		}
 	}
 }
 
-report_unsupported_calling_conv_in_type :: proc(ir: ^IR, handle: Type_Handle, seen: ^map[Type_Handle]bool) {
-	if handle == 0 || handle in seen^ {
+report_unsupported_calling_conv_in_type :: proc(ir: ^IR, handle: Type_Handle, seen_types: ^map[Type_Handle]bool) {
+	if handle == 0 || handle in seen_types^ {
 		return
 	}
-	seen^[handle] = true
+	seen_types^[handle] = true
 	info := ir_type(ir, handle)
 	switch variant in info.variant {
 	case Type_Proc:
@@ -328,16 +334,16 @@ report_unsupported_calling_conv_in_type :: proc(ir: ^IR, handle: Type_Handle, se
 				calling_conv_label(variant.calling_conv),
 			)
 		}
-		report_unsupported_calling_conv_in_type(ir, variant.return_type, seen)
-		for p in variant.params {
-			report_unsupported_calling_conv_in_type(ir, p.type, seen)
+		report_unsupported_calling_conv_in_type(ir, variant.return_type, seen_types)
+		for parameter in variant.params {
+			report_unsupported_calling_conv_in_type(ir, parameter.type, seen_types)
 		}
 	case Type_Pointer:
-		report_unsupported_calling_conv_in_type(ir, variant.pointee, seen)
+		report_unsupported_calling_conv_in_type(ir, variant.pointee, seen_types)
 	case Type_Lowered_Pointer:
-		report_unsupported_calling_conv_in_type(ir, variant.pointee, seen)
+		report_unsupported_calling_conv_in_type(ir, variant.pointee, seen_types)
 	case Type_Array:
-		report_unsupported_calling_conv_in_type(ir, variant.element, seen)
+		report_unsupported_calling_conv_in_type(ir, variant.element, seen_types)
 	case Type_Builtin, Type_Std, Type_Idiomatic_Leaf, Type_Record_Ref, Type_Enum_Ref, Type_Typedef_Ref, Type_Bit_Set:
 	}
 }

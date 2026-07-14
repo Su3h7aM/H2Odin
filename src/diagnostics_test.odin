@@ -28,7 +28,7 @@ test_ir_diag_collects_categorized_messages :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_report_pointer_lowering_guesses_records_guessed_sites :: proc(t: ^testing.T) {
+test_report_pointer_lowering_guesses_only_reports_emitted_types :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)
 	testing.expect_value(t, err, nil)
@@ -47,8 +47,22 @@ test_report_pointer_lowering_guesses_records_guessed_sites :: proc(t: ^testing.T
 		Type_Info{variant = Type_Lowered_Pointer{pointee = int_ty, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}},
 	)
 	ir_add_func(&ir, Func_Decl{name = "fill", return_type = ir_builtin_type(&ir, .Void), params = {{name = "out", type = ptr}}})
+	ir_add_record(&ir, Record_Decl{name = "Opaque", is_complete = true, has_unrepresentable_fields = true, fields = {{name = "data", type = ptr}}})
+	ir_add_record(
+		&ir,
+		Record_Decl {
+			name = "Opaque_Bit_Fields",
+			size = 8,
+			alignment = 8,
+			is_complete = true,
+			is_union = true,
+			fields = {{name = "data", type = ptr, size = 8, alignment = 8}, {name = "flag", is_bitfield = true, bit_width = 1}},
+		},
+	)
 
-	report_pointer_lowering_guesses(&ir)
+	bit_field_plan := plan_bit_field_emission(&ir)
+	testing.expect(t, bit_field_plan.opaque_records[1])
+	report_pointer_lowering_guesses(&ir, bit_field_plan.opaque_records)
 
 	testing.expect_value(t, len(ir.diagnostics), 1)
 	testing.expect_value(t, ir.diagnostics[0].category, Diag_Category.Pointer_Lowering_Guess)

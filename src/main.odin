@@ -83,7 +83,7 @@ generate_bindings :: proc(command_line: Command_Line_Options) -> bool {
 		append(&ir.diagnostics, diagnostic)
 	}
 	report_pointer_lowering_guesses(&ir, bit_field_plan.opaque_records)
-	report_unsupported_calling_conventions(&ir)
+	report_unsupported_calling_conventions(&ir, bit_field_plan.opaque_records)
 	result := emit(&ir, plan, emit_options)
 
 	write_emit_result(result, &policy, command_line.destination) or_return
