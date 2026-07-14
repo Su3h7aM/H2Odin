@@ -136,12 +136,7 @@ typedef_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> 
 	// so no dangling name can reach Emission.
 	handle := ir_create_typedef(state.ir, decl) if is_foreign else ir_add_typedef(state.ir, decl)
 	if usr != "" {
-		ref := Decl_Ref {
-			kind  = .Typedef,
-			index = u32(handle),
-		}
-		state.decl_map[usr] = ref
-		record_decl_occurrence(state, ref, cursor)
+		remember_captured(state, cursor, .Typedef, u32(handle))
 	}
 
 	aliased, aliased_ok := capture_type(state, clang.get_typedef_decl_underlying_type(cursor))
@@ -213,12 +208,7 @@ enum_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> Dec
 		ir_promote_enum(state.ir, handle)
 	}
 	if usr != "" {
-		ref := Decl_Ref {
-			kind  = .Enum,
-			index = u32(handle),
-		}
-		state.decl_map[usr] = ref
-		record_decl_occurrence(state, ref, cursor)
+		remember_captured(state, cursor, .Enum, u32(handle))
 	}
 	if clang.is_cursor_definition(cursor) != 0 && !is_foreign {
 		fill_enum(state, handle, cursor)
@@ -350,12 +340,7 @@ record_decl_for_cursor :: proc(state: ^Extract_State, cursor: clang.Cursor) -> D
 	// Only named records enter decl_map. Anonymous ones must not: shared USRs
 	// would alias distinct nested types (see is_anonymous note above).
 	if !is_anonymous && usr != "" {
-		ref := Decl_Ref {
-			kind  = .Record,
-			index = u32(handle),
-		}
-		state.decl_map[usr] = ref
-		record_decl_occurrence(state, ref, cursor)
+		remember_captured(state, cursor, .Record, u32(handle))
 	}
 	// Fill layouts for non-system project records. System tags stay incomplete
 	// so we never claim a system header's field list as our binding;

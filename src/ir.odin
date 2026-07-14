@@ -663,14 +663,11 @@ ir_create_record :: proc(ir: ^IR, decl: Record_Decl) -> Decl_Handle {
 }
 
 // Promote a pool-only record into the ordering list (emission). Called when a
-// foreign record's definition lands in a configured input header.
+// foreign record's definition lands in a configured input header, or when an
+// unowned project record is revived as an incomplete stub. Reuses a unique
+// tombstoned (.Invalid) slot with this index when ownership left one behind.
 ir_promote_record :: proc(ir: ^IR, handle: Decl_Handle) {
-	for ref in ir.order {
-		if ref.kind == .Record && ref.index == u32(handle) {
-			return // already in order
-		}
-	}
-	append(&ir.order, Decl_Ref{kind = .Record, index = u32(handle)})
+	ir_promote_decl(ir, .Record, handle)
 }
 
 ir_add_enum :: proc(ir: ^IR, decl: Enum_Decl) -> Decl_Handle {
@@ -687,14 +684,32 @@ ir_create_enum :: proc(ir: ^IR, decl: Enum_Decl) -> Decl_Handle {
 	return Decl_Handle(len(ir.enums) - 1)
 }
 
-// Promote a pool-only enum into the ordering list (emission).
+// Promote a pool-only enum into the ordering list (emission). Same tombstone
+// reuse as ir_promote_record.
 ir_promote_enum :: proc(ir: ^IR, handle: Decl_Handle) {
-	for ref in ir.order {
-		if ref.kind == .Enum && ref.index == u32(handle) {
-			return // already in order
+	ir_promote_decl(ir, .Enum, handle)
+}
+
+// Restore a live order slot for kind+handle, reusing a unique ownership
+// tombstone when present. Multiple .Invalid entries with the same index (from
+// different original kinds) are ambiguous, so those fall back to append.
+ir_promote_decl :: proc(ir: ^IR, kind: Decl_Kind, handle: Decl_Handle) {
+	tombstone_i := -1
+	tombstone_count := 0
+	for ref, i in ir.order {
+		if ref.kind == kind && ref.index == u32(handle) {
+			return
+		}
+		if ref.kind == .Invalid && ref.index == u32(handle) {
+			tombstone_count += 1
+			tombstone_i = i
 		}
 	}
-	append(&ir.order, Decl_Ref{kind = .Enum, index = u32(handle)})
+	if tombstone_count == 1 {
+		ir.order[tombstone_i].kind = kind
+		return
+	}
+	append(&ir.order, Decl_Ref{kind = kind, index = u32(handle)})
 }
 
 ir_add_typedef :: proc(ir: ^IR, decl: Typedef_Decl) -> Decl_Handle {

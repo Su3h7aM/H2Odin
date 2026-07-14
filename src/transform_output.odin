@@ -26,7 +26,8 @@ Output_Plan :: struct {
 plan_outputs :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) {
 	switch policy.output_layout {
 	case .Auto:
-		if len(ir.input_headers) == 2 { 	// empty sentinel + one root
+		// One real root → single merged file; more → one file per root.
+		if ir_real_root_count(ir) == 1 {
 			return plan_merged(ir)
 		}
 		return plan_per_header(ir)
@@ -39,8 +40,16 @@ plan_outputs :: proc(ir: ^IR, policy: ^Policy) -> (plan: Output_Plan, ok: bool) 
 	return {}, false
 }
 
-plan_merged :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
+// Count configured roots, excluding the empty sentinel at input_headers[0].
+ir_real_root_count :: proc(ir: ^IR) -> int {
 	if len(ir.input_headers) < 2 {
+		return 0
+	}
+	return len(ir.input_headers) - 1
+}
+
+plan_merged :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
+	if ir_real_root_count(ir) < 1 {
 		user_error("h2odin: internal error: no input headers registered for output planning")
 		return {}, false
 	}
@@ -74,7 +83,7 @@ plan_merged :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
 
 plan_per_header :: proc(ir: ^IR) -> (plan: Output_Plan, ok: bool) {
 	// Real headers: slots 1..n-1 of input_headers.
-	header_count := len(ir.input_headers) - 1
+	header_count := ir_real_root_count(ir)
 	if header_count < 1 {
 		user_error("h2odin: internal error: no input headers registered for per_header planning")
 		return {}, false

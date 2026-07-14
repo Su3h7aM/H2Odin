@@ -414,6 +414,8 @@ test_extract_captures_unlisted_project_header_provenance :: proc(t: ^testing.T) 
 		return
 	}
 
+	// Provenance must name the unlisted project header, not the root.
+	expected_path := normalize_source_path("tests/fixtures/transitive_typedef_dependency.h", context.temp_allocator)
 	found := false
 	for td, i in ir.typedefs {
 		if td.name != "Hidden_Id" {
@@ -421,7 +423,7 @@ test_extract_captures_unlisted_project_header_provenance :: proc(t: ^testing.T) 
 		}
 		found = true
 		testing.expect(t, !td.is_foreign)
-		testing.expect(t, td.source_path != "")
+		testing.expect_value(t, td.source_path, expected_path)
 		testing.expect_value(t, td.home, Input_Header_Handle(0))
 		in_order := false
 		for ref in ir.order {
