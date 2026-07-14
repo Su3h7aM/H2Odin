@@ -166,3 +166,46 @@ test_unsupported_calling_conventions_only_report_emitted_types :: proc(t: ^testi
 
 	testing.expect_value(t, len(ir.diagnostics), 0)
 }
+
+@(test)
+test_unsupported_calling_conventions_ignore_explicit_type_spellings :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	void_type := ir_builtin_type(&ir, .Void)
+	hidden_return := ir_add_type(&ir, Type_Info{variant = Type_Proc{return_type = void_type, calling_conv = .Vectorcall}})
+	hidden_parameter := ir_add_type(&ir, Type_Info{variant = Type_Proc{return_type = void_type, calling_conv = .Thiscall}})
+	hidden_field := ir_add_type(&ir, Type_Info{variant = Type_Proc{return_type = void_type, calling_conv = .Other}})
+	hidden_nested_parameter := ir_add_type(&ir, Type_Info{variant = Type_Proc{return_type = void_type, calling_conv = .Unknown}})
+	outer_proc := ir_add_type(
+		&ir,
+		Type_Info {
+			variant = Type_Proc {
+				return_type = void_type,
+				params = {{name = "callback", type = hidden_nested_parameter, type_spelling = "rawptr"}},
+				calling_conv = .C,
+			},
+		},
+	)
+	ir_add_func(
+		&ir,
+		Func_Decl {
+			name = "call",
+			return_type = hidden_return,
+			return_type_spelling = "rawptr",
+			params = {{name = "callback", type = hidden_parameter, type_spelling = "rawptr"}},
+		},
+	)
+	ir_add_record(&ir, Record_Decl{name = "Callbacks", is_complete = true, fields = {{name = "callback", type = hidden_field, type_spelling = "rawptr"}}})
+	ir_add_typedef(&ir, Typedef_Decl{name = "Outer_Callback", aliased = outer_proc})
+
+	report_unsupported_calling_conventions(&ir)
+
+	testing.expect_value(t, len(ir.diagnostics), 0)
+}

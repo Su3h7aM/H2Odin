@@ -5,6 +5,62 @@ import "core:strings"
 import "core:testing"
 
 @(test)
+test_emit_uses_backing_type_for_incomplete_enum_references :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	backing_type := ir_builtin_type(&ir, .Int)
+	enum_handle := ir_add_enum(&ir, Enum_Decl{name = "Forward_Kind", backing = backing_type})
+	enum_type := ir_add_type(&ir, Type_Info{variant = Type_Enum_Ref{decl = enum_handle}})
+	ir_add_func(&ir, Func_Decl{name = "use_kind", return_type = ir_builtin_type(&ir, .Void), params = {{name = "kind", type = enum_type}}})
+
+	plan := Output_Plan {
+		units = {{filename = "example.odin", stem = "example", decls = ir.order[:]}},
+	}
+	result := emit(&ir, plan, Emit_Options{package_name = "example", foreign_lib = "example"})
+	content := result.files[0].content
+
+	testing.expect(t, !strings.contains(content, "Forward_Kind ::"))
+	testing.expect(t, strings.contains(content, "kind: c.int"))
+}
+
+@(test)
+test_emit_preserves_typedef_name_for_incomplete_enum :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	backing_type := ir_builtin_type(&ir, .Int)
+	enum_handle := ir_add_enum(&ir, Enum_Decl{name = "Forward_Kind", backing = backing_type})
+	enum_type := ir_add_type(&ir, Type_Info{variant = Type_Enum_Ref{decl = enum_handle}})
+	typedef_handle := ir_add_typedef(&ir, Typedef_Decl{name = "Forward_Kind", aliased = enum_type})
+	typedef_type := ir_add_type(&ir, Type_Info{variant = Type_Typedef_Ref{decl = typedef_handle}})
+	ir_add_func(&ir, Func_Decl{name = "use_kind", return_type = ir_builtin_type(&ir, .Void), params = {{name = "kind", type = typedef_type}}})
+
+	plan := Output_Plan {
+		units = {{filename = "example.odin", stem = "example", decls = ir.order[:]}},
+	}
+	result := emit(&ir, plan, Emit_Options{package_name = "example", foreign_lib = "example"})
+	content := result.files[0].content
+
+	testing.expect(t, strings.contains(content, "Forward_Kind :: c.int"))
+	testing.expect(t, strings.contains(content, "kind: Forward_Kind"))
+}
+
+@(test)
 test_write_enum_body_omits_default_sequential_values :: proc(t: ^testing.T) {
 	arena: vmem.Arena
 	err := vmem.arena_init_growing(&arena)

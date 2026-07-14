@@ -70,6 +70,46 @@ test_report_pointer_lowering_guesses_only_reports_emitted_types :: proc(t: ^test
 }
 
 @(test)
+test_pointer_lowering_guesses_ignore_explicit_type_spellings :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	err := vmem.arena_init_growing(&arena)
+	testing.expect_value(t, err, nil)
+	defer vmem.arena_destroy(&arena)
+
+	old_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = old_allocator
+
+	ir: IR
+	ir_init(&ir)
+	int_type := ir_builtin_type(&ir, .Int)
+	void_type := ir_builtin_type(&ir, .Void)
+	hidden_pointer := ir_add_type(
+		&ir,
+		Type_Info{variant = Type_Lowered_Pointer{pointee = int_type, kind = .Single, confidence = .Guessed, reason = .Single_Pointer_Default}},
+	)
+	outer_proc := ir_add_type(
+		&ir,
+		Type_Info{variant = Type_Proc{return_type = void_type, params = {{name = "value", type = hidden_pointer, type_spelling = "rawptr"}}}},
+	)
+	ir_add_func(
+		&ir,
+		Func_Decl {
+			name = "read",
+			return_type = hidden_pointer,
+			return_type_spelling = "rawptr",
+			params = {{name = "value", type = hidden_pointer, type_spelling = "rawptr"}},
+		},
+	)
+	ir_add_record(&ir, Record_Decl{name = "Value", is_complete = true, fields = {{name = "data", type = hidden_pointer, type_spelling = "rawptr"}}})
+	ir_add_typedef(&ir, Typedef_Decl{name = "Read_Callback", aliased = outer_proc})
+
+	report_pointer_lowering_guesses(&ir)
+
+	testing.expect_value(t, len(ir.diagnostics), 0)
+}
+
+@(test)
 test_diag_resolve_severity_default_warn_and_local_override :: proc(t: ^testing.T) {
 	policy: Policy
 	// default zero: all Warn

@@ -157,15 +157,15 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 
 	case Type_Enum_Ref:
 		decl := ir.enums[variant.decl]
-		if decl.name != "" {
+		if decl.members == nil {
+			// The enum declaration is not emitted without a definition. Use the
+			// measured backing type instead of leaving a dangling name.
+			write_type(b, ir, decl.backing, indent, emit_comments, imports)
+		} else if decl.name != "" {
 			strings.write_string(b, decl.name)
-		} else if decl.members != nil {
+		} else {
 			// Anonymous enum: its body is its only spelling.
 			write_enum_body(b, ir, decl, indent, emit_comments, imports)
-		} else {
-			// Referenced but never defined — only its backing integer is
-			// known, and that is all C guarantees about it anyway.
-			write_type(b, ir, decl.backing, indent, emit_comments, imports)
 		}
 
 	case Type_Typedef_Ref:
@@ -342,9 +342,13 @@ report_unsupported_calling_conventions :: proc(ir: ^IR, opaque_records: []bool =
 		case .Invalid, .Macro, .Bit_Set, .Wrapper:
 		case .Func:
 			declaration := ir.funcs[ref.index]
-			report_unsupported_calling_conv_in_type(ir, declaration.return_type, &seen_types)
+			if declaration.return_type_spelling == "" {
+				report_unsupported_calling_conv_in_type(ir, declaration.return_type, &seen_types)
+			}
 			for parameter in declaration.params {
-				report_unsupported_calling_conv_in_type(ir, parameter.type, &seen_types)
+				if parameter.type_spelling == "" {
+					report_unsupported_calling_conv_in_type(ir, parameter.type, &seen_types)
+				}
 			}
 		case .Var:
 			report_unsupported_calling_conv_in_type(ir, ir.vars[ref.index].type, &seen_types)
@@ -360,7 +364,9 @@ report_unsupported_calling_conventions :: proc(ir: ^IR, opaque_records: []bool =
 				continue
 			}
 			for field in record.fields {
-				report_unsupported_calling_conv_in_type(ir, field.type, &seen_types)
+				if field.type_spelling == "" {
+					report_unsupported_calling_conv_in_type(ir, field.type, &seen_types)
+				}
 			}
 		case .Enum:
 		}
@@ -385,7 +391,9 @@ report_unsupported_calling_conv_in_type :: proc(ir: ^IR, handle: Type_Handle, se
 		}
 		report_unsupported_calling_conv_in_type(ir, variant.return_type, seen_types)
 		for parameter in variant.params {
-			report_unsupported_calling_conv_in_type(ir, parameter.type, seen_types)
+			if parameter.type_spelling == "" {
+				report_unsupported_calling_conv_in_type(ir, parameter.type, seen_types)
+			}
 		}
 	case Type_Pointer:
 		report_unsupported_calling_conv_in_type(ir, variant.pointee, seen_types)

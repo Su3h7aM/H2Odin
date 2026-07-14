@@ -275,7 +275,11 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comm
 			return
 		}
 	case Type_Enum_Ref:
-		if ir.enums[target.decl].name == decl.name {
+		enum_declaration := ir.enums[target.decl]
+		if enum_declaration.name == decl.name && enum_declaration.members != nil {
+			// A defined enum already claims the shared typedef/tag name. An
+			// incomplete enum has no declaration to merge with, so preserve the
+			// typedef as an alias of its measured backing type.
 			return
 		}
 	}
