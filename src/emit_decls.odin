@@ -304,14 +304,24 @@ emit_macro :: proc(b: ^strings.Builder, decl: Macro_Decl, emit_comments: bool) {
 	}
 
 	token := decl.tokens[0]
-	if token.kind != .Literal || !macro_literal_can_emit(token.spelling) {
+	if token.kind != .Literal {
+		return
+	}
+	integer_body, is_integer := c_integer_literal_for_emission(token.spelling)
+	if !is_integer && !macro_literal_can_emit_verbatim(token.spelling) {
 		return
 	}
 
 	// No @(deprecated) on constants — emit a semantic Deprecated: line.
 	write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 0)
 	write_doc(b, decl.doc, 0, emit_comments)
-	fmt.sbprintfln(b, "%s :: %s", decl.name, token.spelling)
+	fmt.sbprintf(b, "%s :: ", decl.name)
+	if is_integer {
+		write_macro_integer_body(b, integer_body)
+	} else {
+		strings.write_string(b, token.spelling)
+	}
+	strings.write_string(b, "\n")
 }
 
 emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, emit_comments: bool, imports: ^Emit_Imports) {
@@ -327,17 +337,30 @@ emit_bit_set :: proc(b: ^strings.Builder, ir: ^IR, decl: Bit_Set_Decl, emit_comm
 	fmt.sbprintf(b, "; %s]\n\n", backing)
 }
 
-macro_literal_can_emit :: proc(s: string) -> bool {
-	if len(s) == 0 {
+// write_macro_integer_body rewrites C's leading-zero octal notation, which
+// Odin would otherwise read as decimal.
+write_macro_integer_body :: proc(b: ^strings.Builder, body: string) {
+	if len(body) > 1 && body[0] == '0' && is_ascii_digit(body[1]) {
+		strings.write_string(b, "0o")
+		strings.write_string(b, body[1:])
+		return
+	}
+	strings.write_string(b, body)
+}
+
+// macro_literal_can_emit_verbatim reports whether a non-integer C literal is
+// already valid Odin. Numeric suffixes reach here only when integer
+// normalization failed or when floating-point suffix handling is unsupported.
+macro_literal_can_emit_verbatim :: proc(spelling: string) -> bool {
+	if len(spelling) == 0 {
 		return false
 	}
-	first := s[0]
+	first := spelling[0]
 	if first == '"' || first == '\'' {
 		return true
 	}
-	last := s[len(s) - 1]
-	// Skip common C numeric suffixes until macro values get a real numeric
-	// parser. Emitting invalid Odin would be worse than omitting the macro.
+	last := spelling[len(spelling) - 1]
+	// Emitting invalid Odin would be worse than omitting the macro.
 	if last == 'u' || last == 'U' || last == 'l' || last == 'L' || last == 'f' || last == 'F' {
 		return false
 	}

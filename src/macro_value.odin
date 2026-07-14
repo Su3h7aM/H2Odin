@@ -27,52 +27,11 @@ macro_integer_value :: proc(decl: Macro_Decl) -> (value: i64, ok: bool) {
 }
 
 parse_c_integer_literal :: proc(s: string) -> (value: i64, ok: bool) {
-	if len(s) == 0 {
+	_, digits, base, negative, syntax_ok := parse_c_integer_literal_syntax(s)
+	if !syntax_ok {
 		return 0, false
 	}
-	// Strip trailing C type suffixes (u, l, ul, ll, ull, …), case-insensitive.
-	end := len(s)
-	for end > 0 {
-		c := s[end - 1]
-		if c == 'u' || c == 'U' || c == 'l' || c == 'L' {
-			end -= 1
-			continue
-		}
-		break
-	}
-	if end == 0 {
-		return 0, false
-	}
-	body := s[:end]
-
-	base := 10
-	num := body
-	if len(body) > 2 && body[0] == '0' && (body[1] == 'x' || body[1] == 'X') {
-		base = 16
-		num = body[2:]
-	} else if len(body) > 2 && body[0] == '0' && (body[1] == 'b' || body[1] == 'B') {
-		base = 2
-		num = body[2:]
-	} else if len(body) > 1 && body[0] == '0' && is_ascii_digit(body[1]) {
-		// C octal. Rare in flag macros; still accept.
-		base = 8
-		num = body[1:]
-	}
-	if len(num) == 0 {
-		return 0, false
-	}
-	// strconv.parse_i64_of_base rejects leading +; handle sign.
-	negative := false
-	if num[0] == '-' {
-		negative = true
-		num = num[1:]
-	} else if num[0] == '+' {
-		num = num[1:]
-	}
-	if len(num) == 0 {
-		return 0, false
-	}
-	v, parse_ok := strconv.parse_i64_of_base(num, base)
+	v, parse_ok := strconv.parse_i64_of_base(digits, base)
 	if !parse_ok {
 		return 0, false
 	}
@@ -80,6 +39,69 @@ parse_c_integer_literal :: proc(s: string) -> (value: i64, ok: bool) {
 		v = -v
 	}
 	return v, true
+}
+
+// c_integer_literal_for_emission validates the full unsigned range accepted by
+// Odin while returning a suffix-free body that still aliases the input.
+c_integer_literal_for_emission :: proc(spelling: string) -> (body: string, ok: bool) {
+	digits: string
+	base: int
+	negative, syntax_ok: bool
+	body, digits, base, negative, syntax_ok = parse_c_integer_literal_syntax(spelling)
+	if !syntax_ok {
+		return "", false
+	}
+	if negative {
+		_, ok = strconv.parse_i64_of_base(digits, base)
+	} else {
+		_, ok = strconv.parse_u64_of_base(digits, base)
+	}
+	return body, ok
+}
+
+// parse_c_integer_literal_syntax separates the source spelling without
+// allocating. body excludes C's type suffix; digits excludes sign and radix.
+parse_c_integer_literal_syntax :: proc(spelling: string) -> (body, digits: string, base: int, negative, ok: bool) {
+	if len(spelling) == 0 {
+		return
+	}
+	end := len(spelling)
+	for end > 0 {
+		character := spelling[end - 1]
+		if character == 'u' || character == 'U' || character == 'l' || character == 'L' {
+			end -= 1
+			continue
+		}
+		break
+	}
+	if end == 0 {
+		return
+	}
+	body = spelling[:end]
+	digits = body
+	if digits[0] == '-' {
+		negative = true
+		digits = digits[1:]
+	} else if digits[0] == '+' {
+		digits = digits[1:]
+	}
+	if len(digits) == 0 {
+		return
+	}
+
+	base = 10
+	if len(digits) > 2 && digits[0] == '0' && (digits[1] == 'x' || digits[1] == 'X') {
+		base = 16
+		digits = digits[2:]
+	} else if len(digits) > 2 && digits[0] == '0' && (digits[1] == 'b' || digits[1] == 'B') {
+		base = 2
+		digits = digits[2:]
+	} else if len(digits) > 1 && digits[0] == '0' && is_ascii_digit(digits[1]) {
+		base = 8
+		digits = digits[1:]
+	}
+	ok = len(digits) > 0
+	return
 }
 
 // First matching prefix from the list, or "" if none.
