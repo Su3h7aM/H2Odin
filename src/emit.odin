@@ -73,8 +73,8 @@ emit_close_foreign :: proc(b: ^strings.Builder, in_foreign: ^bool) {
 	in_foreign^ = false
 }
 
-emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, imports: Emit_Imports, needs_foreign: bool) {
-	fmt.sbprintfln(b, "package %s", opts.package_name)
+emit_write_prelude :: proc(b: ^strings.Builder, options: Emit_Options, imports: Emit_Imports, needs_foreign: bool) {
+	fmt.sbprintfln(b, "package %s", options.package_name)
 	strings.write_string(b, "\n")
 	if imports.core_c {
 		strings.write_string(b, "import \"core:c\"\n")
@@ -97,163 +97,159 @@ emit_write_prelude :: proc(b: ^strings.Builder, opts: Emit_Options, imports: Emi
 	// -vet treats that as an error and per_header layout emits one file per
 	// input (macros-only headers become package-only files).
 	if needs_foreign {
-		emit_write_foreign_import(b, opts)
+		emit_write_foreign_import(b, options)
 	}
-}
-
-emit_write_foreign_block :: proc(b: ^strings.Builder, foreign_body: string, link_prefix: string, require_results := false) {
-	if len(foreign_body) == 0 {
-		return
-	}
-	write_foreign_block_attrs(b, link_prefix, require_results)
-	strings.write_string(b, "foreign lib {\n")
-	strings.write_string(b, foreign_body)
-	strings.write_string(b, "}\n")
 }
 
 // True when every Func in decls has require_results and there is at least one.
 // Used for block-level @(require_results) compression.
 foreign_decls_all_require_results :: proc(ir: ^IR, decls: []Decl_Ref) -> bool {
-	n_func := 0
-	for ref in decls {
-		if ref.kind != .Func {
+	procedure_count := 0
+	for declaration in decls {
+		if declaration.kind != .Func {
 			continue
 		}
-		n_func += 1
-		if !ir.funcs[ref.index].require_results {
+		procedure_count += 1
+		if !ir.funcs[declaration.index].require_results {
 			return false
 		}
 	}
-	return n_func > 0
+	return procedure_count > 0
 }
 
 // Per-index flag: the contiguous Func/Var foreign segment containing this
 // decl has block-level require_results (every Func in the segment sets it).
 compute_foreign_segment_require_results :: proc(ir: ^IR, decls: []Decl_Ref) -> []bool {
-	out := make([]bool, len(decls), context.temp_allocator)
-	i := 0
-	for i < len(decls) {
-		kind := decls[i].kind
+	require_results := make([]bool, len(decls), context.temp_allocator)
+	segment_start := 0
+	for segment_start < len(decls) {
+		kind := decls[segment_start].kind
 		if kind != .Func && kind != .Var {
-			i += 1
+			segment_start += 1
 			continue
 		}
-		j := i
-		for j < len(decls) {
-			k := decls[j].kind
-			if k != .Func && k != .Var {
+		segment_end := segment_start
+		for segment_end < len(decls) {
+			segment_kind := decls[segment_end].kind
+			if segment_kind != .Func && segment_kind != .Var {
 				break
 			}
-			j += 1
+			segment_end += 1
 		}
-		all_req := foreign_decls_all_require_results(ir, decls[i:j])
-		for k in i ..< j {
-			out[k] = all_req
+		all_require_results := foreign_decls_all_require_results(ir, decls[segment_start:segment_end])
+		for declaration_index in segment_start ..< segment_end {
+			require_results[declaration_index] = all_require_results
 		}
-		i = j
+		segment_start = segment_end
 	}
-	return out
+	return require_results
 }
 
 // Serialize each planned output unit. Decl placement is already decided.
-emit :: proc(ir: ^IR, plan: Output_Plan, opts: Emit_Options) -> Emit_Result {
+emit :: proc(ir: ^IR, plan: Output_Plan, options: Emit_Options) -> Emit_Result {
 	files := make([]Generated_File, len(plan.units))
-	for unit, ui in plan.units {
-		content, imports, needs_foreign := emit_unit_body(ir, unit.decls, opts)
-		out: strings.Builder
-		emit_write_prelude(&out, opts, imports, needs_foreign)
-		strings.write_string(&out, content)
-		files[ui] = Generated_File {
-			filename = unit.filename,
-			stem     = unit.stem,
-			content  = strings.to_string(out),
+	for unit, unit_index in plan.units {
+		body: strings.Builder
+		strings.builder_init(&body, context.temp_allocator)
+		imports, needs_foreign := emit_unit_body(&body, ir, unit.decls, options)
+
+		file_builder: strings.Builder
+		emit_write_prelude(&file_builder, options, imports, needs_foreign)
+		strings.write_string(&file_builder, strings.to_string(body))
+		files[unit_index] = Generated_File {
+			// Output planning is scratch-owned; the result must not retain it.
+			filename = strings.clone(unit.filename),
+			stem     = strings.clone(unit.stem),
+			content  = strings.to_string(file_builder),
 		}
 	}
 	return Emit_Result{files = files}
 }
 
-// Build the declaration body for one unit (no package/prelude). Returns
-// which imports the body needs and whether it declares foreign symbols
-// (so the prelude can omit an unused `foreign import` under -vet).
-emit_unit_body :: proc(ir: ^IR, decls: []Decl_Ref, opts: Emit_Options) -> (body: string, imports: Emit_Imports, needs_foreign: bool) {
-	types_body: strings.Builder
-	foreign_body: strings.Builder
-	interleaved: strings.Builder
+// Build one unit's declaration body into caller-owned scratch storage. Returns
+// the imports and foreign state needed to prepend the unit's final prelude.
+emit_unit_body :: proc(body: ^strings.Builder, ir: ^IR, decls: []Decl_Ref, options: Emit_Options) -> (imports: Emit_Imports, needs_foreign: bool) {
 	imports = {}
 	in_foreign := false
 	needs_foreign = false
 
-	if opts.procedures_at_end {
-		block_req := foreign_decls_all_require_results(ir, decls)
+	if options.procedures_at_end {
+		block_require_results := foreign_decls_all_require_results(ir, decls)
+		// Types and constants retain their relative order at the front.
 		for ref in decls {
 			switch ref.kind {
-			case .Invalid:
+			case .Invalid, .Func, .Var, .Wrapper:
+			case .Record:
+				emit_record(body, ir, ir.records[ref.index], options.emit_comments, &imports)
+			case .Enum:
+				emit_enum(body, ir, ir.enums[ref.index], options.emit_comments, &imports)
+			case .Typedef:
+				emit_typedef(body, ir, ir.typedefs[ref.index], options.emit_comments, &imports)
+			case .Macro:
+				emit_macro(body, ir.macros[ref.index], options.emit_comments)
+			case .Bit_Set:
+				emit_bit_set(body, ir, ir.bit_sets[ref.index], options.emit_comments, &imports)
+			}
+		}
+
+		// Foreign declarations share one block after the types.
+		for ref in decls {
+			switch ref.kind {
 			case .Func:
 				needs_foreign = true
-				emit_func(&foreign_body, ir, ir.funcs[ref.index], opts.emit_comments, &imports, block_req)
-			case .Record:
-				emit_record(&types_body, ir, ir.records[ref.index], opts.emit_comments, &imports)
-			case .Enum:
-				emit_enum(&types_body, ir, ir.enums[ref.index], opts.emit_comments, &imports)
-			case .Typedef:
-				emit_typedef(&types_body, ir, ir.typedefs[ref.index], opts.emit_comments, &imports)
+				emit_open_foreign(body, &in_foreign, options.link_prefix, block_require_results)
+				emit_func(body, ir, ir.funcs[ref.index], options.emit_comments, &imports, block_require_results)
 			case .Var:
 				needs_foreign = true
-				emit_var(&foreign_body, ir, ir.vars[ref.index], opts.emit_comments, &imports)
-			case .Macro:
-				emit_macro(&types_body, ir.macros[ref.index], opts.emit_comments)
-			case .Bit_Set:
-				emit_bit_set(&types_body, ir, ir.bit_sets[ref.index], opts.emit_comments, &imports)
-			case .Wrapper:
-			// Wrappers are ordinary Odin procs; emit after the foreign block.
+				emit_open_foreign(body, &in_foreign, options.link_prefix, block_require_results)
+				emit_var(body, ir, ir.vars[ref.index], options.emit_comments, &imports)
+			case .Invalid, .Record, .Enum, .Typedef, .Macro, .Bit_Set, .Wrapper:
 			}
 		}
-		// Second pass: wrappers after foreign (so they can call internal foreign names).
-		wrappers_body: strings.Builder
+		emit_close_foreign(body, &in_foreign)
+
+		// Wrappers are ordinary Odin procedures and follow the foreign block so
+		// they can call its internal declaration names.
 		for ref in decls {
 			if ref.kind == .Wrapper {
-				emit_wrapper(&wrappers_body, ir, ir.wrappers[ref.index], opts.emit_comments, &imports)
+				emit_wrapper(body, ir, ir.wrappers[ref.index], options.emit_comments, &imports)
 			}
 		}
-		out: strings.Builder
-		strings.write_string(&out, strings.to_string(types_body))
-		emit_write_foreign_block(&out, strings.to_string(foreign_body), opts.link_prefix, block_req)
-		strings.write_string(&out, strings.to_string(wrappers_body))
-		return strings.to_string(out), imports, needs_foreign
+		return imports, needs_foreign
 	}
 
-	segment_req := compute_foreign_segment_require_results(ir, decls)
-	for ref, di in decls {
+	segment_require_results := compute_foreign_segment_require_results(ir, decls)
+	for ref, declaration_index in decls {
 		switch ref.kind {
 		case .Invalid:
 		case .Func:
 			needs_foreign = true
-			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix, segment_req[di])
-			emit_func(&interleaved, ir, ir.funcs[ref.index], opts.emit_comments, &imports, segment_req[di])
+			emit_open_foreign(body, &in_foreign, options.link_prefix, segment_require_results[declaration_index])
+			emit_func(body, ir, ir.funcs[ref.index], options.emit_comments, &imports, segment_require_results[declaration_index])
 		case .Var:
 			needs_foreign = true
-			emit_open_foreign(&interleaved, &in_foreign, opts.link_prefix, segment_req[di])
-			emit_var(&interleaved, ir, ir.vars[ref.index], opts.emit_comments, &imports)
+			emit_open_foreign(body, &in_foreign, options.link_prefix, segment_require_results[declaration_index])
+			emit_var(body, ir, ir.vars[ref.index], options.emit_comments, &imports)
 		case .Record:
-			emit_close_foreign(&interleaved, &in_foreign)
-			emit_record(&interleaved, ir, ir.records[ref.index], opts.emit_comments, &imports)
+			emit_close_foreign(body, &in_foreign)
+			emit_record(body, ir, ir.records[ref.index], options.emit_comments, &imports)
 		case .Enum:
-			emit_close_foreign(&interleaved, &in_foreign)
-			emit_enum(&interleaved, ir, ir.enums[ref.index], opts.emit_comments, &imports)
+			emit_close_foreign(body, &in_foreign)
+			emit_enum(body, ir, ir.enums[ref.index], options.emit_comments, &imports)
 		case .Typedef:
-			emit_close_foreign(&interleaved, &in_foreign)
-			emit_typedef(&interleaved, ir, ir.typedefs[ref.index], opts.emit_comments, &imports)
+			emit_close_foreign(body, &in_foreign)
+			emit_typedef(body, ir, ir.typedefs[ref.index], options.emit_comments, &imports)
 		case .Macro:
-			emit_close_foreign(&interleaved, &in_foreign)
-			emit_macro(&interleaved, ir.macros[ref.index], opts.emit_comments)
+			emit_close_foreign(body, &in_foreign)
+			emit_macro(body, ir.macros[ref.index], options.emit_comments)
 		case .Bit_Set:
-			emit_close_foreign(&interleaved, &in_foreign)
-			emit_bit_set(&interleaved, ir, ir.bit_sets[ref.index], opts.emit_comments, &imports)
+			emit_close_foreign(body, &in_foreign)
+			emit_bit_set(body, ir, ir.bit_sets[ref.index], options.emit_comments, &imports)
 		case .Wrapper:
-			emit_close_foreign(&interleaved, &in_foreign)
-			emit_wrapper(&interleaved, ir, ir.wrappers[ref.index], opts.emit_comments, &imports)
+			emit_close_foreign(body, &in_foreign)
+			emit_wrapper(body, ir, ir.wrappers[ref.index], options.emit_comments, &imports)
 		}
 	}
-	emit_close_foreign(&interleaved, &in_foreign)
-	return strings.to_string(interleaved), imports, needs_foreign
+	emit_close_foreign(body, &in_foreign)
+	return imports, needs_foreign
 }
