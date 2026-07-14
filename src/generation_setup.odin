@@ -1,11 +1,11 @@
 package h2odin
 
-import "core:fmt"
 import "core:path/filepath"
+import "core:strings"
 
 resolve_input_headers :: proc(policy: ^Policy) -> (headers: []string, ok: bool) {
 	if len(policy.inputs) == 0 {
-		fmt.eprintln("h2odin: config.inputs is empty (list at least one header path)")
+		user_error("h2odin: config.inputs is empty (list at least one header path)")
 		return nil, false
 	}
 	headers = make([]string, len(policy.inputs))
@@ -50,8 +50,8 @@ resolve_extract_preprocess :: proc(policy: ^Policy, resource_dir_override: strin
 
 // Build Emission's complete option set. Package and shorthand library defaults
 // come from the first configured input header.
-resolve_emit_options :: proc(policy: ^Policy, first_header: string) -> (options: Emit_Options, ok: bool) {
-	header_stem := filepath.stem(filepath.base(first_header))
+resolve_emit_options :: proc(policy: ^Policy, first_header_path: string) -> (options: Emit_Options, ok: bool) {
+	header_stem := filepath.stem(filepath.base(first_header_path))
 	package_name, foreign_lib := resolve_emit_names(policy, header_stem) or_return
 	return Emit_Options {
 			package_name = package_name,
@@ -67,10 +67,10 @@ resolve_emit_options :: proc(policy: ^Policy, first_header: string) -> (options:
 // Resolve package and foreign-lib names for emission. Explicit config values
 // fail closed when invalid; stem defaults are sanitized into legal forms.
 // When foreign.targets is set, foreign_lib is unused (left empty).
-resolve_emit_names :: proc(policy: ^Policy, stem: string) -> (package_name, foreign_lib: string, ok: bool) {
+resolve_emit_names :: proc(policy: ^Policy, header_stem: string) -> (package_name, foreign_lib: string, ok: bool) {
 	if policy.package_name != "" {
 		if !is_odin_identifier(policy.package_name) {
-			fmt.eprintfln(
+			user_errorf(
 				"h2odin: config.package %q is not a valid Odin package identifier (letter/underscore then alphanumerics/underscores, not a keyword)",
 				policy.package_name,
 			)
@@ -78,7 +78,7 @@ resolve_emit_names :: proc(policy: ^Policy, stem: string) -> (package_name, fore
 		}
 		package_name = policy.package_name
 	} else {
-		package_name = sanitize_package_stem(stem)
+		package_name = sanitize_package_stem(header_stem)
 		if package_name == "" {
 			package_name = "bindings"
 		}
@@ -90,17 +90,68 @@ resolve_emit_names :: proc(policy: ^Policy, stem: string) -> (package_name, fore
 	}
 
 	if policy.foreign_lib != "" {
-		if !is_safe_foreign_lib(policy.foreign_lib) {
-			fmt.eprintfln("h2odin: config.foreign.import_lib %q is empty or contains a quote, backslash, or control character", policy.foreign_lib)
+		if !is_safe_foreign_path(policy.foreign_lib) {
+			user_errorf("h2odin: config.foreign.import_lib %q is empty or contains a quote, backslash, or control character", policy.foreign_lib)
 			return "", "", false
 		}
 		foreign_lib = policy.foreign_lib
 	} else {
 		// system: path is a string, not an identifier — keep the stem as-is
 		// when non-empty (hyphens are fine); fall back to a generic name.
-		foreign_lib = stem if is_safe_foreign_lib(stem) else "lib"
+		foreign_lib = header_stem if is_safe_foreign_path(header_stem) else "lib"
 	}
 	return package_name, foreign_lib, true
+}
+
+// Legal non-keyword Odin identifier: [A-Za-z_][A-Za-z0-9_]*.
+is_odin_identifier :: proc(name: string) -> bool {
+	if name == "" || is_odin_keyword(name) {
+		return false
+	}
+	if !is_ascii_alpha(name[0]) && name[0] != '_' {
+		return false
+	}
+	for character_index in 1 ..< len(name) {
+		character := name[character_index]
+		if !is_ascii_alpha(character) && !is_ascii_digit(character) && character != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+// Default package name from a header stem (e.g. "my-library.h" → "my_library").
+// Hyphens and other non-identifier characters become underscores; leading
+// digits get a leading underscore; empty collapses later to "bindings";
+// keyword collisions get a trailing underscore.
+sanitize_package_stem :: proc(stem: string) -> string {
+	if stem == "" {
+		return ""
+	}
+	name_bytes := make([dynamic]u8, 0, len(stem) + 1, context.temp_allocator)
+	for character_index in 0 ..< len(stem) {
+		character := stem[character_index]
+		if is_ascii_alpha(character) || is_ascii_digit(character) || character == '_' {
+			append(&name_bytes, character)
+		} else if len(name_bytes) == 0 || name_bytes[len(name_bytes) - 1] != '_' {
+			append(&name_bytes, '_')
+		}
+	}
+	// Trim separators produced by trailing non-identifier characters.
+	for len(name_bytes) > 0 && name_bytes[len(name_bytes) - 1] == '_' {
+		pop(&name_bytes)
+	}
+	if len(name_bytes) == 0 {
+		return ""
+	}
+	if is_ascii_digit(name_bytes[0]) {
+		inject_at(&name_bytes, 0, '_')
+	}
+	name := string(name_bytes[:])
+	if is_odin_keyword(name) {
+		return strings.concatenate({name, "_"}, context.temp_allocator)
+	}
+	return name
 }
 
 // Absolute paths stay as-is; relative paths join base_dir when non-empty.
@@ -112,7 +163,7 @@ resolve_path :: proc(path: string, base_dir: string, allocator := context.alloca
 	}
 	joined_path, join_error := filepath.join({base_dir, path}, allocator)
 	if join_error != nil {
-		fmt.eprintfln("h2odin: cannot join path %q with base %q: %v", path, base_dir, join_error)
+		user_errorf("h2odin: cannot join path %q with base %q: %v", path, base_dir, join_error)
 		return "", false
 	}
 	return joined_path, true

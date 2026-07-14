@@ -16,6 +16,16 @@ test_foreign_target_key_roundtrip :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_foreign_import_path_validation_rejects_unsafe_source :: proc(t: ^testing.T) {
+	testing.expect(t, is_safe_foreign_path("clang"))
+	testing.expect(t, is_safe_foreign_path("my-lib"))
+	testing.expect(t, is_safe_foreign_path("system:pthread"))
+	testing.expect(t, !is_safe_foreign_path(""))
+	testing.expect(t, !is_safe_foreign_path("bad\"lib"))
+	testing.expect(t, !is_safe_foreign_path("bad\\lib"))
+}
+
+@(test)
 test_sort_foreign_targets_deterministic_order :: proc(t: ^testing.T) {
 	// Insert out of order; emit order is most-specific first, fallback last.
 	raw := []Foreign_Target {

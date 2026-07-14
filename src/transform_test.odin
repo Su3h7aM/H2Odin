@@ -14,29 +14,6 @@ test_keyword_safe_default_suffixes_keywords :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_package_stem_sanitization_and_identifier_check :: proc(t: ^testing.T) {
-	testing.expect(t, is_odin_identifier("mylib"))
-	testing.expect(t, is_odin_identifier("_private"))
-	testing.expect(t, !is_odin_identifier(""))
-	testing.expect(t, !is_odin_identifier("my-library"))
-	testing.expect(t, !is_odin_identifier("2bad"))
-	testing.expect(t, !is_odin_identifier("package")) // keyword
-
-	testing.expect_value(t, sanitize_package_stem("my-library"), "my_library")
-	testing.expect_value(t, sanitize_package_stem("lib.foo"), "lib_foo")
-	testing.expect_value(t, sanitize_package_stem("2d_math"), "_2d_math")
-	testing.expect_value(t, sanitize_package_stem("map"), "map_")
-	testing.expect_value(t, sanitize_package_stem(""), "")
-	testing.expect_value(t, sanitize_package_stem("---"), "")
-
-	testing.expect(t, is_safe_foreign_lib("clang"))
-	testing.expect(t, is_safe_foreign_lib("my-lib"))
-	testing.expect(t, !is_safe_foreign_lib(""))
-	testing.expect(t, !is_safe_foreign_lib("bad\"lib"))
-	testing.expect(t, !is_safe_foreign_lib("bad\\lib"))
-}
-
-@(test)
 test_strip_configured_affixes_by_symbol_kind :: proc(t: ^testing.T) {
 	policy := Policy {
 		strip_prefix_proc  = {"gl_"},

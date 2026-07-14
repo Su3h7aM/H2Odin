@@ -148,9 +148,20 @@ foreign_target_condition :: proc(key: Foreign_Target_Key) -> string {
 	return ""
 }
 
-// Validate one foreign-import path string (local path or system: name).
+// Validate one foreign-import string, whether it is a shorthand system name,
+// local path, or system: path. Empty and control/quote characters would emit
+// invalid or surprising Odin source.
 is_safe_foreign_path :: proc(path: string) -> bool {
-	return is_safe_foreign_lib(path)
+	if path == "" {
+		return false
+	}
+	for character_index in 0 ..< len(path) {
+		character := path[character_index]
+		if character < 0x20 || character == 0x7f || character == '"' || character == '\\' {
+			return false
+		}
+	}
+	return true
 }
 
 // Turn a system dependency name into a foreign-import path. Already-prefixed
