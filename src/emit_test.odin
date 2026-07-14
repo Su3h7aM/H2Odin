@@ -81,3 +81,67 @@ test_emit_result_outlives_scratch_plan_and_body :: proc(t: ^testing.T) {
 	testing.expect_value(t, result.files[0].stem, "example")
 	testing.expect_value(t, result.files[0].content, "package example\n\n")
 }
+
+@(test)
+test_emit_imports_packages_used_by_explicit_function_results :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	void_type := ir_builtin_type(&ir, .Void)
+	ir_add_func(&ir, Func_Decl{name = "get_count", return_type = void_type, return_type_spelling = "^c.int"})
+	ir_add_func(&ir, Func_Decl{name = "get_socket_length", return_type = void_type, return_type_spelling = "[^]posix.socklen_t"})
+	ir_add_func(&ir, Func_Decl{name = "get_stream", return_type = void_type, return_type_spelling = "^libc.FILE"})
+	ir_add_func(&ir, Func_Decl{name = "get_handle", return_type = void_type, return_type_spelling = "^[4]win32.HANDLE"})
+
+	plan := Output_Plan {
+		units = {{filename = "example.odin", stem = "example", decls = ir.order[:]}},
+	}
+	result := emit(&ir, plan, Emit_Options{package_name = "example", foreign_lib = "example"})
+	content := result.files[0].content
+
+	testing.expect(t, strings.contains(content, "import \"core:c\""))
+	testing.expect(t, strings.contains(content, "import \"core:c/libc\""))
+	testing.expect(t, strings.contains(content, "import \"core:sys/posix\""))
+	testing.expect(t, strings.contains(content, "import win32 \"core:sys/windows\""))
+}
+
+@(test)
+test_emit_does_not_import_packages_named_only_inside_type_metadata :: proc(t: ^testing.T) {
+	arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&arena), nil)
+	defer vmem.arena_destroy(&arena)
+
+	previous_allocator := context.allocator
+	context.allocator = vmem.arena_allocator(&arena)
+	defer context.allocator = previous_allocator
+
+	ir: IR
+	ir_init(&ir)
+	void_type := ir_builtin_type(&ir, .Void)
+	ir_add_func(
+		&ir,
+		Func_Decl {
+			name = "get_value",
+			return_type = void_type,
+			return_type_spelling = "struct { longer: abc.int, chained: other.c.int, tagged: int `fmt:\"c.int libc.FILE posix.T win32.T\"` }",
+		},
+	)
+
+	plan := Output_Plan {
+		units = {{filename = "example.odin", stem = "example", decls = ir.order[:]}},
+	}
+	result := emit(&ir, plan, Emit_Options{package_name = "example", foreign_lib = "example"})
+	content := result.files[0].content
+
+	testing.expect(t, !strings.contains(content, "import \"core:c\""))
+	testing.expect(t, !strings.contains(content, "import \"core:c/libc\""))
+	testing.expect(t, !strings.contains(content, "import \"core:sys/posix\""))
+	testing.expect(t, !strings.contains(content, "import win32 \"core:sys/windows\""))
+}

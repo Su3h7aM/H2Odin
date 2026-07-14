@@ -180,15 +180,67 @@ write_type :: proc(b: ^strings.Builder, ir: ^IR, handle: Type_Handle, indent: in
 // Any caller that writes a spelling straight into the output —
 // including field/param type_spelling overrides from policy — must call this.
 note_import_for_spelling :: proc(imports: ^Emit_Imports, spelling: string) {
-	if strings.has_prefix(spelling, "posix.") {
+	if type_spelling_uses_package(spelling, "c") {
+		imports.core_c = true
+	}
+	if type_spelling_uses_package(spelling, "posix") {
 		imports.posix = true
 	}
-	if strings.has_prefix(spelling, "libc.") {
+	if type_spelling_uses_package(spelling, "libc") {
 		imports.libc = true
 	}
-	if strings.has_prefix(spelling, "win32.") {
+	if type_spelling_uses_package(spelling, "win32") {
 		imports.win32 = true
 	}
+}
+
+// type_spelling_uses_package finds a package selector anywhere inside an Odin
+// type expression without mistaking a longer identifier or selector chain for
+// the package name.
+type_spelling_uses_package :: proc(spelling, package_name: string) -> bool {
+	start := 0
+	for start < len(spelling) {
+		character := spelling[start]
+		if character == '"' || character == '\'' || character == '`' {
+			quote := character
+			start += 1
+			for start < len(spelling) {
+				if quote != '`' && spelling[start] == '\\' {
+					start += 2
+					continue
+				}
+				if spelling[start] == quote {
+					start += 1
+					break
+				}
+				start += 1
+			}
+			continue
+		}
+
+		dot_index := start + len(package_name)
+		if dot_index + 1 >= len(spelling) {
+			break
+		}
+		if spelling[start:dot_index] != package_name || spelling[dot_index] != '.' {
+			start += 1
+			continue
+		}
+		if start > 0 {
+			preceding := spelling[start - 1]
+			if is_ascii_alpha(preceding) || is_ascii_digit(preceding) || preceding == '_' || preceding == '.' {
+				start += 1
+				continue
+			}
+		}
+		member_start := spelling[dot_index + 1]
+		if !is_ascii_alpha(member_start) && member_start != '_' {
+			start += 1
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 // Params may carry an explicit type_spelling from policy; track its imports.

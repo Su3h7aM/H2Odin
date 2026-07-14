@@ -286,15 +286,15 @@ emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comm
 	strings.write_string(b, "\n\n")
 }
 
-emit_var :: proc(b: ^strings.Builder, ir: ^IR, decl: Var_Decl, emit_comments: bool, imports: ^Emit_Imports) {
+emit_variable :: proc(b: ^strings.Builder, ir: ^IR, variable: Var_Decl, emit_comments: bool, imports: ^Emit_Imports) {
 	// No @(deprecated) on variables — emit a semantic Deprecated: line.
-	write_deprecated_doc_line(b, decl.deprecated, decl.deprecated_message, 1)
-	write_doc(b, decl.doc, 1, emit_comments)
-	if decl.link_name != "" {
-		fmt.sbprintfln(b, "\t@(link_name = %q)", decl.link_name)
+	write_deprecated_doc_line(b, variable.deprecated, variable.deprecated_message, 1)
+	write_doc(b, variable.doc, 1, emit_comments)
+	if variable.link_name != "" {
+		fmt.sbprintfln(b, "\t@(link_name = %q)", variable.link_name)
 	}
-	fmt.sbprintf(b, "\t%s: ", decl.name)
-	write_type(b, ir, decl.type, 1, emit_comments, imports)
+	fmt.sbprintf(b, "\t%s: ", variable.name)
+	write_type(b, ir, variable.type, 1, emit_comments, imports)
 	strings.write_string(b, "\n")
 }
 
@@ -369,33 +369,34 @@ macro_literal_can_emit_verbatim :: proc(spelling: string) -> bool {
 
 // block_require_results: when true the enclosing foreign block already has
 // @(require_results), so per-proc attributes are omitted.
-emit_func :: proc(b: ^strings.Builder, ir: ^IR, func: Func_Decl, emit_comments: bool, imports: ^Emit_Imports, block_require_results := false) {
-	write_doc(b, func.doc, 1, emit_comments)
-	write_deprecated_attr(b, func.deprecated, func.deprecated_message, 1)
-	if func.require_results && !block_require_results {
+emit_function :: proc(b: ^strings.Builder, ir: ^IR, function: Func_Decl, emit_comments: bool, imports: ^Emit_Imports, block_require_results := false) {
+	write_doc(b, function.doc, 1, emit_comments)
+	write_deprecated_attr(b, function.deprecated, function.deprecated_message, 1)
+	if function.require_results && !block_require_results {
 		strings.write_string(b, "\t@(require_results)\n")
 	}
-	if func.link_name != "" {
-		fmt.sbprintfln(b, "\t@(link_name = %q)", func.link_name)
+	if function.link_name != "" {
+		fmt.sbprintfln(b, "\t@(link_name = %q)", function.link_name)
 	}
 	// Foreign blocks default to cdecl; emit an explicit convention only when
 	// the captured fact is not C/default (or when it is unrepresentable — the
 	// diagnostic is raised separately so we never silently rewrite a known
 	// non-C convention without notice).
-	if calling_conv_is_foreign_default(func.calling_conv) {
-		fmt.sbprintf(b, "\t%s :: proc(", func.name)
+	if calling_conv_is_foreign_default(function.calling_conv) {
+		fmt.sbprintf(b, "\t%s :: proc(", function.name)
 	} else {
-		spelling, _ := calling_conv_odin_spelling(func.calling_conv)
-		fmt.sbprintf(b, "\t%s :: proc \"%s\" (", func.name, spelling)
+		spelling, _ := calling_conv_odin_spelling(function.calling_conv)
+		fmt.sbprintf(b, "\t%s :: proc \"%s\" (", function.name, spelling)
 	}
-	write_params(b, ir, func.params, func.is_variadic, emit_comments, imports)
+	write_params(b, ir, function.params, function.is_variadic, emit_comments, imports)
 	strings.write_string(b, ")")
-	if func.return_type_spelling != "" {
+	if function.return_type_spelling != "" {
 		strings.write_string(b, " -> ")
-		strings.write_string(b, func.return_type_spelling)
-	} else if !type_is_void(ir, func.return_type) {
+		note_import_for_spelling(imports, function.return_type_spelling)
+		strings.write_string(b, function.return_type_spelling)
+	} else if !type_is_void(ir, function.return_type) {
 		strings.write_string(b, " -> ")
-		write_type(b, ir, func.return_type, 1, emit_comments, imports)
+		write_type(b, ir, function.return_type, 1, emit_comments, imports)
 	}
 	strings.write_string(b, " ---\n")
 }

@@ -198,11 +198,11 @@ emit_unit_body :: proc(body: ^strings.Builder, ir: ^IR, decls: []Decl_Ref, optio
 			case .Func:
 				needs_foreign = true
 				emit_open_foreign(body, &in_foreign, options.link_prefix, block_require_results)
-				emit_func(body, ir, ir.funcs[ref.index], options.emit_comments, &imports, block_require_results)
+				emit_function(body, ir, ir.funcs[ref.index], options.emit_comments, &imports, block_require_results)
 			case .Var:
 				needs_foreign = true
 				emit_open_foreign(body, &in_foreign, options.link_prefix, block_require_results)
-				emit_var(body, ir, ir.vars[ref.index], options.emit_comments, &imports)
+				emit_variable(body, ir, ir.vars[ref.index], options.emit_comments, &imports)
 			case .Invalid, .Record, .Enum, .Typedef, .Macro, .Bit_Set, .Wrapper:
 			}
 		}
@@ -225,11 +225,11 @@ emit_unit_body :: proc(body: ^strings.Builder, ir: ^IR, decls: []Decl_Ref, optio
 		case .Func:
 			needs_foreign = true
 			emit_open_foreign(body, &in_foreign, options.link_prefix, segment_require_results[declaration_index])
-			emit_func(body, ir, ir.funcs[ref.index], options.emit_comments, &imports, segment_require_results[declaration_index])
+			emit_function(body, ir, ir.funcs[ref.index], options.emit_comments, &imports, segment_require_results[declaration_index])
 		case .Var:
 			needs_foreign = true
 			emit_open_foreign(body, &in_foreign, options.link_prefix, segment_require_results[declaration_index])
-			emit_var(body, ir, ir.vars[ref.index], options.emit_comments, &imports)
+			emit_variable(body, ir, ir.vars[ref.index], options.emit_comments, &imports)
 		case .Record:
 			emit_close_foreign(body, &in_foreign)
 			emit_record(body, ir, ir.records[ref.index], options.emit_comments, &imports)
