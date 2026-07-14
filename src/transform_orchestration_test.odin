@@ -71,6 +71,41 @@ test_transform_materializes_wrapper_after_renaming :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_transform_wrapper_requires_configured_result :: proc(t: ^testing.T) {
+	generation_arena: vmem.Arena
+	testing.expect_value(t, vmem.arena_init_growing(&generation_arena), nil)
+	defer vmem.arena_destroy(&generation_arena)
+	context.allocator = vmem.arena_allocator(&generation_arena)
+
+	ir: IR
+	ir_init(&ir)
+	ir_add_func(&ir, Func_Decl{name = "get_count", return_type = ir_builtin_type(&ir, .Void)})
+
+	policy: Policy
+	policy.proc_results = make(map[string]Member_Action)
+	policy.proc_results["get_count"] = Member_Action {
+		type = "c.int",
+	}
+	policy.proc_wrappers = make(map[string]Wrapper_Rule)
+	policy.proc_wrappers["get_count"] = Wrapper_Rule {
+		keep_c_return = true,
+	}
+
+	{
+		scratch_arena: vmem.Arena
+		testing.expect_value(t, vmem.arena_init_growing(&scratch_arena), nil)
+		defer vmem.arena_destroy(&scratch_arena)
+		context.temp_allocator = vmem.arena_allocator(&scratch_arena)
+
+		transform(&ir, .Idiomatic, &policy)
+	}
+
+	testing.expect_value(t, len(ir.wrappers), 1)
+	testing.expect_value(t, ir.funcs[0].return_type_spelling, "c.int")
+	testing.expect(t, ir.wrappers[0].require_results)
+}
+
+@(test)
 test_transform_rejects_pointer_spelling_for_wrapper_slice_count :: proc(t: ^testing.T) {
 	generation_arena: vmem.Arena
 	testing.expect_value(t, vmem.arena_init_growing(&generation_arena), nil)

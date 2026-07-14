@@ -99,6 +99,8 @@ test_emit_imports_packages_used_by_explicit_function_results :: proc(t: ^testing
 	ir_add_func(&ir, Func_Decl{name = "get_socket_length", return_type = void_type, return_type_spelling = "[^]posix.socklen_t"})
 	ir_add_func(&ir, Func_Decl{name = "get_stream", return_type = void_type, return_type_spelling = "^libc.FILE"})
 	ir_add_func(&ir, Func_Decl{name = "get_handle", return_type = void_type, return_type_spelling = "^[4]win32.HANDLE"})
+	wrapper := ir_add_wrapper(&ir, Wrapper_Decl{name = "Get_Socket_Length", target = 1, keep_c_return = true})
+	ir_add_wrapper_to_order(&ir, wrapper)
 
 	plan := Output_Plan {
 		units = {{filename = "example.odin", stem = "example", decls = ir.order[:]}},
@@ -110,6 +112,8 @@ test_emit_imports_packages_used_by_explicit_function_results :: proc(t: ^testing
 	testing.expect(t, strings.contains(content, "import \"core:c/libc\""))
 	testing.expect(t, strings.contains(content, "import \"core:sys/posix\""))
 	testing.expect(t, strings.contains(content, "import win32 \"core:sys/windows\""))
+	testing.expect(t, strings.contains(content, "Get_Socket_Length :: proc() -> [^]posix.socklen_t"))
+	testing.expect(t, strings.contains(content, "res = get_socket_length()"))
 }
 
 @(test)

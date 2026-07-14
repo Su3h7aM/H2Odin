@@ -56,9 +56,13 @@ write_parameter_type :: proc(b: ^strings.Builder, ir: ^IR, parameter: Param, ind
 	write_type(b, ir, parameter.type, indent, emit_comments, imports)
 }
 
-type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
-	builtin, is_builtin := ir_type(ir, handle).variant.(Type_Builtin)
-	return is_builtin && builtin.kind == .Void
+write_function_result_type :: proc(b: ^strings.Builder, ir: ^IR, function: Func_Decl, indent: int, emit_comments: bool, imports: ^Emit_Imports) {
+	if function.return_type_spelling != "" {
+		note_imports_for_odin_expression(imports, function.return_type_spelling)
+		strings.write_string(b, function.return_type_spelling)
+		return
+	}
+	write_type(b, ir, function.return_type, indent, emit_comments, imports)
 }
 
 // Write the type spelling decided by Transformation. indent is where this type

@@ -390,13 +390,9 @@ emit_function :: proc(b: ^strings.Builder, ir: ^IR, function: Func_Decl, emit_co
 	}
 	write_params(b, ir, function.params, function.is_variadic, emit_comments, imports)
 	strings.write_string(b, ")")
-	if function.return_type_spelling != "" {
+	if function_has_result(ir, function) {
 		strings.write_string(b, " -> ")
-		note_imports_for_odin_expression(imports, function.return_type_spelling)
-		strings.write_string(b, function.return_type_spelling)
-	} else if !type_is_void(ir, function.return_type) {
-		strings.write_string(b, " -> ")
-		write_type(b, ir, function.return_type, 1, emit_comments, imports)
+		write_function_result_type(b, ir, function, 1, emit_comments, imports)
 	}
 	strings.write_string(b, " ---\n")
 }

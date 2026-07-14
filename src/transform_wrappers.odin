@@ -116,7 +116,7 @@ materialize_wrapper_plan :: proc(ir: ^IR, function_handle: Decl_Handle, plan: Wr
 		}
 	}
 
-	require_results := target_function.require_results || len(out_params) > 0 || (plan.rule.keep_c_return && !type_is_void(ir, target_function.return_type))
+	require_results := target_function.require_results || len(out_params) > 0 || (plan.rule.keep_c_return && function_has_result(ir, target_function^))
 	wrapper := Wrapper_Decl {
 		name            = strings.clone(public_name),
 		target          = function_handle,

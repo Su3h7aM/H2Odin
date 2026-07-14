@@ -593,6 +593,17 @@ ir_type :: proc(ir: ^IR, handle: Type_Handle) -> Type_Info {
 	return ir.types[int(handle)]
 }
 
+type_is_void :: proc(ir: ^IR, handle: Type_Handle) -> bool {
+	builtin, is_builtin := ir_type(ir, handle).variant.(Type_Builtin)
+	return is_builtin && builtin.kind == .Void
+}
+
+// A transformed result spelling is authoritative even when it replaces a C
+// void result. All later stages must agree that the procedure now has a result.
+function_has_result :: proc(ir: ^IR, function: Func_Decl) -> bool {
+	return function.return_type_spelling != "" || !type_is_void(ir, function.return_type)
+}
+
 // Each add_* appends to its pool and records the declaration in the ordering
 // list. Records and enums may be created as placeholders when first
 // referenced and filled in when their definition is visited; they enter the
