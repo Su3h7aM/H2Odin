@@ -24,7 +24,6 @@ config.inputs = {
 }
 config.preprocess.include_paths = { "include" }
 config.output_folder = "."
-config.output.layout = "merged"
 
 config.foreign.import_lib = "ggml"
 -- Primary C prefix; gguf_* keep @(link_name) when their Odin name differs.

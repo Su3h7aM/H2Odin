@@ -38,7 +38,8 @@ config opts out so the package stays green without field renames.
 
 ## Gaps vs `vendor:cgltf`
 
-- Official multi-file / wasm layout; we emit one unit
+- Official adds a target-specific wasm file; the C declaration surface is one
+  upstream header, so it remains one ownership unit
 - Out-parameter wrappers (`parse`, `parse_file`, `load_buffer_base64`) are
   generated via `procs.wrappers` (faithful foreign under `_name`); vendor also
   nests private foreign blocks differently

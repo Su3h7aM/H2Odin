@@ -9,6 +9,8 @@ local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "miniaudio"
 config.type_mode = "idiomatic"
+-- vendor:miniaudio hand-partitions this one upstream header by API topic.
+-- Header ownership cannot reproduce that split without inventing boundaries.
 config.inputs = { "miniaudio.h" }
 config.output_folder = "."
 config.foreign.import_lib = "miniaudio"

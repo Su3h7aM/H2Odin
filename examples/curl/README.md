@@ -6,7 +6,8 @@ a classic multi-header C API.
 
 ## What this exercises
 
-- Multi-header umbrella (`curl.h` pulls easy/multi/urlapi/…)
+- Multi-root public API split (`curl.h`, `multi.h`, and `urlapi.h`), with
+  non-standalone API/support headers folded into the core root
 - Opaque handles as **`typedef void CURL;`** → `CURL :: distinct rawptr`
 - Huge option / info surfaces (`CURLOPT_*`, `CURLINFO_*` as enums + macros)
 - Callback typedefs (write/read/progress/…)
@@ -33,12 +34,17 @@ Or the full corpus gate: `./scripts/validate-examples`.
 | `odin check` | **OK** |
 | Opaque handles | `CURL` / `CURLM` / `CURLSH` as `distinct rawptr` |
 | System types | `addr: posix.sockaddr`, `time_t` → `libc.time_t` |
-| Foreign procs | Umbrella API from `curl.h` and its folded project headers |
-| `@(require_results)` | 7 (honest subset declared in `curl.h`) |
+| Layout | core / multi / URL API generated files |
+| Foreign procs | Public API roots plus their folded support headers |
+| `@(require_results)` | 7 (curated across the public roots) |
 
 ## Gaps vs `vendor:curl`
 
-- Official multi-file package + OS-specific socket types (`platform_sockaddr`)
+- `easy.h`, `header.h`, `options.h`, and `websockets.h` are not standalone C
+  translation units, so they remain folded into `curl.odin` rather than
+  matching every official topic file
+- Generated file names follow headers rather than the official `curl_*` names
+- OS-specific socket types (`platform_sockaddr`)
 - Hand-curated CURLOPT tables and per-OS calling conventions
 - Single `system:curl` import (`foreign.targets` available when needed)
 - Pointer multipointers often stay `^T` (see regenerate diagnostics)

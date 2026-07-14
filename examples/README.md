@@ -47,9 +47,9 @@ so without inventing library semantics.
 | Example | Official reference | Role | `odin check` |
 |---------|-------------------|------|--------------|
 | [`raylib`](raylib/) | `vendor:raylib` (6.0) | Large C API, PascalCase, math overrides, multi/require_results | pass |
-| [`box3d`](box3d/) | `vendor:box3d` | Prefix strip + handles, `#by_ptr` defs | pass |
+| [`box3d`](box3d/) | `vendor:box3d` | Topic-split roots, prefix strip + handles, `#by_ptr` defs | pass |
 | [`cgltf`](cgltf/) | `vendor:cgltf` | Single-header scene graph, `#by_ptr options` | pass |
-| [`curl`](curl/) | `vendor:curl` | Multi-header, `typedef void` opaques, POSIX types | pass |
+| [`curl`](curl/) | `vendor:curl` | Vendor-like multi-root split, `typedef void` opaques, POSIX types | pass |
 | [`miniaudio`](miniaudio/) | `vendor:miniaudio` | ~95k-line single-header, multi/`#by_ptr`/require_results | pass |
 | [`ggml`](ggml/) | [ggml-org/ggml](https://github.com/ggml-org/ggml) | Multi-header tensor API, dual `ggml`/`gguf` prefixes | pass |
 

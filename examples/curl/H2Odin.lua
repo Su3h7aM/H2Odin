@@ -9,10 +9,20 @@ local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "curl"
 config.type_mode = "idiomatic"
--- curl.h is the public root. Its non-system includes (easy.h, multi.h,
--- urlapi.h, ...) fold into the same output unit and parse in umbrella context.
-config.inputs = { "include/curl.h" }
+-- Keep libcurl's independently parseable public API areas as separate roots.
+-- easy/header/options/websockets are only valid inside curl.h's umbrella
+-- context, so they fold into the core unit alongside support headers. This is
+-- the closest honest split to vendor:curl without patching upstream headers.
+config.inputs = {
+	"include/curl.h",
+	"include/multi.h",
+	"include/urlapi.h",
+}
 config.preprocess.include_paths = { "include" }
+-- Directly parsing multi.h includes curl.h before multi.h's own declarations;
+-- disable the convenience type-check macros so they do not rewrite those
+-- declarations on the second half of that include cycle.
+config.preprocess.defines = { CURL_DISABLE_TYPECHECK = "1" }
 config.output_folder = "."
 config.foreign.import_lib = "curl"
 config.foreign.link_prefix = "curl_"

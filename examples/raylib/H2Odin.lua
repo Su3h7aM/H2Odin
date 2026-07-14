@@ -17,6 +17,9 @@ local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "raylib"
 config.type_mode = "idiomatic"
+-- The vendor package's raymath/easings modules are Odin implementations, and
+-- raygui/rlgl come from separate companion headers not present in this corpus.
+-- raylib.h therefore remains the only honest ownership root.
 config.inputs = { "raylib.h" }
 config.output_folder = "."
 config.foreign.import_lib = "raylib"

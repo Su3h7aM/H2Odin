@@ -41,7 +41,9 @@ Or the full corpus gate: `./scripts/validate-examples`.
 
 ## Gaps vs `vendor:miniaudio`
 
-- Official multi-file layout (types / procs / backends / wasm)
+- Official hand-partitioned multi-file layout (types / procs / backends /
+  wasm); the upstream API is one header, so header ownership has no honest
+  boundary from which to reproduce that split
 - Heavy hand curation of platform threads and backend structs
 - Remaining multipointers and out-params largely stay `^T` (quality work, not
   a validity blocker)

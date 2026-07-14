@@ -47,7 +47,11 @@ These are intentional scope choices, not silent ABI substitutions:
 2. **Palette constants** — hand binding hard-codes `LIGHTGRAY`, `RAYWHITE`, …; the C header only has macros/comments, so we do not invent them.
 3. **`#by_ptr`** — not used on this surface (vendor does on some math-ish call sites); multipointer + require_results are curated instead.
 4. **Pointer lowering** — many `T*` stay `^T` where the hand binding uses multipointers or `cstring` with more context; see diagnostics on regenerate.
-5. **Extra modules** — official also ships `raymath`, `raygui`, `rlgl`, easings. This example is `raylib.h` only.
+5. **Extra modules** — `raymath` and easings are Odin implementations of
+   companion header-only APIs; `raygui` and `rlgl` likewise come from separate
+   headers/libraries. None of those headers is included by or vendored beside
+   this example's `raylib.h`, so the multi-header ownership model cannot split
+   them out without expanding the corpus to additional upstream APIs.
 
 Use this package as a **quality benchmark**, not as a drop-in replacement for
 `vendor:raylib` in production games.

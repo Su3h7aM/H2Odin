@@ -8,6 +8,8 @@ local h2o = require "h2odin"
 local config = h2o.config()
 config.package = "cgltf"
 config.type_mode = "idiomatic"
+-- The upstream API is one header; the vendor package's extra wasm file is a
+-- target-specific binding concern rather than another declaration root.
 config.inputs = { "cgltf.h" }
 config.output_folder = "."
 config.foreign.import_lib = "cgltf"

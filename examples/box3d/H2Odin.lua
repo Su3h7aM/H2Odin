@@ -8,9 +8,8 @@
 --   - Vec2/Vec3 as [2]f32/[3]f32; keep ID structs as structs
 --   - Idiomatic leaves (f32, u16, …)
 --
--- Multi-header input with merged layout (one box3d.odin). Official binding
--- is split by topic (types / math / collision / …); we generate one file and
--- note the layout difference in README.md.
+-- Public headers are separate roots so generated files follow the official
+-- binding's core / collision / constants / id / math / types organization.
 
 local h2o = require "h2odin"
 
@@ -18,11 +17,16 @@ local config = h2o.config()
 config.package = "box3d"
 config.type_mode = "idiomatic"
 
--- Umbrella header pulls base, types, id, math, collision.
-config.inputs = { "include/box3d/box3d.h" }
+config.inputs = {
+	"include/box3d/box3d.h",
+	"include/box3d/collision.h",
+	"include/box3d/constants.h",
+	"include/box3d/id.h",
+	"include/box3d/math_functions.h",
+	"include/box3d/types.h",
+}
 config.preprocess.include_paths = { "include" }
 config.output_folder = "."
-config.output.layout = "merged"
 
 config.foreign.import_lib = "box3d"
 config.foreign.link_prefix = "b3"
@@ -54,8 +58,7 @@ config.types.overrides = {
 
 -- Faithful-surface curation matching vendor:box3d's #by_ptr call-borrowed
 -- shape/world defs. Idiomatic-only for by_ptr. Keys are C names from the
--- configured input surface (box3d.h umbrella). collision.h helpers such as
--- b3CreateMesh are transitive only and are not "ours".
+-- configured public-header surface.
 config.procs.params = {
 	["b3CreateWorld.def"] = { by_ptr = true },
 	["b3CreateSphereShape.def"] = { by_ptr = true },

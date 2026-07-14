@@ -9,6 +9,8 @@ Pinned headers from commit `af97976` (see `GGML_COMMIT.txt`) under `include/`.
 
 - Multi-header public API: `ggml.h`, `ggml-alloc.h`, `ggml-backend.h`,
   `ggml-cpu.h`, `gguf.h` (no CUDA/Metal/Vulkan backends)
+- One generated Odin file per public root, preserving core / allocation /
+  backend / CPU / GGUF separation
 - Dense tensor / graph API, opaque contexts, large enums, function pointers
 - Dual-prefix naming: strip `ggml_` / `GGML_`; **keep** `gguf_*` Odin names so
   short names do not collide after strip
@@ -34,6 +36,7 @@ Or the full corpus gate: `./scripts/validate-examples`.
 | `odin check` | **OK** |
 | Foreign procs (approx.) | ~612 |
 | `[^]T` sites | 6 |
+| Layout | `ggml`, `ggml-alloc`, `ggml-backend`, `ggml-cpu`, and `gguf` units |
 | Gate | included in `./scripts/validate-examples` |
 
 ### Honest dual-prefix strategy
