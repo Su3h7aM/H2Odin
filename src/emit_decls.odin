@@ -183,17 +183,18 @@ write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: i
 	// Emit `= N` only when the C value differs from that sequence so dense
 	// sequential enums stay clean while gaps, non-zero starts, and mid-list
 	// removals keep their explicit values (ABI-safe).
-	expected: i64 = 0
+	expected_value: Maybe(i64) = i64(0)
 	for member in decl.members {
 		write_doc(b, member.doc, indent + 1, emit_comments)
 		write_indent(b, indent + 1)
 		strings.write_string(b, member.name)
-		if member.value != expected {
+		expected, has_expected := expected_value.?
+		if !has_expected || member.value != expected {
 			strings.write_string(b, " = ")
 			write_enum_value(b, ir, decl.backing, member.value)
 		}
 		strings.write_string(b, ",\n")
-		expected = member.value + 1
+		expected_value = next_implicit_enum_value(ir, decl.backing, member.value)
 	}
 	write_indent(b, indent)
 	strings.write_string(b, "}")
@@ -202,17 +203,62 @@ write_enum_body :: proc(b: ^strings.Builder, ir: ^IR, decl: Enum_Decl, indent: i
 // Member values are stored as raw i64 bits; the backing type's signedness
 // decides how they read back.
 write_enum_value :: proc(b: ^strings.Builder, ir: ^IR, backing: Type_Handle, value: i64) {
-	info := ir_type(ir, backing)
-	if leaf, is_leaf := info.variant.(Type_Idiomatic_Leaf); is_leaf {
-		// Signedness lives on the original the substitution replaced.
-		info = ir_type(ir, leaf.original)
-	}
-	builtin, is_builtin := info.variant.(Type_Builtin)
-	if is_builtin && builtin_is_unsigned(builtin.kind) {
+	unsigned, _ := emitted_enum_backing_layout(ir, backing)
+	if unsigned {
 		fmt.sbprintf(b, "%d", u64(value))
 	} else {
 		fmt.sbprintf(b, "%d", value)
 	}
+}
+
+// next_implicit_enum_value returns the successor when the backing type can
+// represent it. nil forces the next C member to keep an explicit value.
+next_implicit_enum_value :: proc(ir: ^IR, backing: Type_Handle, value: i64) -> Maybe(i64) {
+	unsigned, size := emitted_enum_backing_layout(ir, backing)
+	bit_count := size * 8
+	if unsigned {
+		unsigned_value := u64(value)
+		maximum_value := max(u64)
+		if bit_count > 0 && bit_count < 64 {
+			maximum_value = (u64(1) << uint(bit_count)) - 1
+		}
+		if unsigned_value == maximum_value {
+			return nil
+		}
+		return i64(unsigned_value + 1)
+	}
+
+	maximum_value := max(i64)
+	if bit_count > 0 && bit_count < 64 {
+		maximum_value = (i64(1) << uint(bit_count - 1)) - 1
+	}
+	if value == maximum_value {
+		return nil
+	}
+	return value + 1
+}
+
+// emitted_enum_backing_layout follows emission-time substitutions and aliases
+// to the measured integer backing. The original type remains the signedness
+// authority for an idiomatic spelling.
+emitted_enum_backing_layout :: proc(ir: ^IR, backing: Type_Handle) -> (unsigned: bool, size: int) {
+	current := backing
+	for _ in 0 ..< len(ir.types) {
+		type_info := ir_type(ir, current)
+		switch variant in type_info.variant {
+		case Type_Builtin:
+			return builtin_is_unsigned(variant.kind), variant.size
+		case Type_Std:
+			return variant.unsigned, variant.size
+		case Type_Idiomatic_Leaf:
+			current = variant.original
+		case Type_Typedef_Ref:
+			current = ir.typedefs[variant.decl].aliased
+		case Type_Pointer, Type_Lowered_Pointer, Type_Array, Type_Proc, Type_Record_Ref, Type_Enum_Ref, Type_Bit_Set:
+			return false, -1
+		}
+	}
+	return false, -1
 }
 
 emit_typedef :: proc(b: ^strings.Builder, ir: ^IR, decl: Typedef_Decl, emit_comments: bool, imports: ^Emit_Imports) {
